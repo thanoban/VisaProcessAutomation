@@ -1,0 +1,14 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: visaflow-mas-api
+spec:
+  template:
+    spec:
+      containers:
+        - image: gcr.io/PROJECT_ID/visaflow-mas:latest
+          env:
+            - name: DATABASE_URL
+              value: postgresql+psycopg://USERNAME:PASSWORD@/visaflow?host=/cloudsql/PROJECT:REGION:INSTANCE
+            - name: VISAFLOW_POLICY_DIR
+              value: /app/rag/visa_policy_documents

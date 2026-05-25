@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AuditEvent",
+  "type": "object",
+  "required": ["audit_id", "case_id", "timestamp", "event_type", "actor_type", "actor_id", "tool_calls", "input_hash", "output_hash", "evidence_ids", "policy_ids", "recommendation", "human_action", "override_reason", "ip_address", "session_id"],
+  "properties": {
+    "audit_id": { "type": "string" },
+    "case_id": { "type": "string" },
+    "timestamp": { "type": "string" },
+    "event_type": { "type": "string" },
+    "actor_type": { "type": "string" },
+    "actor_id": { "type": "string" },
+    "agent_name": { "type": ["string", "null"] },
+    "prompt_version": { "type": "string" },
+    "model_version": { "type": "string" },
+    "tool_calls": { "type": "array" },
+    "input_hash": { "type": "string" },
+    "output_hash": { "type": "string" },
+    "evidence_ids": { "type": "array" },
+    "policy_ids": { "type": "array" },
+    "recommendation": { "type": "string" },
+    "human_action": { "type": "string" },
+    "override_reason": { "type": "string" },
+    "ip_address": { "type": "string" },
+    "session_id": { "type": "string" },
+    "payload": { "type": "object" }
+  }
+}

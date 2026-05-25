@@ -1,0 +1,42 @@
+{
+  "case_id": "VISA-2026-0001",
+  "applicant": {
+    "full_name": "Kamal Perera",
+    "date_of_birth": "1998-04-12",
+    "nationality": "Sri Lankan",
+    "passport_number": "N1234567",
+    "contact_email": "kamal@example.com"
+  },
+  "visa_application": {
+    "visa_class": "TOURIST",
+    "purpose_of_travel": "Tourism and sightseeing",
+    "arrival_date": "2026-08-10",
+    "departure_date": "2026-08-20",
+    "sponsor": null,
+    "destination_address": "Hotel Example, City Center",
+    "country_of_application": "Sri Lanka",
+    "payment_status": "PAID"
+  },
+  "documents": [
+    {
+      "document_id": "DOC-001",
+      "document_type": "PASSPORT",
+      "file_uri": "gs://visa-docs/case-0001/passport.pdf"
+    },
+    {
+      "document_id": "DOC-002",
+      "document_type": "BANK_STATEMENT",
+      "file_uri": "gs://visa-docs/case-0001/bank.pdf"
+    },
+    {
+      "document_id": "DOC-003",
+      "document_type": "FLIGHT_ITINERARY",
+      "file_uri": "gs://visa-docs/case-0001/flight.pdf"
+    }
+  ],
+  "policy_context": {
+    "country": "Sri Lanka",
+    "policy_version": "tourist-policy-v1",
+    "effective_date": "2026-05-25"
+  }
+}

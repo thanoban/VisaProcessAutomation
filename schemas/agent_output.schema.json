@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AgentOutput",
+  "type": "object",
+  "required": ["agent_name", "case_id", "status", "summary", "findings", "evidence_ids", "policy_ids", "confidence", "requires_human_review", "created_at"],
+  "properties": {
+    "agent_name": { "type": "string" },
+    "case_id": { "type": "string" },
+    "status": { "type": "string" },
+    "summary": { "type": "string" },
+    "findings": { "type": "array" },
+    "evidence_ids": { "type": "array" },
+    "policy_ids": { "type": "array" },
+    "confidence": { "type": "number" },
+    "requires_human_review": { "type": "boolean" },
+    "created_at": { "type": "string" },
+    "details": { "type": "object" }
+  }
+}

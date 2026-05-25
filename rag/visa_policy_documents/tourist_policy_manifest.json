@@ -1,0 +1,28 @@
+{
+  "policy_version": "tourist-policy-v1",
+  "source_uri": "local://tourist-policy.pdf",
+  "sections": [
+    {
+      "policy_id": "TOURIST-01-A",
+      "visa_class": "TOURIST",
+      "effective_date": "2026-01-01",
+      "requirement": "Applicant must hold a valid passport with at least 6 months validity.",
+      "required_document": "PASSPORT"
+    },
+    {
+      "policy_id": "TOURIST-12-B",
+      "visa_class": "TOURIST",
+      "effective_date": "2026-01-01",
+      "requirement": "Applicant must show sufficient funds for the intended stay.",
+      "required_document": "BANK_STATEMENT",
+      "minimum_funds": 1500.0
+    },
+    {
+      "policy_id": "TOURIST-20-C",
+      "visa_class": "TOURIST",
+      "effective_date": "2026-01-01",
+      "requirement": "Applicant must provide intended travel itinerary evidence.",
+      "required_document": "FLIGHT_ITINERARY"
+    }
+  ]
+}

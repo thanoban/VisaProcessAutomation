@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OfficerBrief",
+  "type": "object",
+  "required": ["case_id", "visa_class", "applicant_summary", "recommendation", "confidence", "human_decision_required", "agent_results", "key_evidence", "policy_references", "risk_flags", "missing_items", "questions_for_officer", "final_decision_options"],
+  "properties": {
+    "case_id": { "type": "string" },
+    "visa_class": { "type": "string" },
+    "applicant_summary": { "type": "string" },
+    "recommendation": { "type": "string" },
+    "confidence": { "type": "number" },
+    "human_decision_required": { "type": "boolean" },
+    "agent_results": { "type": "array" },
+    "key_evidence": { "type": "array" },
+    "policy_references": { "type": "array" },
+    "risk_flags": { "type": "array" },
+    "missing_items": { "type": "array" },
+    "questions_for_officer": { "type": "array" },
+    "final_decision_options": { "type": "array" },
+    "recommendation_panel": { "type": "object" },
+    "evidence_viewer": { "type": "object" },
+    "audit_timeline": { "type": "array" }
+  }
+}

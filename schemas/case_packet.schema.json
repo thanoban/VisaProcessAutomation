@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CasePacket",
+  "type": "object",
+  "required": ["case_id", "applicant", "visa_application", "documents", "policy_context", "agent_outputs", "workflow", "audit"],
+  "properties": {
+    "case_id": { "type": "string" },
+    "applicant": { "type": "object" },
+    "visa_application": { "type": "object" },
+    "documents": { "type": "array" },
+    "policy_context": { "type": "object" },
+    "agent_outputs": { "type": "object" },
+    "workflow": { "type": "object" },
+    "audit": { "type": "object" },
+    "submission_channel": { "type": "string" },
+    "status_timeline": { "type": "array" },
+    "applicant_message_history": { "type": "array" },
+    "security_handling_code": { "type": "string" },
+    "decision_due_at": { "type": ["string", "null"] },
+    "override_required": { "type": "boolean" },
+    "retention_class": { "type": "string" },
+    "mock_profile": { "type": "object" }
+  }
+}
