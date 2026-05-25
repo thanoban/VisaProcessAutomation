@@ -90,16 +90,7 @@ async function handleLookup(event) {
       return;
     }
 
-    const casePacket = await api.getCase(caseId);
-    let officerBrief;
-
-    try {
-      officerBrief = await api.getOfficerBrief(caseId);
-    } catch {
-      await api.processCase(caseId);
-      officerBrief = await api.getOfficerBrief(caseId);
-    }
-
+    const { casePacket, officerBrief } = await loadOfficerReviewCase(caseId);
     renderDashboard(casePacket, officerBrief, false);
     elements.feedback.textContent = `Officer brief loaded for ${caseId}.`;
   } catch (error) {
@@ -280,10 +271,47 @@ async function handleDecisionSubmit(event) {
   try {
     elements.decisionFeedback.textContent = "Submitting officer decision...";
     const result = await api.submitOfficerDecision(state.currentCaseId, payload);
-    elements.decisionFeedback.textContent = `Decision recorded with status: ${result.status}.`;
+    const { casePacket, officerBrief } = await loadOfficerReviewCase(state.currentCaseId, false);
+    renderDashboard(casePacket, officerBrief, false);
+    elements.decisionFeedback.textContent = `Decision recorded with status: ${result.status}. The dashboard has been refreshed with the latest case state and audit trail.`;
   } catch (error) {
     elements.decisionFeedback.textContent = `Decision submission failed: ${error.message}`;
   }
+}
+
+async function loadOfficerReviewCase(caseId, processIfMissingBrief = true) {
+  const casePacket = await api.getCase(caseId);
+  let officerBrief;
+
+  try {
+    officerBrief = await api.getOfficerBrief(caseId);
+  } catch (error) {
+    if (!processIfMissingBrief) {
+      throw error;
+    }
+    await api.processCase(caseId);
+    officerBrief = await api.getOfficerBrief(caseId);
+  }
+
+  const auditTimeline = await api.getAudit(caseId);
+  return {
+    casePacket,
+    officerBrief: mergeBriefWithCurrentCase(officerBrief, casePacket, auditTimeline),
+  };
+}
+
+function mergeBriefWithCurrentCase(brief, casePacket, auditTimeline) {
+  return {
+    ...brief,
+    recommendation_panel: {
+      ...(brief.recommendation_panel || {}),
+      current_holder: casePacket.workflow.current_holder,
+      action_required_from: casePacket.workflow.action_required_from,
+      next_action: casePacket.workflow.next_action,
+      human_decision_required: true,
+    },
+    audit_timeline: auditTimeline,
+  };
 }
 
 function objectPairsMarkup(value) {
