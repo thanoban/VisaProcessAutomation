@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VisaFlow MAS Supervisor Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Manrope", "Segoe UI", "sans-serif"],
+              display: ["Source Serif 4", "Georgia", "serif"],
+            },
+            colors: {
+              visa: {
+                ink: "#123042",
+                navy: "#12364D",
+              },
+            },
+            boxShadow: {
+              soft: "0 24px 60px rgba(17, 24, 39, 0.10)",
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="stylesheet" href="../shared/styles.css" />
+  </head>
+  <body class="min-h-screen text-visa-ink">
+    <div class="mx-auto w-[min(calc(100%-1.5rem),82rem)] py-4 md:w-[min(calc(100%-2rem),82rem)] md:py-6">
+      <header class="mb-7 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div class="flex items-center gap-4">
+          <div class="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-visa-navy to-teal-700 text-lg font-extrabold tracking-[0.18em] text-white shadow-soft">
+            VF
+          </div>
+          <div>
+            <small class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Operations oversight surface</small>
+            <strong class="block text-lg text-slate-900">VisaFlow MAS Supervisor Dashboard</strong>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-3 md:justify-end">
+          <span class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+            Queue visibility
+          </span>
+          <span class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600" id="supervisor-api-pill">
+            Awaiting API check
+          </span>
+        </div>
+      </header>
+
+      <section class="rounded-[2.25rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-8">
+        <div class="grid gap-6 xl:grid-cols-[1.5fr_minmax(18rem,0.9fr)]">
+          <div>
+            <span class="block text-[0.72rem] uppercase tracking-[0.22em] text-slate-500">Supervisor operations</span>
+            <h1 class="font-display mt-3 text-4xl leading-none tracking-[-0.05em] text-slate-950 md:text-6xl">
+              See where the workflow is stalling before the backlog turns invisible.
+            </h1>
+            <p class="mt-4 max-w-3xl text-sm leading-7 text-slate-600 md:text-base">
+              This surface highlights queue pressure, manual referrals, document loops, and officer-ready inventory so
+              supervisors can intervene earlier.
+            </p>
+          </div>
+
+          <div class="grid gap-4">
+            <div class="rounded-[1.75rem] border border-slate-200/80 bg-white/75 p-5 backdrop-blur">
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Operational watch points</span>
+              <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                <div class="rounded-3xl border border-slate-200/70 bg-white/80 p-4">
+                  <small class="text-slate-500">Manual referrals</small>
+                  <strong class="mt-2 block text-lg text-slate-900">Escalate early</strong>
+                </div>
+                <div class="rounded-3xl border border-slate-200/70 bg-white/80 p-4">
+                  <small class="text-slate-500">Document loops</small>
+                  <strong class="mt-2 block text-lg text-slate-900">Prevent silent waiting</strong>
+                </div>
+                <div class="rounded-3xl border border-slate-200/70 bg-white/80 p-4">
+                  <small class="text-slate-500">Officer-ready queue</small>
+                  <strong class="mt-2 block text-lg text-slate-900">Balance reviewer load</strong>
+                </div>
+                <div class="rounded-3xl border border-slate-200/70 bg-white/80 p-4">
+                  <small class="text-slate-500">Auditability</small>
+                  <strong class="mt-2 block text-lg text-slate-900">Operationally reconstructable</strong>
+                </div>
+              </div>
+            </div>
+            <div class="rounded-[1.5rem] border border-slate-200/80 bg-white/75 p-5">
+              <strong class="text-sm uppercase tracking-[0.18em] text-slate-700">Queue posture</strong>
+              <p class="mt-2 text-sm leading-7 text-slate-600" id="supervisor-hero-copy">
+                Loading supervisor dashboard mode and notices.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="mt-6 grid gap-6 xl:grid-cols-[1.2fr_minmax(20rem,0.95fr)]">
+        <main class="grid gap-6">
+          <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7">
+            <div class="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div>
+                <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Live queue summary</span>
+                <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Workflow pressure at a glance</h2>
+                <p class="mt-2 max-w-3xl text-sm leading-7 text-slate-600">
+                  Queue totals are pulled from the existing supervisor API and grouped into the most important
+                  intervention signals first.
+                </p>
+              </div>
+              <button class="rounded-full bg-visa-navy px-5 py-3 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5" id="refresh-queues-button" type="button">
+                Refresh queues
+              </button>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-4" id="supervisor-metrics"></div>
+
+            <div class="mt-6 rounded-[1.75rem] border border-slate-200/80 bg-white/75 p-5">
+              <div class="mb-5">
+                <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Counts by workflow state</span>
+                <h3 class="mt-2 text-xl font-extrabold text-slate-900">State distribution</h3>
+              </div>
+              <div class="grid gap-4 md:grid-cols-2" id="state-counts-list"></div>
+            </div>
+          </section>
+        </main>
+
+        <aside class="grid gap-6">
+          <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7">
+            <div class="mb-5">
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Intervention guidance</span>
+              <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Operational hotspots</h2>
+            </div>
+            <div class="grid gap-4" id="hotspot-list"></div>
+          </section>
+
+          <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7">
+            <div class="mb-5">
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">System notices</span>
+              <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Service conditions</h2>
+            </div>
+            <div class="grid gap-4" id="supervisor-notice-list"></div>
+          </section>
+        </aside>
+      </div>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

@@ -8,7 +8,7 @@ The frontend must make the Sri Lanka tourist-visit workflow understandable for:
 
 - applicants who need clarity, next actions, deadlines, and document guidance
 - officers who need structured evidence, policy context, audit visibility, and a safe decision workflow
-- supervisors who need queue signals and operational friction visibility in later phases
+- supervisors who need queue signals and operational friction visibility
 
 ## 2. Product Surfaces
 
@@ -46,6 +46,21 @@ Initial modules:
 - policy and governance reference panel
 - audit timeline
 - final decision action panel
+
+### Supervisor operations dashboard
+
+Primary goals:
+
+- make queue pressure visible at a glance
+- expose manual-referral and document-loop bottlenecks early
+- help operations staff see where the workflow is stalling
+
+Initial modules:
+
+- queue summary header
+- counts by workflow state
+- bottleneck callouts
+- service notice visibility
 
 ## 3. Experience Principles
 
@@ -98,6 +113,7 @@ Initial modules:
 - accessibility pass
 - terminology consistency pass against Sri Lanka workflow docs
 - integration path into FastAPI static serving or a future dedicated frontend build pipeline
+- supervisor dashboard refinement and richer operations drill-down
 
 ## 7. Verification Standard
 
@@ -114,4 +130,5 @@ Each frontend slice is only considered finished when:
 1. shared frontend foundation
 2. applicant portal landing, intake, and status shell
 3. officer dashboard overview and brief shell
-4. API wiring refinement and UI hardening
+4. supervisor queue visibility shell
+5. FastAPI integration and UI hardening

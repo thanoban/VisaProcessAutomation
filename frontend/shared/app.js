@@ -40,6 +40,9 @@ export function createApiClient(baseUrl) {
     getSystemNotices() {
       return request("/system/notices");
     },
+    getSupervisorQueues() {
+      return request("/supervisor/queues");
+    },
     getChecklist() {
       return request("/checklists/tourist-visit");
     },
@@ -51,6 +54,12 @@ export function createApiClient(baseUrl) {
     },
     getCase(caseId) {
       return request(`/cases/${encodeURIComponent(caseId)}`);
+    },
+    uploadDocuments(caseId, payload) {
+      return request(`/cases/${encodeURIComponent(caseId)}/documents`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
     },
     getCaseStatus(caseId) {
       return request(`/cases/${encodeURIComponent(caseId)}/status`);
@@ -455,4 +464,21 @@ export const officerDashboardMock = {
       },
     ],
   },
+};
+
+export const supervisorDashboardMock = {
+  queues: {
+    workflow_pack: "SRI_LANKA_TOURIST_VISIT",
+    counts_by_state: {
+      SUBMITTED: 4,
+      WAITING_FOR_DOCUMENTS: 3,
+      REFERRED_TO_MANUAL_REVIEW: 2,
+      READY_FOR_OFFICER_REVIEW: 6,
+      POST_DECISION_FULFILLMENT: 1,
+    },
+    manual_referrals: 2,
+    waiting_for_documents: 3,
+    ready_for_officer_review: 6,
+  },
+  notices: applicantPortalMock.notices,
 };
