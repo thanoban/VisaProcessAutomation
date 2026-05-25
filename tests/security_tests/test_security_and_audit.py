@@ -93,6 +93,102 @@ def test_officer_decision_records_override_reason(client):
     assert any(item["override_reason"] == "Conflicting travel history context found during manual inspection." for item in audit)
 
 
+def test_officer_override_requires_reason_when_decision_differs_from_recommendation(client):
+    payload = {
+        "case_id": "VISA-2026-DEC-REQ-001",
+        "applicant": {
+            "full_name": "Arjun Mehta",
+            "date_of_birth": "1998-04-12",
+            "nationality": "Indian",
+            "passport_number": "P1234567",
+            "contact_email": "arjun@example.com"
+        },
+        "visa_application": {
+            "visa_class": "TOURIST",
+            "purpose_of_travel": "Tourism and sightseeing in Sri Lanka",
+            "arrival_date": "2026-08-10",
+            "departure_date": "2026-08-20",
+            "destination_address": "Hotel Example",
+            "country_of_application": "India",
+            "payment_status": "PAID"
+        },
+        "documents": [
+            {"document_id": "DOC-001", "document_type": "PASSPORT", "file_uri": "gs://x/passport.pdf"},
+            {"document_id": "DOC-002", "document_type": "BANK_STATEMENT", "file_uri": "gs://x/bank.pdf"},
+            {"document_id": "DOC-003", "document_type": "FLIGHT_ITINERARY", "file_uri": "gs://x/flight.pdf"}
+        ],
+        "policy_context": {
+            "country": "Sri Lanka",
+            "policy_version": "sl-tourist-policy-v1",
+            "effective_date": "2026-05-25"
+        }
+    }
+    assert client.post("/applications", json=payload).status_code == 201
+    assert client.post(f"/cases/{payload['case_id']}/process").status_code == 200
+
+    decision = client.post(
+        f"/cases/{payload['case_id']}/officer-decision",
+        json={
+            "decision": "REJECT",
+            "officer_id": "OFF-1",
+            "reason": "Officer reached a different conclusion after manual review.",
+            "override_reason": ""
+        },
+    )
+    assert decision.status_code == 400
+    assert "override_reason is required" in decision.json()["detail"]
+
+
+def test_enhanced_review_allows_final_decision_without_override_reason(client):
+    payload = {
+        "case_id": "VISA-2026-DEC-ENH-001",
+        "applicant": {
+            "full_name": "Arjun Mehta",
+            "date_of_birth": "1998-04-12",
+            "nationality": "Indian",
+            "passport_number": "P1234567",
+            "contact_email": "arjun@example.com"
+        },
+        "visa_application": {
+            "visa_class": "TOURIST",
+            "purpose_of_travel": "Tourism and sightseeing in Sri Lanka",
+            "arrival_date": "2026-08-10",
+            "departure_date": "2026-08-20",
+            "destination_address": "Hotel Example",
+            "country_of_application": "India",
+            "payment_status": "PAID"
+        },
+        "documents": [
+            {"document_id": "DOC-001", "document_type": "PASSPORT", "file_uri": "gs://x/passport.pdf"},
+            {"document_id": "DOC-002", "document_type": "BANK_STATEMENT", "file_uri": "gs://x/bank.pdf"},
+            {"document_id": "DOC-003", "document_type": "FLIGHT_ITINERARY", "file_uri": "gs://x/flight.pdf"}
+        ],
+        "policy_context": {
+            "country": "Sri Lanka",
+            "policy_version": "sl-tourist-policy-v1",
+            "effective_date": "2026-05-25"
+        },
+        "mock_profile": {
+            "security_status": "SYSTEM_UNAVAILABLE"
+        }
+    }
+    assert client.post("/applications", json=payload).status_code == 201
+    process = client.post(f"/cases/{payload['case_id']}/process")
+    assert process.status_code == 200
+    assert process.json()["recommendation"] == "ENHANCED_REVIEW"
+
+    decision = client.post(
+        f"/cases/{payload['case_id']}/officer-decision",
+        json={
+            "decision": "REJECT",
+            "officer_id": "OFF-1",
+            "reason": "Officer completed enhanced review and recorded a final refusal.",
+            "override_reason": ""
+        },
+    )
+    assert decision.status_code == 200
+
+
 def test_officer_approval_moves_case_to_port_clearance_follow_up(client):
     payload = {
         "case_id": "VISA-2026-PORT-001",

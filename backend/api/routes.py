@@ -128,6 +128,12 @@ def submit_officer_decision(case_id: str, payload: OfficerDecisionRequest) -> di
     case = case_service.get_case(case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
+    recommendation = case.agent_outputs.get("supervisor_agent", {}).get("recommendation", "")
+    if workflow.override_reason_required(recommendation, payload.decision) and not payload.override_reason.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="override_reason is required when the officer decision differs from the system recommendation.",
+        )
     return workflow.submit_officer_decision(case_id, payload)
 
 

@@ -138,9 +138,7 @@ class TouristVisaWorkflow:
             return None
 
         recommendation = case.agent_outputs.get("supervisor_agent", {}).get("recommendation", "")
-        override_required = payload.decision == "REJECT" and recommendation == "APPROVE_READY"
-        if payload.decision != "REQUEST_MORE_INFO" and recommendation and payload.override_reason:
-            override_required = True
+        override_required = self.override_reason_required(recommendation, payload.decision)
         case.override_required = override_required
 
         if payload.decision == "APPROVE":
@@ -260,6 +258,22 @@ class TouristVisaWorkflow:
         )
         self.notification_service.store_message(case_id, applicant_message)
         return {"status": "RECORDED", "audit_event": event, "human_decision_required": True}
+
+    def override_reason_required(self, recommendation: str, decision: str) -> bool:
+        allowed_decisions = {
+            "APPROVE_READY": {"APPROVE"},
+            "REQUEST_MORE_INFO": {"REQUEST_MORE_INFO"},
+            "REFUSAL_DRAFT_READY": {"REJECT"},
+            # ENHANCED_REVIEW is a routing outcome rather than a final legal disposition,
+            # so the officer may still approve, reject, request more information, or escalate
+            # after completing the additional human review steps.
+            "ENHANCED_REVIEW": {"APPROVE", "REJECT", "REQUEST_MORE_INFO", "ESCALATE"},
+        }
+        normalized_recommendation = str(recommendation or "").upper()
+        normalized_decision = str(decision or "").upper()
+        if normalized_recommendation not in allowed_decisions:
+            return False
+        return normalized_decision not in allowed_decisions[normalized_recommendation]
 
     def send_applicant_message(self, case_id: str) -> ApplicantMessageResponse | None:
         case = self.case_service.get_case(case_id)
