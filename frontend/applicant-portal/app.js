@@ -14,9 +14,12 @@ const elements = {
   heroNoticeCopy: document.querySelector("#hero-notice-copy"),
   applicationForm: document.querySelector("#application-form"),
   statusForm: document.querySelector("#status-form"),
+  documentResponseForm: document.querySelector("#document-response-form"),
   formFeedback: document.querySelector("#form-feedback"),
+  documentResponseFeedback: document.querySelector("#document-response-feedback"),
   caseIdInput: document.querySelector("#case-id"),
   lookupCaseIdInput: document.querySelector("#lookup-case-id"),
+  documentResponseCaseIdInput: document.querySelector("#document-response-case-id"),
   loadSampleButton: document.querySelector("#load-sample-button"),
   useSampleStatusButton: document.querySelector("#use-sample-status-button"),
   checklistList: document.querySelector("#checklist-list"),
@@ -49,6 +52,7 @@ async function initialize() {
 function wireEvents() {
   elements.applicationForm.addEventListener("submit", handleApplicationSubmit);
   elements.statusForm.addEventListener("submit", handleStatusLookup);
+  elements.documentResponseForm.addEventListener("submit", handleDocumentResponseSubmit);
   elements.loadSampleButton.addEventListener("click", loadSampleIntoForm);
   elements.useSampleStatusButton.addEventListener("click", () => {
     renderCaseStatus(applicantPortalMock.casePacket, {
@@ -231,6 +235,45 @@ async function handleStatusLookup(event) {
   }
 }
 
+async function handleDocumentResponseSubmit(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.documentResponseForm);
+  const caseId = String(formData.get("documentResponseCaseId") || "").trim();
+  const documents = buildDocumentsPayload(formData, "documentResponse");
+
+  if (!caseId) {
+    elements.documentResponseFeedback.textContent = "Enter a case ID before submitting document updates.";
+    return;
+  }
+
+  if (!documents.length) {
+    elements.documentResponseFeedback.textContent = "Provide at least one document URI to continue.";
+    return;
+  }
+
+  try {
+    if (!state.apiAvailable) {
+      elements.documentResponseFeedback.textContent =
+        "Mock mode is active. Start the backend to submit a real document response.";
+      return;
+    }
+
+    elements.documentResponseFeedback.textContent = "Submitting document response and triggering re-check...";
+    await api.uploadDocuments(caseId, { documents });
+    await api.processCase(caseId);
+    const [casePacket, caseStatus] = await Promise.all([api.getCase(caseId), api.getCaseStatus(caseId)]);
+    renderCaseStatus(casePacket, {
+      latestStatus: caseStatus,
+      useMock: false,
+    });
+    elements.lookupCaseIdInput.value = caseId;
+    elements.documentResponseFeedback.textContent =
+      "Document response accepted. The case has been sent back through the Sri Lanka review workflow.";
+  } catch (error) {
+    elements.documentResponseFeedback.textContent = `Document response failed: ${error.message}`;
+  }
+}
+
 async function renderSampleCasePreview() {
   renderCaseStatus(applicantPortalMock.casePacket, {
     latestStatus: buildMockStatus(applicantPortalMock.casePacket),
@@ -272,6 +315,7 @@ function renderCaseStatus(casePacket, options) {
     .join("");
 
   const uploadedDocuments = status.uploaded_documents?.length ? status.uploaded_documents : casePacket.documents;
+  hydrateDocumentResponseForm(casePacket, uploadedDocuments);
   elements.documentSummaryList.innerHTML = listMarkup(
     (uploadedDocuments || []).map(
       (document) => `
@@ -312,6 +356,22 @@ function renderCaseStatus(casePacket, options) {
     elements.statusEmpty.textContent =
       "The sample case is shown below. Start the backend to replace this preview with live API data.";
   }
+}
+
+function hydrateDocumentResponseForm(casePacket, documents) {
+  elements.documentResponseCaseIdInput.value = casePacket.case_id;
+  setDocumentInputValue("documentResponsePassportUri", documents, "PASSPORT");
+  setDocumentInputValue("documentResponseBankUri", documents, "BANK_STATEMENT");
+  setDocumentInputValue("documentResponseFlightUri", documents, "FLIGHT_ITINERARY");
+  setDocumentInputValue("documentResponseAccommodationUri", documents, "HOTEL_BOOKING_OR_INVITATION");
+}
+
+function setDocumentInputValue(fieldName, documents, documentType) {
+  const input = elements.documentResponseForm?.elements?.namedItem(fieldName);
+  if (!input) {
+    return;
+  }
+  input.value = documents.find((document) => document.document_type === documentType)?.file_uri || "";
 }
 
 function buildMockStatus(casePacket) {
@@ -371,12 +431,13 @@ function buildApplicationPayload(formData) {
   };
 }
 
-function buildDocumentsPayload(formData) {
+function buildDocumentsPayload(formData, prefix = "") {
+  const field = (name) => formData.get(`${prefix}${name}`);
   const documentSpecs = [
-    ["DOC-001", "PASSPORT", formData.get("passportDocumentUri")],
-    ["DOC-002", "BANK_STATEMENT", formData.get("bankDocumentUri")],
-    ["DOC-003", "FLIGHT_ITINERARY", formData.get("flightDocumentUri")],
-    ["DOC-004", "HOTEL_BOOKING_OR_INVITATION", formData.get("accommodationDocumentUri")],
+    ["DOC-001", "PASSPORT", prefix ? field("PassportUri") : formData.get("passportDocumentUri")],
+    ["DOC-002", "BANK_STATEMENT", prefix ? field("BankUri") : formData.get("bankDocumentUri")],
+    ["DOC-003", "FLIGHT_ITINERARY", prefix ? field("FlightUri") : formData.get("flightDocumentUri")],
+    ["DOC-004", "HOTEL_BOOKING_OR_INVITATION", prefix ? field("AccommodationUri") : formData.get("accommodationDocumentUri")],
   ];
 
   return documentSpecs

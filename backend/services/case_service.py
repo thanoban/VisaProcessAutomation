@@ -105,7 +105,33 @@ class CaseService:
         case = self.get_case(case_id)
         if not case:
             return None
-        case.documents.extend(documents)
+        incoming_documents = list(documents)
+        if not incoming_documents:
+            return case
+
+        documents_by_type = {document.document_type: document for document in case.documents}
+        for document in incoming_documents:
+            documents_by_type[document.document_type] = document
+        case.documents = list(documents_by_type.values())
+
+        open_requests = [request for request in case.workflow.additional_evidence_requests if request.status == "OPEN"]
+        for request in open_requests:
+            request.status = "RESPONDED"
+
+        case.workflow.current_holder = "SYSTEM"
+        case.workflow.action_required_from = "SYSTEM"
+        case.workflow.next_action = "RECHECK_SUBMITTED_DOCUMENTS"
+        if open_requests or case.workflow.current_state == "WAITING_FOR_DOCUMENTS":
+            case.workflow.eta_status = "ETA_DOCUMENT_RESPONSE_RECEIVED"
+            case = self.append_timeline_event(
+                case,
+                state=case.workflow.current_state,
+                actor="APPLICANT",
+                description="Applicant submitted additional or replacement documents for re-check.",
+                action_owner="SYSTEM",
+            )
+            return case
+
         return self.save_case(case)
 
     def update_state(
