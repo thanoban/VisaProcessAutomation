@@ -15,3 +15,4 @@ Frontend priorities:
 - clear case state and current holder visibility
 - reduced confusion during document and manual-review loops
 - responsive, high-trust presentation suitable for a government workflow PoC
+- Tailwind-based MVP UI without a separate frontend build step yet

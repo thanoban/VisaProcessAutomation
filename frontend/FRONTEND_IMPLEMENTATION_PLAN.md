@@ -62,7 +62,7 @@ Initial modules:
 - use a shared design foundation for typography, spacing, cards, status badges, buttons, forms, and timelines
 - keep applicant and officer surfaces separate, but reuse shared tokens and utility behavior
 - consume the current FastAPI contract directly with small fetch wrappers and mock-safe fallbacks
-- start with static HTML, CSS, and JavaScript for fast PoC delivery, then upgrade to a component framework only if the interaction surface outgrows the static architecture
+- start with static HTML and JavaScript plus Tailwind-based styling for fast PoC delivery, then upgrade to a compiled Tailwind or component pipeline only if the interaction surface outgrows the static architecture
 
 ## 5. Visual Direction
 

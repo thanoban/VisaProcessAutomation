@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VisaFlow MAS Applicant Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Manrope", "Segoe UI", "sans-serif"],
+              display: ["Source Serif 4", "Georgia", "serif"],
+            },
+            colors: {
+              visa: {
+                ink: "#123042",
+                navy: "#12364D",
+                teal: "#0F766E",
+                sand: "#F8F2E9",
+                mist: "#EEF5F4",
+              },
+            },
+            boxShadow: {
+              soft: "0 24px 60px rgba(17, 24, 39, 0.10)",
+            },
+            borderRadius: {
+              "4xl": "2rem",
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="stylesheet" href="../shared/styles.css" />
+  </head>
+  <body class="min-h-screen text-visa-ink">
+    <div class="mx-auto w-[min(calc(100%-1.5rem),78rem)] px-0 py-4 md:w-[min(calc(100%-2rem),78rem)] md:py-6">
+      <header class="mb-7 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div class="flex items-center gap-4">
+          <div class="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-visa-navy to-sky-700 text-lg font-extrabold tracking-[0.18em] text-white shadow-soft">
+            VF
+          </div>
+          <div>
+            <small class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Sri Lanka Tourist Visit PoC</small>
+            <strong class="block text-lg text-slate-900">VisaFlow MAS Applicant Portal</strong>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-3 md:justify-end">
+          <span class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+            Human decision remains with the immigration officer
+          </span>
+          <span class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600" id="api-mode-pill">
+            Awaiting API check
+          </span>
+        </div>
+      </header>
+
+      <section class="relative overflow-hidden rounded-[2.25rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-8">
+        <div class="pointer-events-none absolute -bottom-24 -right-16 h-72 w-72 rounded-full bg-teal-200/30 blur-3xl"></div>
+        <div class="grid gap-6 xl:grid-cols-[1.55fr_minmax(18rem,0.95fr)]">
+          <div>
+            <span class="block text-[0.72rem] uppercase tracking-[0.22em] text-slate-500">Professional Frontend MVP</span>
+            <h1 class="font-display mt-3 text-4xl leading-none tracking-[-0.05em] text-slate-950 md:text-6xl">
+              Track the case clearly. Upload with confidence. Know the next step.
+            </h1>
+            <p class="mt-4 max-w-3xl text-sm leading-7 text-slate-600 md:text-base">
+              This portal is designed to reduce applicant confusion across ETA, document review, and manual
+              referral stages while keeping the final legal decision with the officer.
+            </p>
+            <div class="mt-6 flex flex-wrap gap-3">
+              <a class="rounded-full bg-visa-navy px-5 py-3 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5" href="#intake-panel">Start a case</a>
+              <a class="rounded-full bg-slate-900/5 px-5 py-3 text-sm font-bold text-slate-800 transition hover:-translate-y-0.5" href="#status-panel">Check case status</a>
+            </div>
+          </div>
+
+          <div class="grid gap-4">
+            <div class="rounded-[1.75rem] border border-slate-200/80 bg-white/75 p-5 backdrop-blur">
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">What this portal clarifies</span>
+              <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                <div class="rounded-3xl border border-slate-200/70 bg-white/80 p-4">
+                  <small class="text-slate-500">Operational stage</small>
+                  <strong class="mt-2 block text-lg text-slate-900">ETA to officer review</strong>
+                </div>
+                <div class="rounded-3xl border border-slate-200/70 bg-white/80 p-4">
+                  <small class="text-slate-500">Applicant visibility</small>
+                  <strong class="mt-2 block text-lg text-slate-900">Deadlines and next action</strong>
+                </div>
+                <div class="rounded-3xl border border-slate-200/70 bg-white/80 p-4">
+                  <small class="text-slate-500">Workflow safety</small>
+                  <strong class="mt-2 block text-lg text-slate-900">Manual review stays explicit</strong>
+                </div>
+                <div class="rounded-3xl border border-slate-200/70 bg-white/80 p-4">
+                  <small class="text-slate-500">Support posture</small>
+                  <strong class="mt-2 block text-lg text-slate-900">Not a legal decision engine</strong>
+                </div>
+              </div>
+            </div>
+            <div class="flex gap-3 rounded-[1.5rem] border border-slate-200/80 bg-white/75 p-5 backdrop-blur">
+              <strong class="text-sm uppercase tracking-[0.18em] text-slate-700">Portal posture</strong>
+              <span class="text-sm leading-6 text-slate-600" id="hero-notice-copy">Loading system notice and checklist guidance.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="mt-6 grid gap-6 xl:grid-cols-[1.35fr_minmax(18rem,0.85fr)]">
+        <main class="grid gap-6">
+          <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7" id="intake-panel">
+            <div class="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div>
+                <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">New application intake</span>
+                <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Create a short-visit case packet</h2>
+                <p class="mt-2 max-w-3xl text-sm leading-7 text-slate-600">
+                  Use this intake screen to create the initial case record and align the core travel facts before
+                  document review starts.
+                </p>
+              </div>
+              <div class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">Phase 1 MVP</div>
+            </div>
+
+            <form id="application-form" class="grid gap-4 md:grid-cols-2">
+              <div class="grid gap-2">
+                <label class="text-sm font-semibold text-slate-700" for="case-id">Case ID</label>
+                <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none ring-0 transition focus:border-teal-500" id="case-id" name="caseId" />
+              </div>
+              <div class="grid gap-2">
+                <label class="text-sm font-semibold text-slate-700" for="full-name">Full name</label>
+                <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="full-name" name="fullName" required />
+              </div>
+              <div class="grid gap-2">
+                <label class="text-sm font-semibold text-slate-700" for="date-of-birth">Date of birth</label>
+                <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="date-of-birth" name="dateOfBirth" type="date" required />
+              </div>
+              <div class="grid gap-2">
+                <label class="text-sm font-semibold text-slate-700" for="nationality">Nationality</label>
+                <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="nationality" name="nationality" required />
+              </div>
+              <div class="grid gap-2">
+                <label class="text-sm font-semibold text-slate-700" for="passport-number">Passport number</label>
+                <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="passport-number" name="passportNumber" required />
+              </div>
+              <div class="grid gap-2">
+                <label class="text-sm font-semibold text-slate-700" for="contact-email">Contact email</label>
+                <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="contact-email" name="contactEmail" type="email" required />
+              </div>
+              <div class="grid gap-2">
+                <label class="text-sm font-semibold text-slate-700" for="phone">Phone</label>
+                <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="phone" name="phone" />
+              </div>
+              <div class="grid gap-2">
+                <label class="text-sm font-semibold text-slate-700" for="country-of-application">Country of application</label>
+                <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="country-of-application" name="countryOfApplication" required />
+              </div>
+              <div class="grid gap-2 md:col-span-2">
+                <label class="text-sm font-semibold text-slate-700" for="purpose-of-travel">Purpose of travel</label>
+                <textarea class="min-h-32 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="purpose-of-travel" name="purposeOfTravel" required></textarea>
+              </div>
+              <div class="grid gap-2">
+                <label class="text-sm font-semibold text-slate-700" for="arrival-date">Arrival date</label>
+                <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="arrival-date" name="arrivalDate" type="date" required />
+              </div>
+              <div class="grid gap-2">
+                <label class="text-sm font-semibold text-slate-700" for="departure-date">Departure date</label>
+                <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="departure-date" name="departureDate" type="date" required />
+              </div>
+              <div class="grid gap-2">
+                <label class="text-sm font-semibold text-slate-700" for="destination-address">Destination address</label>
+                <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="destination-address" name="destinationAddress" />
+              </div>
+              <div class="grid gap-2">
+                <label class="text-sm font-semibold text-slate-700" for="sponsor">Sponsor or host</label>
+                <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="sponsor" name="sponsor" />
+              </div>
+              <div class="grid gap-2">
+                <label class="text-sm font-semibold text-slate-700" for="decision-due-at">Internal decision due</label>
+                <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="decision-due-at" name="decisionDueAt" type="datetime-local" />
+              </div>
+              <div class="grid gap-2">
+                <label class="text-sm font-semibold text-slate-700" for="payment-status">Payment status</label>
+                <select class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="payment-status" name="paymentStatus">
+                  <option value="PAID">Paid</option>
+                  <option value="PENDING">Pending</option>
+                </select>
+              </div>
+              <div class="grid gap-3 md:col-span-2">
+                <div class="flex flex-wrap gap-3">
+                  <button class="rounded-full bg-visa-navy px-5 py-3 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5" type="submit">Create application</button>
+                  <button class="rounded-full border border-slate-200 bg-transparent px-5 py-3 text-sm font-bold text-slate-700 transition hover:-translate-y-0.5" type="button" id="load-sample-button">Load sample data</button>
+                </div>
+                <p class="text-sm text-slate-500" id="form-feedback">The portal will use the live FastAPI API when it is reachable.</p>
+              </div>
+            </form>
+          </section>
+
+          <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7" id="status-panel">
+            <div class="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div>
+                <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Case status lookup</span>
+                <h2 class="mt-2 text-2xl font-extrabold text-slate-950">See the current holder, next action, and timeline</h2>
+                <p class="mt-2 max-w-3xl text-sm leading-7 text-slate-600">
+                  Applicants should never be left guessing whether a case is waiting on system review, officer action,
+                  or a document loop.
+                </p>
+              </div>
+              <div class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">Applicant clarity</div>
+            </div>
+
+            <form id="status-form" class="grid gap-4">
+              <div class="grid gap-2">
+                <label class="text-sm font-semibold text-slate-700" for="lookup-case-id">Case ID</label>
+                <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="lookup-case-id" name="lookupCaseId" placeholder="VISA-2026-0001" required />
+              </div>
+              <div class="flex flex-wrap gap-3">
+                  <button class="rounded-full bg-slate-900/5 px-5 py-3 text-sm font-bold text-slate-800 transition hover:-translate-y-0.5" type="submit">Load case status</button>
+                  <button class="rounded-full border border-slate-200 bg-transparent px-5 py-3 text-sm font-bold text-slate-700 transition hover:-translate-y-0.5" type="button" id="use-sample-status-button">Use sample case</button>
+                </div>
+            </form>
+
+            <div id="status-results" class="mt-6 grid gap-5" hidden>
+              <div class="grid gap-4 md:grid-cols-3">
+                <div class="rounded-3xl border border-slate-200/80 bg-white/85 p-5">
+                  <small class="text-slate-500">Current state</small>
+                  <span class="mt-3 block text-lg font-extrabold text-slate-900" id="state-value">-</span>
+                </div>
+                <div class="rounded-3xl border border-slate-200/80 bg-white/85 p-5">
+                  <small class="text-slate-500">Current holder</small>
+                  <span class="mt-3 block text-lg font-extrabold text-slate-900" id="holder-value">-</span>
+                </div>
+                <div class="rounded-3xl border border-slate-200/80 bg-white/85 p-5">
+                  <small class="text-slate-500">Next action</small>
+                  <span class="mt-3 block text-lg font-extrabold text-slate-900" id="next-action-value">-</span>
+                </div>
+              </div>
+
+              <div class="grid gap-4 md:grid-cols-2" id="status-definition-grid"></div>
+
+              <div class="rounded-[1.75rem] border border-slate-200/80 bg-white/75 p-5">
+                <div class="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Timeline</span>
+                    <h3 class="mt-2 text-xl font-extrabold text-slate-900">Case progression</h3>
+                  </div>
+                </div>
+                <div class="border-l-2 border-teal-100 pl-5" id="timeline-list"></div>
+              </div>
+            </div>
+
+            <div id="status-empty" class="mt-6 rounded-3xl border border-dashed border-slate-300 bg-white/45 p-6 text-sm leading-7 text-slate-600">
+              Load a case to review its operational status, document summary, and timeline.
+            </div>
+          </section>
+        </main>
+
+        <aside class="grid gap-6">
+          <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7">
+            <div class="mb-5">
+              <div>
+                <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Checklist guidance</span>
+                <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Tourist visit requirements</h2>
+              </div>
+            </div>
+            <div id="checklist-list" class="grid gap-4"></div>
+            <div id="checklist-notes" class="mt-4 grid gap-3"></div>
+          </section>
+
+          <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7">
+            <div class="mb-5">
+              <div>
+                <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">System notices</span>
+                <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Operational notices</h2>
+              </div>
+            </div>
+            <div id="notice-list" class="grid gap-4"></div>
+          </section>
+        </aside>
+      </div>
+
+      <p class="mt-6 text-center text-sm text-slate-500">
+        Applicant-facing messages stay procedural. Final approval or refusal remains a human immigration decision.
+      </p>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
