@@ -281,3 +281,119 @@ export const applicantPortalMock = {
     decision_due_at: "2026-06-03T17:00:00Z",
   },
 };
+
+export const officerDashboardMock = {
+  casePacket: applicantPortalMock.casePacket,
+  officerBrief: {
+    case_id: "VISA-2026-0001",
+    visa_class: "TOURIST",
+    applicant_summary:
+      "Arjun Mehta, passport P1234567, travel purpose: Tourism and sightseeing in Sri Lanka, workflow pack: SRI_LANKA_TOURIST_VISIT",
+    recommendation: "APPROVE_READY",
+    confidence: 0.91,
+    human_decision_required: true,
+    agent_results: [
+      {
+        agent_name: "intake_completeness_agent",
+        status: "COMPLETE",
+        summary: "All required baseline evidence is present for the current stage.",
+        risk_level: "INFO",
+      },
+      {
+        agent_name: "document_validator_agent",
+        status: "VALID",
+        summary: "Passport extraction and validation completed without blocking mismatches.",
+        risk_level: "INFO",
+      },
+      {
+        agent_name: "financial_employment_agent",
+        status: "PASS",
+        summary: "Average balance is above the configured threshold for the visit window.",
+        risk_level: "INFO",
+      },
+      {
+        agent_name: "policy_compliance_agent",
+        status: "MEETS_REQUIREMENTS",
+        summary: "Current rule pack requirements appear satisfied on the available evidence.",
+        risk_level: "INFO",
+      },
+      {
+        agent_name: "security_background_agent",
+        status: "CLEAR",
+        summary: "No blocking security matches were surfaced in the mock review path.",
+        risk_level: "CLEAR",
+      },
+      {
+        agent_name: "risk_fraud_agent",
+        status: "LOW",
+        summary: "Fraud indicators remain low and do not block officer review.",
+        risk_level: "LOW",
+      },
+    ],
+    key_evidence: ["DOC-001", "DOC-002", "DOC-003"],
+    policy_references: [
+      {
+        policy_id: "TOURIST-12-A",
+        requirement: "Valid passport and travel purpose must align with a short tourist visit.",
+        status: "SATISFIED",
+      },
+      {
+        policy_id: "TOURIST-12-B",
+        requirement: "Applicant must demonstrate sufficient support for the travel period.",
+        status: "SATISFIED",
+      },
+    ],
+    risk_flags: [],
+    missing_items: [],
+    questions_for_officer: [
+      "Confirm that the recommendation aligns with the Sri Lanka case record, active rule pack, and local operating procedures.",
+      "Remember that ETA issuance does not remove port-of-entry clearance requirements.",
+    ],
+    final_decision_options: ["APPROVE", "REJECT", "REQUEST_MORE_INFO", "ESCALATE"],
+    recommendation_panel: {
+      recommendation: "APPROVE_READY",
+      human_decision_required: true,
+      next_action: "HUMAN_OFFICER_FINAL_REVIEW",
+      current_holder: "OFFICER",
+      action_required_from: "OFFICER",
+    },
+    evidence_viewer: {
+      passport_fields: {
+        passport_number: "P1234567",
+        full_name: "Arjun Mehta",
+        date_of_birth: "1998-04-12",
+        nationality: "Indian",
+        expiry_date: "2032-03-02",
+      },
+      bank_statement_metrics: {
+        average_balance: 4200,
+        currency: "USD",
+        suspicious_patterns: [],
+      },
+      itinerary_evidence: ["DOC-003"],
+      rule_version_used: "sl-rule-pack-2026-05-25",
+      publication_reference: "ETA-40-COUNTRY-SCHEME-2026-05-25",
+      policy_source_uri: "https://example.gov.lk/tourist-policy",
+      official_sources: ["https://eta.gov.lk", "https://immigration.gov.lk"],
+      verified_at: "2026-05-25T10:15:00Z",
+    },
+    audit_timeline: [
+      {
+        timestamp: "2026-05-25T08:15:00Z",
+        event_type: "CASE_CREATED",
+        actor_type: "SYSTEM",
+        actor_id: "portal",
+        recommendation: "",
+        human_action: "",
+      },
+      {
+        timestamp: "2026-05-25T09:05:00Z",
+        event_type: "CASE_READY_FOR_OFFICER_REVIEW",
+        actor_type: "SYSTEM",
+        actor_id: "workflow",
+        recommendation: "APPROVE_READY",
+        human_action: "",
+      },
+    ],
+  },
+};

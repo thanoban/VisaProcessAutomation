@@ -99,8 +99,13 @@ def get_authorization_status(case_id: str) -> AuthorizationStatusResponse:
         manual_referral_reason=case.workflow.manual_referral_reason,
         action_required_from=case.workflow.action_required_from,
         next_action=case.workflow.next_action,
+        policy_version=case.policy_context.policy_version,
+        effective_date=case.policy_context.effective_date,
         rule_version_used=case.policy_context.effective_rule_version,
         publication_reference=case.policy_context.publication_reference,
+        source_uri=case.policy_context.source_uri,
+        official_sources=case.policy_context.official_sources,
+        verified_at=case.policy_context.verified_at,
     )
 
 

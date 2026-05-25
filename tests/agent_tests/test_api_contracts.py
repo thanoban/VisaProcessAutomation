@@ -50,10 +50,17 @@ def test_case_status_and_brief_contract(client):
     status_body = status_response.json()
     auth_body = auth_response.json()
     policy_body = policy_response.json()
+    checklist_body = checklist_response.json()
+    governance_body = governance_response.json()
     assert "recommendation_panel" in body
     assert "evidence_viewer" in body
     assert body["human_decision_required"] is True
     assert status_body["current_holder"] == "OFFICER"
     assert status_body["authorization_status"]["rule_version_used"] == "sl-rule-pack-2026-05-25"
     assert auth_body["workflow_pack"] == "SRI_LANKA_TOURIST_VISIT"
+    assert auth_body["policy_version"] == "sl-tourist-policy-v1"
+    assert auth_body["source_uri"].startswith("https://www.immigration.gov.lk/")
     assert policy_body["policy_version"] == "sl-tourist-policy-v1"
+    assert policy_body["official_sources"]
+    assert checklist_body["country"] == "Sri Lanka"
+    assert governance_body["verified_at"] == "2026-05-25"

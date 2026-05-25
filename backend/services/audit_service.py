@@ -24,6 +24,14 @@ class AuditService:
                 normalized.append(value[key])
         return normalized
 
+    @staticmethod
+    def _policy_value(payload: dict, *keys: str) -> str:
+        for key in keys:
+            value = payload.get(key, "")
+            if isinstance(value, str):
+                return value
+        return ""
+
     def write_event(
         self,
         *,
@@ -36,10 +44,18 @@ class AuditService:
         tool_calls: list[dict] | None = None,
         evidence_ids: list[str] | None = None,
         policy_ids: list[str] | None = None,
+        policy_version: str = "",
+        rule_version_used: str = "",
+        publication_reference: str = "",
+        policy_source_uri: str = "",
         recommendation: str = "",
         human_action: str = "",
         override_reason: str = "",
     ) -> dict:
+        resolved_policy_version = policy_version or self._policy_value(payload, "policy_version")
+        resolved_rule_version = rule_version_used or self._policy_value(payload, "rule_version_used")
+        resolved_publication_reference = publication_reference or self._policy_value(payload, "publication_reference")
+        resolved_policy_source_uri = policy_source_uri or self._policy_value(payload, "policy_source_uri", "source_uri")
         event = AuditEvent(
             audit_id=f"AUD-{uuid.uuid4()}",
             case_id=case_id,
@@ -55,6 +71,10 @@ class AuditService:
             output_hash=stable_hash(payload),
             evidence_ids=self._normalize_ids(evidence_ids, "evidence_id"),
             policy_ids=self._normalize_ids(policy_ids, "policy_id"),
+            policy_version=resolved_policy_version,
+            rule_version_used=resolved_rule_version,
+            publication_reference=resolved_publication_reference,
+            policy_source_uri=resolved_policy_source_uri,
             recommendation=recommendation,
             human_action=human_action,
             override_reason=override_reason,
@@ -77,6 +97,10 @@ class AuditService:
                     output_hash=event.output_hash,
                     evidence_ids=event.evidence_ids,
                     policy_ids=event.policy_ids,
+                    policy_version=event.policy_version,
+                    rule_version_used=event.rule_version_used,
+                    publication_reference=event.publication_reference,
+                    policy_source_uri=event.policy_source_uri,
                     recommendation=event.recommendation,
                     human_action=event.human_action,
                     override_reason=event.override_reason,
@@ -108,6 +132,10 @@ class AuditService:
                         output.get("policy_ids", output.get("policy_references", [])),
                         "policy_id",
                     ),
+                    policy_version=self._policy_value(output, "policy_version"),
+                    rule_version_used=self._policy_value(output, "rule_version_used"),
+                    publication_reference=self._policy_value(output, "publication_reference"),
+                    policy_source_uri=self._policy_value(output, "policy_source_uri", "source_uri"),
                     output_json=output,
                 )
             )

@@ -18,6 +18,7 @@ from backend.models.schemas import (
 from backend.services.audit_service import AuditService
 from backend.services.case_service import CaseService
 from backend.services.notification_service import NotificationService
+from backend.services.policy_service import load_policy_manifest
 from backend.services.sri_lanka_reference_service import SriLankaReferenceService
 from backend.services.utils import stable_hash
 from tools.audit_tools import write_audit_log
@@ -109,6 +110,10 @@ class TouristVisaWorkflow:
                 recommendation=recommendation,
                 evidence_ids=supervisor_output["evidence_references"],
                 policy_ids=[ref["policy_id"] for ref in supervisor_output["policy_references"]],
+                policy_version=case.policy_context.policy_version,
+                rule_version_used=case.policy_context.effective_rule_version,
+                publication_reference=case.policy_context.publication_reference,
+                policy_source_uri=case.policy_context.source_uri,
             )
         else:
             self.audit_service.write_event(
@@ -120,6 +125,10 @@ class TouristVisaWorkflow:
                 recommendation=recommendation,
                 evidence_ids=supervisor_output["evidence_references"],
                 policy_ids=[ref["policy_id"] for ref in supervisor_output["policy_references"]],
+                policy_version=case.policy_context.policy_version,
+                rule_version_used=case.policy_context.effective_rule_version,
+                publication_reference=case.policy_context.publication_reference,
+                policy_source_uri=case.policy_context.source_uri,
             )
         return supervisor_output
 
@@ -225,6 +234,10 @@ class TouristVisaWorkflow:
             actor_type="OFFICER",
             actor_id=payload.officer_id,
             payload=payload.model_dump(),
+            policy_version=case.policy_context.policy_version,
+            rule_version_used=case.policy_context.effective_rule_version,
+            publication_reference=case.policy_context.publication_reference,
+            policy_source_uri=case.policy_context.source_uri,
             recommendation=recommendation,
             human_action=payload.decision,
             override_reason=payload.override_reason,
@@ -265,6 +278,7 @@ class TouristVisaWorkflow:
 
     def get_policy_requirements(self, visa_class: str) -> PolicyRequirementsResponse:
         active_rules = self.reference_service.get_active_rules()
+        manifest = load_policy_manifest()
         retrieved = retrieve_policy_sections(
             visa_class,
             "Sri Lanka",
@@ -272,7 +286,12 @@ class TouristVisaWorkflow:
         )
         return PolicyRequirementsResponse(
             visa_class=visa_class.upper(),
+            workflow_pack=retrieved["workflow_pack"],
             policy_version=retrieved["policy_version"],
+            effective_date=active_rules.active_policy_version.effective_date,
+            source_uri=retrieved["source_uri"],
+            official_sources=manifest.get("official_sources", []),
+            verified_at=manifest.get("verified_at", ""),
             requirements=[
                 {"policy_id": section["policy_id"], "requirement": section["requirement"]}
                 for section in retrieved["sections"]
@@ -416,6 +435,9 @@ class TouristVisaWorkflow:
             "policy_version": retrieved["policy_version"],
             "rule_version_used": case.policy_context.effective_rule_version,
             "publication_reference": case.policy_context.publication_reference,
+            "policy_source_uri": retrieved["source_uri"],
+            "official_sources": case.policy_context.official_sources,
+            "verified_at": case.policy_context.verified_at,
             "eligibility_status": eligibility_status,
             "criteria": criteria,
             "missing_evidence": missing_evidence,
@@ -495,6 +517,9 @@ class TouristVisaWorkflow:
                 "itinerary_evidence": [doc.document_id for doc in case.documents if doc.document_type == "FLIGHT_ITINERARY"],
                 "rule_version_used": case.policy_context.effective_rule_version,
                 "publication_reference": case.policy_context.publication_reference,
+                "policy_source_uri": case.policy_context.source_uri,
+                "official_sources": case.policy_context.official_sources,
+                "verified_at": case.policy_context.verified_at,
             },
             audit_timeline=self.case_service.list_audit_events(case.case_id),
         )
@@ -571,6 +596,10 @@ class TouristVisaWorkflow:
             actor_type="SYSTEM",
             actor_id="workflow",
             payload=applicant_message.model_dump(),
+            policy_version=case.policy_context.policy_version,
+            rule_version_used=case.policy_context.effective_rule_version,
+            publication_reference=case.policy_context.publication_reference,
+            policy_source_uri=case.policy_context.source_uri,
         )
         supervisor_output = self._supervisor_output(
             case,
@@ -625,6 +654,10 @@ class TouristVisaWorkflow:
             "workflow_pack": case.workflow.workflow_pack,
             "rule_version_used": case.policy_context.effective_rule_version,
             "publication_reference": case.policy_context.publication_reference,
+            "policy_version": case.policy_context.policy_version,
+            "policy_source_uri": case.policy_context.source_uri,
+            "official_sources": case.policy_context.official_sources,
+            "verified_at": case.policy_context.verified_at,
             "manual_referral_reason": case.workflow.manual_referral_reason,
             "eta_status": case.workflow.eta_status,
             "port_clearance_state": case.workflow.port_clearance_state,
@@ -637,6 +670,10 @@ class TouristVisaWorkflow:
             actor_type="SYSTEM",
             actor_id="workflow",
             payload=supervisor_output,
+            policy_version=case.policy_context.policy_version,
+            rule_version_used=case.policy_context.effective_rule_version,
+            publication_reference=case.policy_context.publication_reference,
+            policy_source_uri=case.policy_context.source_uri,
             recommendation="ENHANCED_REVIEW",
         )
         return supervisor_output
@@ -720,8 +757,12 @@ class TouristVisaWorkflow:
             "current_holder": case.workflow.current_holder,
             "action_required_from": case.workflow.action_required_from,
             "workflow_pack": case.workflow.workflow_pack,
+            "policy_version": case.policy_context.policy_version,
             "rule_version_used": case.policy_context.effective_rule_version,
             "publication_reference": case.policy_context.publication_reference,
+            "policy_source_uri": case.policy_context.source_uri,
+            "official_sources": case.policy_context.official_sources,
+            "verified_at": case.policy_context.verified_at,
             "manual_referral_reason": case.workflow.manual_referral_reason,
             "eta_status": case.workflow.eta_status,
             "port_clearance_state": case.workflow.port_clearance_state,
@@ -737,10 +778,15 @@ class TouristVisaWorkflow:
 
     def _apply_governance_context(self, case: CasePacket) -> CasePacket:
         active_rules = self.reference_service.get_active_rules()
+        manifest = load_policy_manifest()
         case.policy_context.country = "Sri Lanka"
         case.policy_context.policy_version = active_rules.active_policy_version.policy_version
+        case.policy_context.effective_date = active_rules.active_policy_version.effective_date
         case.policy_context.effective_rule_version = active_rules.active_policy_version.rule_version
         case.policy_context.publication_reference = active_rules.active_policy_version.publication_reference
+        case.policy_context.source_uri = manifest.get("source_uri", "")
+        case.policy_context.official_sources = manifest.get("official_sources", active_rules.official_sources)
+        case.policy_context.verified_at = manifest.get("verified_at", active_rules.verified_at)
         case.policy_context.publication_channels = active_rules.active_circulars[0].publications
         case.workflow.workflow_pack = active_rules.workflow_pack
         return self.case_service.save_case(case)

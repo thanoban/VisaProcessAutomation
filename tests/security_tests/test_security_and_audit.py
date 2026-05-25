@@ -38,6 +38,8 @@ def test_security_payload_is_minimal_and_audit_exists(client):
     assert body["recommendation"] == "ENHANCED_REVIEW"
     audit = client.get(f"/cases/{payload['case_id']}/audit").json()
     assert audit
+    assert any(item["policy_version"] == "sl-tourist-policy-v1" for item in audit)
+    assert any(item["policy_source_uri"].startswith("https://www.immigration.gov.lk/") for item in audit)
     security_outputs = [item["payload"] for item in audit if item.get("agent_name") == "security_background_agent"]
     assert security_outputs
     raw = str(security_outputs[0])

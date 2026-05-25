@@ -13,8 +13,10 @@ def test_reference_service_loads_file_backed_sri_lanka_data():
 
     assert checklist.workflow_pack == "SRI_LANKA_TOURIST_VISIT"
     assert checklist.checklist[0].code == "PASSPORT"
+    assert checklist.country == "Sri Lanka"
     assert any("port-of-entry clearance" in note for note in checklist.notes)
     assert rules.active_policy_version.policy_version == "sl-tourist-policy-v1"
+    assert rules.official_sources
     assert rules.active_circulars[0].publications[0].reference == "https://www.eta.gov.lk/"
     assert any(rule.nationality == "NIGERIA" for rule in rules.nationality_exception_rules)
 

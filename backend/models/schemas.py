@@ -137,6 +137,9 @@ class PolicyContext(BaseModel):
     effective_date: str = "2026-05-25"
     effective_rule_version: str = "sl-rule-pack-2026-05-25"
     publication_reference: str = "ETA-40-COUNTRY-SCHEME-2026-05-25"
+    source_uri: str = "https://www.immigration.gov.lk/pages_e.php?id=14&os=av.."
+    official_sources: list[str] = Field(default_factory=list)
+    verified_at: str = "2026-05-25"
     publication_channels: list[ChannelPublication] = Field(default_factory=list)
 
 
@@ -222,6 +225,10 @@ class AuditEvent(BaseModel):
     output_hash: str = ""
     evidence_ids: list[str] = Field(default_factory=list)
     policy_ids: list[str] = Field(default_factory=list)
+    policy_version: str = ""
+    rule_version_used: str = ""
+    publication_reference: str = ""
+    policy_source_uri: str = ""
     recommendation: str = ""
     human_action: str = ""
     override_reason: str = ""
@@ -275,8 +282,11 @@ class ApplicantMessageResponse(BaseModel):
 
 class ChecklistResponse(BaseModel):
     workflow_pack: str
+    country: str = ""
     visa_class: str
     checklist: list[ChecklistItem]
+    verified_at: str = ""
+    official_sources: list[str] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
 
 
@@ -288,8 +298,13 @@ class AuthorizationStatusResponse(BaseModel):
     manual_referral_reason: str | None = None
     action_required_from: str
     next_action: str
+    policy_version: str = ""
+    effective_date: str = ""
     rule_version_used: str
     publication_reference: str = ""
+    source_uri: str = ""
+    official_sources: list[str] = Field(default_factory=list)
+    verified_at: str = ""
 
 
 class CaseStatusResponse(BaseModel):
@@ -324,12 +339,20 @@ class SystemNotice(BaseModel):
 
 class PolicyRequirementsResponse(BaseModel):
     visa_class: str
+    workflow_pack: str = ""
     policy_version: str
+    effective_date: str = ""
+    source_uri: str = ""
+    official_sources: list[str] = Field(default_factory=list)
+    verified_at: str = ""
     requirements: list[dict[str, Any]]
 
 
 class GovernanceRulesResponse(BaseModel):
     workflow_pack: str
+    country: str = ""
+    verified_at: str = ""
+    official_sources: list[str] = Field(default_factory=list)
     active_policy_version: EffectivePolicyVersion
     active_circulars: list[RuleCircular]
     nationality_exception_rules: list[NationalityExceptionRule]

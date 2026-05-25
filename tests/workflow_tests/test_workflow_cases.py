@@ -61,3 +61,5 @@ def test_sample_output_shape(client):
     assert result["next_action"] == "HUMAN_OFFICER_FINAL_REVIEW"
     assert result["workflow_pack"] == "SRI_LANKA_TOURIST_VISIT"
     assert result["rule_version_used"] == "sl-rule-pack-2026-05-25"
+    assert result["policy_version"] == "sl-tourist-policy-v1"
+    assert result["policy_source_uri"].startswith("https://www.immigration.gov.lk/")

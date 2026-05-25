@@ -14,3 +14,4 @@ Frontend priorities:
 - single-screen operational case understanding
 - explicit separation between recommendation and legal human decision
 - clear evidence, risk, policy, and audit framing for officer review
+- Tailwind-based MVP UI without a separate frontend build step yet
