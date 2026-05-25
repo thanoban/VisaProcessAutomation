@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 Recommendation = Literal["APPROVE_READY", "REQUEST_MORE_INFO", "ENHANCED_REVIEW", "REFUSAL_DRAFT_READY"]
 OfficerDecision = Literal["APPROVE", "REJECT", "REQUEST_MORE_INFO", "ESCALATE"]
+ActionOwner = Literal["APPLICANT", "SYSTEM", "OFFICER", "MISSION_OR_HEAD_OFFICE", "PORT_OF_ENTRY", "SUPERVISOR"]
 
 
 class Applicant(BaseModel):
@@ -38,10 +39,104 @@ class DocumentItem(BaseModel):
     status: Literal["UPLOADED", "PROCESSED", "INVALID"] = "UPLOADED"
 
 
+class ChannelPublication(BaseModel):
+    channel: str
+    published_at: str
+    reference: str
+    notes: str = ""
+
+
+class RuleCircular(BaseModel):
+    circular_id: str
+    title: str
+    effective_date: str
+    status: str
+    legal_owner: str
+    public_summary: str
+    internal_summary: str
+    supersedes: str | None = None
+    publications: list[ChannelPublication] = Field(default_factory=list)
+
+
+class EffectivePolicyVersion(BaseModel):
+    workflow_pack: str
+    policy_version: str
+    rule_version: str
+    effective_date: str
+    publication_reference: str
+    notes: str = ""
+
+
+class MissionOverride(BaseModel):
+    mission_code: str
+    reason: str
+    applies_to: str
+
+
+class NationalityExceptionRule(BaseModel):
+    rule_id: str
+    nationality: str
+    requires_sponsor: bool = False
+    requires_manual_review: bool = True
+    routing_target: str = "HEAD_OFFICE"
+    reason: str
+
+
+class CaseTimelineEvent(BaseModel):
+    state: str
+    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    actor: str
+    description: str = ""
+    action_owner: str | None = None
+
+
+class AdditionalEvidenceRequest(BaseModel):
+    request_id: str
+    requested_items: list[str] = Field(default_factory=list)
+    reason: str
+    deadline: str = ""
+    status: str = "OPEN"
+
+
+class Appointment(BaseModel):
+    appointment_type: str
+    appointment_id: str | None = None
+    status: str = "NOT_REQUIRED"
+    location: str = ""
+    scheduled_for: str = ""
+    instructions: str = ""
+
+
+class PortClearanceEvent(BaseModel):
+    event_type: str
+    status: str
+    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    notes: str = ""
+
+
+class DecisionNotice(BaseModel):
+    message_type: str
+    subject: str
+    summary: str
+    next_steps: list[str] = Field(default_factory=list)
+    issued_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+
+
+class ChecklistItem(BaseModel):
+    code: str
+    title: str
+    description: str
+    required: bool = True
+    guidance: str = ""
+
+
 class PolicyContext(BaseModel):
     country: str = "UNSPECIFIED"
     policy_version: str = "tourist-policy-v1"
     effective_date: str = "2026-01-01"
+    effective_rule_version: str = "sl-rule-pack-2026-05-25"
+    publication_reference: str = "ETA-40-COUNTRY-SCHEME-2026-05-25"
+    publication_channels: list[ChannelPublication] = Field(default_factory=list)
 
 
 class WorkflowState(BaseModel):
@@ -49,6 +144,18 @@ class WorkflowState(BaseModel):
     previous_states: list[str] = Field(default_factory=list)
     assigned_officer: str | None = None
     sla_deadline: str | None = None
+    workflow_pack: str = "SRI_LANKA_TOURIST_VISIT"
+    current_holder: ActionOwner = "SYSTEM"
+    next_action: str = "PRECHECK_APPLICATION"
+    action_required_from: ActionOwner = "SYSTEM"
+    eta_status: str = "ETA_SUBMITTED"
+    port_clearance_state: str = "NOT_STARTED"
+    extension_state: str = "NOT_REQUESTED"
+    manual_referral_reason: str | None = None
+    additional_evidence_requests: list[AdditionalEvidenceRequest] = Field(default_factory=list)
+    appointments: list[Appointment] = Field(default_factory=list)
+    port_clearance_events: list[PortClearanceEvent] = Field(default_factory=list)
+    decision_notice: DecisionNotice | None = None
 
 
 class AuditInfo(BaseModel):
@@ -132,7 +239,7 @@ class CasePacket(BaseModel):
     workflow: WorkflowState = Field(default_factory=WorkflowState)
     audit: AuditInfo = Field(default_factory=AuditInfo)
     submission_channel: str = "ONLINE_PORTAL"
-    status_timeline: list[dict[str, Any]] = Field(default_factory=list)
+    status_timeline: list[CaseTimelineEvent] = Field(default_factory=list)
     applicant_message_history: list[dict[str, Any]] = Field(default_factory=list)
     security_handling_code: str = "STANDARD"
     decision_due_at: str | None = None
@@ -165,6 +272,25 @@ class ApplicantMessageResponse(BaseModel):
     deadline: str = ""
 
 
+class ChecklistResponse(BaseModel):
+    workflow_pack: str
+    visa_class: str
+    checklist: list[ChecklistItem]
+    notes: list[str] = Field(default_factory=list)
+
+
+class AuthorizationStatusResponse(BaseModel):
+    case_id: str
+    workflow_pack: str
+    eta_status: str
+    port_clearance_state: str
+    manual_referral_reason: str | None = None
+    action_required_from: str
+    next_action: str
+    rule_version_used: str
+    publication_reference: str = ""
+
+
 class CaseStatusResponse(BaseModel):
     case_id: str
     status: str
@@ -174,6 +300,12 @@ class CaseStatusResponse(BaseModel):
     deadlines: dict[str, Any] = Field(default_factory=dict)
     service_notices: list[dict[str, Any]] = Field(default_factory=list)
     timeline: list[dict[str, Any]] = Field(default_factory=list)
+    current_holder: str = "SYSTEM"
+    next_action: str = ""
+    action_required_from: str = "SYSTEM"
+    authorization_status: dict[str, Any] = Field(default_factory=dict)
+    port_clearance_state: str = "NOT_STARTED"
+    extension_state: str = "NOT_REQUESTED"
 
 
 class OfficerDecisionRequest(BaseModel):
@@ -193,3 +325,18 @@ class PolicyRequirementsResponse(BaseModel):
     visa_class: str
     policy_version: str
     requirements: list[dict[str, Any]]
+
+
+class GovernanceRulesResponse(BaseModel):
+    workflow_pack: str
+    active_policy_version: EffectivePolicyVersion
+    active_circulars: list[RuleCircular]
+    nationality_exception_rules: list[NationalityExceptionRule]
+
+
+class SupervisorQueueSummary(BaseModel):
+    workflow_pack: str
+    counts_by_state: dict[str, int]
+    manual_referrals: int
+    waiting_for_documents: int
+    ready_for_officer_review: int

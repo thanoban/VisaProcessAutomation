@@ -14,6 +14,16 @@ class AuditService:
     prompt_version = "visaflow-prompts-v1"
     model_version = "gemini-mock-poc-v1"
 
+    @staticmethod
+    def _normalize_ids(values: list | None, key: str) -> list[str]:
+        normalized: list[str] = []
+        for value in values or []:
+            if isinstance(value, str):
+                normalized.append(value)
+            elif isinstance(value, dict) and key in value and isinstance(value[key], str):
+                normalized.append(value[key])
+        return normalized
+
     def write_event(
         self,
         *,
@@ -43,8 +53,8 @@ class AuditService:
             tool_calls=tool_calls or [],
             input_hash=stable_hash({"case_id": case_id, "event_type": event_type, "agent_name": agent_name}),
             output_hash=stable_hash(payload),
-            evidence_ids=evidence_ids or [],
-            policy_ids=policy_ids or [],
+            evidence_ids=self._normalize_ids(evidence_ids, "evidence_id"),
+            policy_ids=self._normalize_ids(policy_ids, "policy_id"),
             recommendation=recommendation,
             human_action=human_action,
             override_reason=override_reason,
@@ -90,8 +100,14 @@ class AuditService:
                     input_hash=stable_hash({"case_id": case_id, "agent_name": output["agent_name"]}),
                     output_hash=stable_hash(output),
                     tool_calls=output.get("tool_calls", []),
-                    evidence_ids=output.get("evidence_ids", output.get("evidence_references", [])),
-                    policy_ids=output.get("policy_ids", output.get("policy_references", [])),
+                    evidence_ids=self._normalize_ids(
+                        output.get("evidence_ids", output.get("evidence_references", [])),
+                        "evidence_id",
+                    ),
+                    policy_ids=self._normalize_ids(
+                        output.get("policy_ids", output.get("policy_references", [])),
+                        "policy_id",
+                    ),
                     output_json=output,
                 )
             )

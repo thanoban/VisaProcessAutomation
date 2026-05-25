@@ -28,11 +28,14 @@ def sample_payload():
         ("VISA-2026-EXPIRED", {"passport_expiry": "2026-01-01"}, "ENHANCED_REVIEW"),
         ("VISA-2026-MISSINGBANK", {}, "REQUEST_MORE_INFO"),
         ("VISA-2026-LOWFUNDS", {"average_balance": 300.0}, "REQUEST_MORE_INFO"),
+        ("VISA-2026-UNREADABLE", {"force_invalid_upload": True}, "REQUEST_MORE_INFO"),
         ("VISA-2026-NAMEMISMATCH", {"passport_name": "Kamal P."}, "ENHANCED_REVIEW"),
         ("VISA-2026-SUDDENDEPOSIT", {"sudden_deposits": [5000.0]}, "REQUEST_MORE_INFO"),
         ("VISA-2026-POLICYFAIL", {"policy_failures": ["TOURIST-20-C"]}, "REFUSAL_DRAFT_READY"),
         ("VISA-2026-HIGHRISK", {"risk_band": "HIGH", "fraud_indicators": ["DUPLICATE_CONTACT"]}, "ENHANCED_REVIEW"),
         ("VISA-2026-SECURITYDOWN", {"security_status": "SYSTEM_UNAVAILABLE"}, "ENHANCED_REVIEW"),
+        ("VISA-2026-MANUAL", {"requires_manual_referral": True}, "ENHANCED_REVIEW"),
+        ("VISA-2026-CONFLICT", {"conflicting_publication": True}, "REQUEST_MORE_INFO"),
         ("VISA-2026-OVERRIDE", {}, "APPROVE_READY"),
     ],
 )
@@ -56,3 +59,5 @@ def test_sample_output_shape(client):
     assert result["recommendation"] == "APPROVE_READY"
     assert "DOC-001" in result["evidence_references"]
     assert result["next_action"] == "HUMAN_OFFICER_FINAL_REVIEW"
+    assert result["workflow_pack"] == "SRI_LANKA_TOURIST_VISIT"
+    assert result["rule_version_used"] == "sl-rule-pack-2026-05-25"

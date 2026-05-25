@@ -2,19 +2,19 @@ def test_case_status_and_brief_contract(client):
     payload = {
         "case_id": "VISA-2026-API-001",
         "applicant": {
-            "full_name": "Kamal Perera",
+            "full_name": "Arjun Mehta",
             "date_of_birth": "1998-04-12",
-            "nationality": "Sri Lankan",
-            "passport_number": "N1234567",
-            "contact_email": "kamal@example.com"
+            "nationality": "Indian",
+            "passport_number": "P1234567",
+            "contact_email": "arjun@example.com"
         },
         "visa_application": {
             "visa_class": "TOURIST",
-            "purpose_of_travel": "Tourism and sightseeing",
+            "purpose_of_travel": "Tourism and sightseeing in Sri Lanka",
             "arrival_date": "2026-08-10",
             "departure_date": "2026-08-20",
             "destination_address": "Hotel Example",
-            "country_of_application": "Sri Lanka",
+            "country_of_application": "India",
             "payment_status": "PAID"
         },
         "documents": [
@@ -32,9 +32,24 @@ def test_case_status_and_brief_contract(client):
     assert client.post(f"/cases/{payload['case_id']}/process").status_code == 200
     status_response = client.get(f"/cases/{payload['case_id']}/status")
     brief_response = client.get(f"/cases/{payload['case_id']}/officer-brief")
+    timeline_response = client.get(f"/cases/{payload['case_id']}/timeline")
+    auth_response = client.get(f"/cases/{payload['case_id']}/authorization-status")
+    checklist_response = client.get("/checklists/tourist-visit")
+    governance_response = client.get("/governance/rules/active")
+    queue_response = client.get("/supervisor/queues")
     assert status_response.status_code == 200
     assert brief_response.status_code == 200
+    assert timeline_response.status_code == 200
+    assert auth_response.status_code == 200
+    assert checklist_response.status_code == 200
+    assert governance_response.status_code == 200
+    assert queue_response.status_code == 200
     body = brief_response.json()
+    status_body = status_response.json()
+    auth_body = auth_response.json()
     assert "recommendation_panel" in body
     assert "evidence_viewer" in body
     assert body["human_decision_required"] is True
+    assert status_body["current_holder"] == "OFFICER"
+    assert status_body["authorization_status"]["rule_version_used"] == "sl-rule-pack-2026-05-25"
+    assert auth_body["workflow_pack"] == "SRI_LANKA_TOURIST_VISIT"

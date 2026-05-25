@@ -3,20 +3,26 @@ from fastapi import APIRouter, HTTPException, status
 from backend.models.schemas import (
     ApplicantMessageResponse,
     ApplicationCreateRequest,
+    AuthorizationStatusResponse,
     CasePacket,
     CaseStatusResponse,
+    ChecklistResponse,
     DocumentUploadRequest,
+    GovernanceRulesResponse,
     OfficerBrief,
     OfficerDecisionRequest,
     PolicyRequirementsResponse,
+    SupervisorQueueSummary,
     SystemNotice,
 )
 from backend.services.case_service import CaseService
+from backend.services.sri_lanka_reference_service import SriLankaReferenceService
 from backend.workflows.tourist_visa_workflow import TouristVisaWorkflow
 
 router = APIRouter()
 case_service = CaseService()
 workflow = TouristVisaWorkflow()
+sri_lanka_reference = SriLankaReferenceService()
 
 
 @router.get("/health")
@@ -72,6 +78,32 @@ def get_case_status(case_id: str) -> CaseStatusResponse:
     return case_service.get_case_status(case)
 
 
+@router.get("/cases/{case_id}/timeline")
+def get_case_timeline(case_id: str) -> list[dict]:
+    case = case_service.get_case(case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    return case_service.get_case_timeline(case)
+
+
+@router.get("/cases/{case_id}/authorization-status", response_model=AuthorizationStatusResponse)
+def get_authorization_status(case_id: str) -> AuthorizationStatusResponse:
+    case = case_service.get_case(case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    return AuthorizationStatusResponse(
+        case_id=case.case_id,
+        workflow_pack=case.workflow.workflow_pack,
+        eta_status=case.workflow.eta_status,
+        port_clearance_state=case.workflow.port_clearance_state,
+        manual_referral_reason=case.workflow.manual_referral_reason,
+        action_required_from=case.workflow.action_required_from,
+        next_action=case.workflow.next_action,
+        rule_version_used=case.policy_context.effective_rule_version,
+        publication_reference=case.policy_context.publication_reference,
+    )
+
+
 @router.get("/cases/{case_id}/officer-brief", response_model=OfficerBrief)
 def get_officer_brief(case_id: str) -> OfficerBrief:
     brief = case_service.get_officer_brief(case_id)
@@ -104,3 +136,18 @@ def send_message(case_id: str) -> ApplicantMessageResponse:
 @router.get("/policies/{visa_class}/requirements", response_model=PolicyRequirementsResponse)
 def get_policy_requirements(visa_class: str) -> PolicyRequirementsResponse:
     return workflow.get_policy_requirements(visa_class)
+
+
+@router.get("/checklists/tourist-visit", response_model=ChecklistResponse)
+def get_tourist_visit_checklist() -> ChecklistResponse:
+    return sri_lanka_reference.get_tourist_checklist()
+
+
+@router.get("/governance/rules/active", response_model=GovernanceRulesResponse)
+def get_active_governance_rules() -> GovernanceRulesResponse:
+    return sri_lanka_reference.get_active_rules()
+
+
+@router.get("/supervisor/queues", response_model=SupervisorQueueSummary)
+def get_supervisor_queues() -> SupervisorQueueSummary:
+    return sri_lanka_reference.build_queue_summary(case_service.list_cases())

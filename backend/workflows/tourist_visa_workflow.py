@@ -1,20 +1,25 @@
 from __future__ import annotations
 
-from typing import Any
+from uuid import uuid4
 
 from backend.models.schemas import (
-    AgentEnvelope,
+    AdditionalEvidenceRequest,
     ApplicantMessageResponse,
+    Appointment,
     CasePacket,
+    DecisionNotice,
+    NationalityExceptionRule,
     OfficerBrief,
     OfficerBriefAgentResult,
     OfficerDecisionRequest,
     PolicyRequirementsResponse,
+    PortClearanceEvent,
 )
 from backend.services.audit_service import AuditService
 from backend.services.case_service import CaseService
 from backend.services.notification_service import NotificationService
-from backend.services.utils import stable_hash, utc_now
+from backend.services.sri_lanka_reference_service import SriLankaReferenceService
+from backend.services.utils import stable_hash
 from tools.audit_tools import write_audit_log
 from tools.case_tools import check_payment_status, get_application, get_uploaded_documents
 from tools.document_tools import check_photo_quality, extract_document_fields, validate_passport
@@ -30,34 +35,50 @@ class TouristVisaWorkflow:
         self.case_service = CaseService()
         self.audit_service = AuditService()
         self.notification_service = NotificationService()
+        self.reference_service = SriLankaReferenceService()
 
     def process_case(self, case_id: str) -> dict | None:
         case = get_application(case_id)
         if not case:
             return None
 
-        self.case_service.update_state(case, "UNDER_REVIEW", actor="SYSTEM")
-        case = self.case_service.get_case(case_id)
+        case = self._apply_governance_context(case)
+        case.workflow.current_holder = "SYSTEM"
+        case.workflow.action_required_from = "SYSTEM"
+        case.workflow.next_action = "RUN_INTAKE_PRECHECK"
+        case.workflow.eta_status = "ETA_UNDER_PRECHECK"
+        case = self.case_service.save_case(case)
+        case = self.case_service.update_state(
+            case,
+            "UNDER_PRECHECK",
+            actor="SYSTEM",
+            description="Sri Lanka tourist visit pre-check started.",
+            action_owner="SYSTEM",
+        )
 
         intake = self._run_intake(case)
         self._store_agent_output(case, intake)
 
-        if intake["status"] == "INCOMPLETE":
-            missing_items = intake["missing_items"]
-            applicant_message = create_evidence_request(case.case_id, missing_items)
-            self.notification_service.store_message(case.case_id, applicant_message)
-            notify_applicant(case.case_id, applicant_message)
-            case.workflow.current_state = "WAITING_FOR_DOCUMENTS"
-            case.status_timeline.append({"state": "WAITING_FOR_DOCUMENTS", "timestamp": utc_now(), "actor": "SYSTEM"})
-            self.case_service.save_case(case)
-            self.audit_service.write_event(
-                case_id=case.case_id,
-                event_type="CASE_WAITING_FOR_DOCUMENTS",
-                actor_type="SYSTEM",
-                actor_id="workflow",
-                payload=applicant_message.model_dump(),
-            )
-            return self._supervisor_output(case, [intake], "REQUEST_MORE_INFO", ["Missing required evidence."])
+        if intake["status"] != "COMPLETE":
+            return self._handle_evidence_loop(case, intake)
+
+        exception_rule = self.reference_service.find_exception_rule(case)
+        if exception_rule:
+            return self._handle_manual_referral(case, intake, exception_rule)
+
+        case = self.case_service.get_case(case.case_id)
+        case.workflow.current_holder = "SYSTEM"
+        case.workflow.action_required_from = "SYSTEM"
+        case.workflow.next_action = "RUN_ELIGIBILITY_ANALYSIS"
+        case.workflow.eta_status = "ETA_UNDER_ANALYSIS"
+        case = self.case_service.save_case(case)
+        case = self.case_service.update_state(
+            case,
+            "UNDER_ANALYSIS",
+            actor="SYSTEM",
+            description="Sri Lanka tourist visit automated analysis started.",
+            action_owner="SYSTEM",
+        )
 
         document = self._run_document_validator(case)
         financial = self._run_financial(case)
@@ -70,36 +91,134 @@ class TouristVisaWorkflow:
             self._store_agent_output(case, output)
 
         recommendation, blocking_issues, risk_flags = self._route(outputs)
+        case = self.case_service.get_case(case.case_id)
+        case = self._update_workflow_for_recommendation(case, recommendation, blocking_issues, policy.get("missing_evidence", []))
+
         supervisor_output = self._supervisor_output(case, outputs, recommendation, blocking_issues, risk_flags)
         self._store_agent_output(case, supervisor_output)
 
-        officer_brief_output = self._run_officer_liaison(case, outputs, supervisor_output)
-        self._store_agent_output(case, officer_brief_output)
-
-        case = self.case_service.get_case(case.case_id)
-        self.case_service.update_state(case, "READY_FOR_OFFICER_REVIEW", actor="SYSTEM")
-        self.audit_service.write_event(
-            case_id=case.case_id,
-            event_type="CASE_READY_FOR_OFFICER_REVIEW",
-            actor_type="SYSTEM",
-            actor_id="workflow",
-            payload=supervisor_output,
-            recommendation=recommendation,
-            evidence_ids=supervisor_output["evidence_references"],
-            policy_ids=[ref["policy_id"] for ref in supervisor_output["policy_references"]],
-        )
+        if case.workflow.current_state == "READY_FOR_OFFICER_REVIEW":
+            officer_brief_output = self._run_officer_liaison(case, outputs, supervisor_output)
+            self._store_agent_output(case, officer_brief_output)
+            self.audit_service.write_event(
+                case_id=case.case_id,
+                event_type="CASE_READY_FOR_OFFICER_REVIEW",
+                actor_type="SYSTEM",
+                actor_id="workflow",
+                payload=supervisor_output,
+                recommendation=recommendation,
+                evidence_ids=supervisor_output["evidence_references"],
+                policy_ids=[ref["policy_id"] for ref in supervisor_output["policy_references"]],
+            )
+        else:
+            self.audit_service.write_event(
+                case_id=case.case_id,
+                event_type="CASE_WAITING_FOR_APPLICANT",
+                actor_type="SYSTEM",
+                actor_id="workflow",
+                payload=supervisor_output,
+                recommendation=recommendation,
+                evidence_ids=supervisor_output["evidence_references"],
+                policy_ids=[ref["policy_id"] for ref in supervisor_output["policy_references"]],
+            )
         return supervisor_output
 
     def submit_officer_decision(self, case_id: str, payload: OfficerDecisionRequest) -> dict | None:
         case = self.case_service.get_case(case_id)
         if not case:
             return None
+
         recommendation = case.agent_outputs.get("supervisor_agent", {}).get("recommendation", "")
         override_required = payload.decision == "REJECT" and recommendation == "APPROVE_READY"
         if payload.decision != "REQUEST_MORE_INFO" and recommendation and payload.override_reason:
             override_required = True
         case.override_required = override_required
-        self.case_service.update_state(case, "DECISION_RECORDED", actor=payload.officer_id)
+
+        if payload.decision == "APPROVE":
+            case.workflow.eta_status = "ETA_ISSUED"
+            case.workflow.port_clearance_state = "PENDING_PORT_CLEARANCE"
+            case.workflow.current_holder = "PORT_OF_ENTRY"
+            case.workflow.action_required_from = "PORT_OF_ENTRY"
+            case.workflow.next_action = "PRESENT_PASSPORT_AT_PORT_OF_ENTRY"
+            case.workflow.decision_notice = DecisionNotice(
+                message_type="STATUS_UPDATE",
+                subject=f"Tourist visit authorization ready for case {case_id}",
+                summary="The case has completed officer review. Travel documents must still be presented for port-of-entry clearance.",
+                next_steps=[
+                    "Carry the passport used for the application.",
+                    "Retain ETA or authorization proof for travel and check-in.",
+                    "Be ready for immigration clearance at the Sri Lanka port of entry.",
+                ],
+            )
+            case.workflow.port_clearance_events.append(
+                PortClearanceEvent(
+                    event_type="AUTHORIZATION_READY",
+                    status="PENDING_PORT_CLEARANCE",
+                    notes="Authorization is ready, but final entry clearance remains with the port-of-entry officer.",
+                )
+            )
+            case = self.case_service.save_case(case)
+            case = self.case_service.update_state(
+                case,
+                "POST_DECISION_FULFILLMENT",
+                actor=payload.officer_id,
+                description="Officer approved the case for authorization issuance and port-of-entry follow-up.",
+                action_owner="PORT_OF_ENTRY",
+            )
+        elif payload.decision == "REQUEST_MORE_INFO":
+            request = AdditionalEvidenceRequest(
+                request_id=f"REQ-{uuid4()}",
+                requested_items=["ADDITIONAL_SUPPORTING_EVIDENCE"],
+                reason=payload.reason,
+                status="OPEN",
+            )
+            case.workflow.additional_evidence_requests.append(request)
+            case.workflow.eta_status = "ETA_ADDITIONAL_EVIDENCE_REQUIRED"
+            case.workflow.current_holder = "APPLICANT"
+            case.workflow.action_required_from = "APPLICANT"
+            case.workflow.next_action = "RESPOND_TO_INFORMATION_REQUEST"
+            case = self.case_service.save_case(case)
+            case = self.case_service.update_state(
+                case,
+                "WAITING_FOR_DOCUMENTS",
+                actor=payload.officer_id,
+                description="Officer requested more information from the applicant.",
+                action_owner="APPLICANT",
+            )
+        elif payload.decision == "ESCALATE":
+            case.workflow.current_holder = "SUPERVISOR"
+            case.workflow.action_required_from = "SUPERVISOR"
+            case.workflow.next_action = "SUPERVISOR_ESCALATION_REVIEW"
+            case.workflow.eta_status = "ETA_ESCALATED"
+            case = self.case_service.save_case(case)
+            case = self.case_service.update_state(
+                case,
+                "READY_FOR_OFFICER_REVIEW",
+                actor=payload.officer_id,
+                description="Officer escalated the case for supervisor review.",
+                action_owner="SUPERVISOR",
+            )
+        else:
+            case.workflow.eta_status = "ETA_REFUSED"
+            case.workflow.port_clearance_state = "NOT_APPLICABLE"
+            case.workflow.current_holder = "APPLICANT"
+            case.workflow.action_required_from = "APPLICANT"
+            case.workflow.next_action = "REVIEW_DECISION_NOTICE"
+            case.workflow.decision_notice = DecisionNotice(
+                message_type="STATUS_UPDATE",
+                subject=f"Update for case {case_id}",
+                summary="The human officer has recorded a final decision on the case.",
+                next_steps=["Review the decision notice and any official next-step instructions."],
+            )
+            case = self.case_service.save_case(case)
+            case = self.case_service.update_state(
+                case,
+                "DECISION_RECORDED",
+                actor=payload.officer_id,
+                description="Officer recorded a final decision.",
+                action_owner="APPLICANT",
+            )
+
         event = self.audit_service.write_event(
             case_id=case_id,
             event_type="OFFICER_DECISION_RECORDED",
@@ -110,14 +229,23 @@ class TouristVisaWorkflow:
             human_action=payload.decision,
             override_reason=payload.override_reason,
         )
-        final_message = ApplicantMessageResponse(
-            message_type="STATUS_UPDATE",
-            subject=f"Update for case {case_id}",
-            message="Your application status has been updated. Please sign in to view the latest next steps.",
-            required_actions=[],
+
+        final_message = case.workflow.decision_notice
+        if final_message is None:
+            final_message = DecisionNotice(
+                message_type="STATUS_UPDATE",
+                subject=f"Update for case {case_id}",
+                summary="Your application status has been updated. Please sign in to view the latest next steps.",
+                next_steps=[],
+            )
+        applicant_message = ApplicantMessageResponse(
+            message_type=final_message.message_type,
+            subject=final_message.subject,
+            message=final_message.summary,
+            required_actions=final_message.next_steps,
             deadline="",
         )
-        self.notification_service.store_message(case_id, final_message)
+        self.notification_service.store_message(case_id, applicant_message)
         return {"status": "RECORDED", "audit_event": event, "human_decision_required": True}
 
     def send_applicant_message(self, case_id: str) -> ApplicantMessageResponse | None:
@@ -129,14 +257,14 @@ class TouristVisaWorkflow:
         message = ApplicantMessageResponse(
             message_type="STATUS_UPDATE",
             subject=f"Case {case_id} is under review",
-            message="Your case is still under review by the visa processing team. This is not a final decision.",
+            message="Your case is still under review by the Sri Lanka visa processing team. This is not a final decision.",
             required_actions=[],
             deadline="",
         )
         return self.notification_service.store_message(case_id, message)
 
     def get_policy_requirements(self, visa_class: str) -> PolicyRequirementsResponse:
-        retrieved = retrieve_policy_sections(visa_class, "UNSPECIFIED", "2026-05-25")
+        retrieved = retrieve_policy_sections(visa_class, "Sri Lanka", "2026-05-25")
         return PolicyRequirementsResponse(
             visa_class=visa_class.upper(),
             policy_version=retrieved["policy_version"],
@@ -155,7 +283,9 @@ class TouristVisaWorkflow:
         if not check_payment_status(case.case_id)["is_complete"]:
             missing.append("PAYMENT_CONFIRMATION")
         if case.mock_profile.get("force_invalid_upload"):
-            invalid.append("Unreadable file detected.")
+            invalid.append("Unreadable file detected and replacement is required.")
+        if case.mock_profile.get("unofficial_payment_reference"):
+            invalid.append("Payment reference does not match an official channel.")
         status = "COMPLETE"
         if missing:
             status = "INCOMPLETE"
@@ -167,7 +297,7 @@ class TouristVisaWorkflow:
             "missing_items": missing,
             "invalid_items": invalid,
             "evidence_ids_checked": [doc["document_id"] for doc in docs],
-            "applicant_message": "Upload missing items to continue processing." if missing else "",
+            "applicant_message": "Upload missing or replacement items to continue Sri Lanka ETA processing." if missing or invalid else "",
             "confidence": 0.98,
             "tool_calls": [{"tool": "get_uploaded_documents"}, {"tool": "check_payment_status"}],
         }
@@ -213,7 +343,7 @@ class TouristVisaWorkflow:
         return {
             "agent_name": "financial_employment_agent",
             "status": status,
-            "financial_summary": f"Average balance {metrics['average_balance']} {metrics['currency']} against minimum threshold.",
+            "financial_summary": f"Average balance {metrics['average_balance']} {metrics['currency']} against Sri Lanka tourist visit threshold.",
             "average_balance": metrics["average_balance"],
             "currency": metrics["currency"],
             "suspicious_patterns": metrics["suspicious_patterns"],
@@ -234,6 +364,8 @@ class TouristVisaWorkflow:
         missing_evidence = []
         criteria = []
         policy_flags = case.mock_profile.get("policy_failures", [])
+        if case.mock_profile.get("conflicting_publication"):
+            policy_flags = list({*policy_flags, "PUBLICATION_CONFLICT"})
         for section in retrieved["sections"]:
             status = "SATISFIED"
             reason = "Requirement supported by available evidence."
@@ -257,6 +389,17 @@ class TouristVisaWorkflow:
                     "reason": reason,
                 }
             )
+        if case.mock_profile.get("conflicting_publication"):
+            criteria.append(
+                {
+                    "policy_id": "SL-RULE-CONFLICT",
+                    "requirement": "Public publication wording and active internal rule pack must align.",
+                    "status": "UNCLEAR",
+                    "evidence_ids": [],
+                    "reason": "Public and internal publication references conflict and require governance confirmation.",
+                }
+            )
+            missing_evidence.append("ACTIVE_RULE_CONFIRMATION")
         eligibility_status = "MEETS_REQUIREMENTS"
         if any(item["status"] == "NOT_SATISFIED" for item in criteria):
             eligibility_status = "DOES_NOT_MEET"
@@ -266,6 +409,8 @@ class TouristVisaWorkflow:
             "agent_name": "policy_compliance_agent",
             "visa_class": case.visa_application.visa_class,
             "policy_version": retrieved["policy_version"],
+            "rule_version_used": case.policy_context.effective_rule_version,
+            "publication_reference": case.policy_context.publication_reference,
             "eligibility_status": eligibility_status,
             "criteria": criteria,
             "missing_evidence": missing_evidence,
@@ -308,7 +453,10 @@ class TouristVisaWorkflow:
         brief = OfficerBrief(
             case_id=case.case_id,
             visa_class=case.visa_application.visa_class,
-            applicant_summary=f"{case.applicant.full_name}, passport {case.applicant.passport_number}, travel purpose: {case.visa_application.purpose_of_travel}",
+            applicant_summary=(
+                f"{case.applicant.full_name}, passport {case.applicant.passport_number}, "
+                f"travel purpose: {case.visa_application.purpose_of_travel}, workflow pack: {case.workflow.workflow_pack}"
+            ),
             recommendation=supervisor["recommendation"],
             confidence=supervisor["confidence"],
             agent_results=[
@@ -329,6 +477,8 @@ class TouristVisaWorkflow:
                 "recommendation": supervisor["recommendation"],
                 "human_decision_required": True,
                 "next_action": supervisor["next_action"],
+                "current_holder": supervisor["current_holder"],
+                "action_required_from": supervisor["action_required_from"],
             },
             evidence_viewer={
                 "passport_fields": outputs[1].get("extracted_fields", {}),
@@ -338,6 +488,8 @@ class TouristVisaWorkflow:
                     "suspicious_patterns": outputs[2].get("suspicious_patterns", []),
                 },
                 "itinerary_evidence": [doc.document_id for doc in case.documents if doc.document_type == "FLIGHT_ITINERARY"],
+                "rule_version_used": case.policy_context.effective_rule_version,
+                "publication_reference": case.policy_context.publication_reference,
             },
             audit_timeline=self.case_service.list_audit_events(case.case_id),
         )
@@ -356,6 +508,9 @@ class TouristVisaWorkflow:
         if intake["status"] == "INCOMPLETE":
             blocking_issues.extend(intake["missing_items"])
             return "REQUEST_MORE_INFO", blocking_issues, risk_flags
+        if intake["status"] == "NEEDS_REVIEW":
+            blocking_issues.extend(intake.get("invalid_items", []))
+            return "REQUEST_MORE_INFO", blocking_issues, risk_flags
         if security["security_status"] in ["POSSIBLE_MATCH", "CONFIRMED_HIT", "SYSTEM_UNAVAILABLE"]:
             blocking_issues.append(f"Security status {security['security_status']}.")
             return "ENHANCED_REVIEW", blocking_issues, risk_flags
@@ -365,16 +520,162 @@ class TouristVisaWorkflow:
         if risk["risk_band"] in ["HIGH", "CRITICAL"]:
             blocking_issues.append("Elevated fraud or anomaly indicators detected.")
             return "ENHANCED_REVIEW", blocking_issues, risk_flags
+        if financial["status"] == "FAIL":
+            blocking_issues.append("Financial evidence below threshold.")
+            return "REQUEST_MORE_INFO", blocking_issues, risk_flags
+        if financial["status"] == "NEEDS_REVIEW":
+            blocking_issues.append("Financial evidence needs clarification or additional support.")
+            return "REQUEST_MORE_INFO", blocking_issues, risk_flags
         if policy["eligibility_status"] == "DOES_NOT_MEET":
             blocking_issues.append("Policy requirements are not fully met.")
             return "REFUSAL_DRAFT_READY", blocking_issues, risk_flags
         if policy["eligibility_status"] == "UNCLEAR":
-            blocking_issues.append("Policy assessment needs more evidence.")
-            return "REQUEST_MORE_INFO", blocking_issues, risk_flags
-        if financial["status"] == "FAIL":
-            blocking_issues.append("Financial evidence below threshold.")
+            blocking_issues.append("Policy assessment needs more evidence or governance confirmation.")
             return "REQUEST_MORE_INFO", blocking_issues, risk_flags
         return "APPROVE_READY", blocking_issues, risk_flags
+
+    def _handle_evidence_loop(self, case: CasePacket, intake: dict) -> dict:
+        case = self.case_service.get_case(case.case_id)
+        missing_items = intake["missing_items"] + intake.get("invalid_items", [])
+        request = AdditionalEvidenceRequest(
+            request_id=f"REQ-{uuid4()}",
+            requested_items=missing_items,
+            reason="Sri Lanka tourist visit processing requires the missing or replacement evidence listed.",
+            deadline=case.decision_due_at or "",
+            status="OPEN",
+        )
+        case.workflow.additional_evidence_requests.append(request)
+        case.workflow.current_holder = "APPLICANT"
+        case.workflow.action_required_from = "APPLICANT"
+        case.workflow.next_action = "UPLOAD_REQUIRED_DOCUMENTS"
+        case.workflow.eta_status = "ETA_ADDITIONAL_EVIDENCE_REQUIRED"
+        case = self.case_service.save_case(case)
+        case = self.case_service.update_state(
+            case,
+            "WAITING_FOR_DOCUMENTS",
+            actor="SYSTEM",
+            description="Case is waiting for missing or replacement evidence from the applicant.",
+            action_owner="APPLICANT",
+        )
+        applicant_message = create_evidence_request(case.case_id, missing_items)
+        self.notification_service.store_message(case.case_id, applicant_message)
+        notify_applicant(case.case_id, applicant_message)
+        self.audit_service.write_event(
+            case_id=case.case_id,
+            event_type="CASE_WAITING_FOR_DOCUMENTS",
+            actor_type="SYSTEM",
+            actor_id="workflow",
+            payload=applicant_message.model_dump(),
+        )
+        supervisor_output = self._supervisor_output(
+            case,
+            [intake],
+            "REQUEST_MORE_INFO",
+            missing_items or ["Missing required evidence."],
+        )
+        self._store_agent_output(case, supervisor_output)
+        return supervisor_output
+
+    def _handle_manual_referral(self, case: CasePacket, intake: dict, rule: NationalityExceptionRule) -> dict:
+        case = self.case_service.get_case(case.case_id)
+        case.workflow.manual_referral_reason = rule.reason
+        case.workflow.current_holder = "MISSION_OR_HEAD_OFFICE"
+        case.workflow.action_required_from = "MISSION_OR_HEAD_OFFICE"
+        case.workflow.next_action = "MANUAL_SPONSOR_OR_EXCEPTION_REVIEW"
+        case.workflow.eta_status = "ETA_MANUAL_REVIEW"
+        if not case.workflow.appointments:
+            case.workflow.appointments.append(
+                Appointment(
+                    appointment_type="MANUAL_REFERRAL_REVIEW",
+                    status="PENDING_SCHEDULING",
+                    location="Head Office / Mission",
+                    instructions="Manual sponsor or nationality exception review is required before ETA can proceed.",
+                )
+            )
+        case = self.case_service.save_case(case)
+        case = self.case_service.update_state(
+            case,
+            "REFERRED_TO_MANUAL_REVIEW",
+            actor="SYSTEM",
+            description=rule.reason,
+            action_owner="MISSION_OR_HEAD_OFFICE",
+        )
+        supervisor_output = {
+            "agent_name": "supervisor_agent",
+            "case_id": case.case_id,
+            "visa_class": case.visa_application.visa_class,
+            "case_state": case.workflow.current_state,
+            "recommendation": "ENHANCED_REVIEW",
+            "confidence": 0.91,
+            "human_decision_required": True,
+            "summary_for_officer": "The case requires manual Sri Lanka sponsor or nationality exception handling before it can move through the straight-through ETA path.",
+            "called_agents": [intake["agent_name"], "audit_compliance_agent"],
+            "blocking_issues": [rule.reason],
+            "risk_flags": [],
+            "policy_references": [],
+            "evidence_references": [doc.document_id for doc in case.documents],
+            "next_action": case.workflow.next_action,
+            "current_holder": case.workflow.current_holder,
+            "action_required_from": case.workflow.action_required_from,
+            "workflow_pack": case.workflow.workflow_pack,
+            "rule_version_used": case.policy_context.effective_rule_version,
+            "publication_reference": case.policy_context.publication_reference,
+            "manual_referral_reason": case.workflow.manual_referral_reason,
+            "eta_status": case.workflow.eta_status,
+            "port_clearance_state": case.workflow.port_clearance_state,
+            "tool_calls": [],
+        }
+        self._store_agent_output(case, supervisor_output)
+        self.audit_service.write_event(
+            case_id=case.case_id,
+            event_type="CASE_MANUAL_REFERRAL",
+            actor_type="SYSTEM",
+            actor_id="workflow",
+            payload=supervisor_output,
+            recommendation="ENHANCED_REVIEW",
+        )
+        return supervisor_output
+
+    def _update_workflow_for_recommendation(
+        self,
+        case: CasePacket,
+        recommendation: str,
+        blocking_issues: list[str],
+        missing_evidence: list[str],
+    ) -> CasePacket:
+        if recommendation == "REQUEST_MORE_INFO":
+            request = AdditionalEvidenceRequest(
+                request_id=f"REQ-{uuid4()}",
+                requested_items=missing_evidence or blocking_issues,
+                reason="Additional evidence or governance clarification is required for this Sri Lanka tourist visit case.",
+                deadline=case.decision_due_at or "",
+                status="OPEN",
+            )
+            case.workflow.additional_evidence_requests.append(request)
+            case.workflow.current_holder = "APPLICANT"
+            case.workflow.action_required_from = "APPLICANT"
+            case.workflow.next_action = "RESPOND_TO_INFORMATION_REQUEST"
+            case.workflow.eta_status = "ETA_ADDITIONAL_EVIDENCE_REQUIRED"
+            case = self.case_service.save_case(case)
+            return self.case_service.update_state(
+                case,
+                "WAITING_FOR_DOCUMENTS",
+                actor="SYSTEM",
+                description="Case needs more information before Sri Lanka ETA processing can continue.",
+                action_owner="APPLICANT",
+            )
+        case.workflow.current_holder = "OFFICER"
+        case.workflow.action_required_from = "OFFICER"
+        case.workflow.next_action = "HUMAN_OFFICER_FINAL_REVIEW"
+        case.workflow.eta_status = "ETA_UNDER_OFFICER_REVIEW"
+        case = self.case_service.save_case(case)
+        return self.case_service.update_state(
+            case,
+            "READY_FOR_OFFICER_REVIEW",
+            actor="SYSTEM",
+            description="Case has completed automated preparation and is ready for officer review.",
+            action_owner="OFFICER",
+        )
 
     def _supervisor_output(
         self,
@@ -400,17 +701,25 @@ class TouristVisaWorkflow:
             "agent_name": "supervisor_agent",
             "case_id": case.case_id,
             "visa_class": case.visa_application.visa_class,
-            "case_state": "READY_FOR_HUMAN_REVIEW" if recommendation != "REQUEST_MORE_INFO" else "WAITING_FOR_APPLICANT",
+            "case_state": case.workflow.current_state,
             "recommendation": recommendation,
             "confidence": confidence,
             "human_decision_required": True,
-            "summary_for_officer": self._summary_for_officer(recommendation, outputs),
+            "summary_for_officer": self._summary_for_officer(recommendation),
             "called_agents": called_agents,
             "blocking_issues": blocking_issues,
             "risk_flags": risk_flags or [],
             "policy_references": policy_refs,
             "evidence_references": evidence_refs,
-            "next_action": "HUMAN_OFFICER_FINAL_REVIEW" if recommendation != "REQUEST_MORE_INFO" else "REQUEST_ADDITIONAL_EVIDENCE",
+            "next_action": case.workflow.next_action,
+            "current_holder": case.workflow.current_holder,
+            "action_required_from": case.workflow.action_required_from,
+            "workflow_pack": case.workflow.workflow_pack,
+            "rule_version_used": case.policy_context.effective_rule_version,
+            "publication_reference": case.policy_context.publication_reference,
+            "manual_referral_reason": case.workflow.manual_referral_reason,
+            "eta_status": case.workflow.eta_status,
+            "port_clearance_state": case.workflow.port_clearance_state,
             "tool_calls": [],
         }
 
@@ -421,17 +730,34 @@ class TouristVisaWorkflow:
         self.audit_service.write_agent_output(case.case_id, output)
         write_audit_log(case.case_id, output["agent_name"], stable_hash({"case_id": case.case_id}), output)
 
-    def _summary_for_officer(self, recommendation: str, outputs: list[dict]) -> str:
+    def _apply_governance_context(self, case: CasePacket) -> CasePacket:
+        active_rules = self.reference_service.get_active_rules()
+        case.policy_context.country = "Sri Lanka"
+        case.policy_context.policy_version = active_rules.active_policy_version.policy_version
+        case.policy_context.effective_rule_version = active_rules.active_policy_version.rule_version
+        case.policy_context.publication_reference = active_rules.active_policy_version.publication_reference
+        case.policy_context.publication_channels = active_rules.active_circulars[0].publications
+        case.workflow.workflow_pack = active_rules.workflow_pack
+        return self.case_service.save_case(case)
+
+    def _summary_for_officer(self, recommendation: str) -> str:
         if recommendation == "APPROVE_READY":
-            return "The applicant submitted the mandatory evidence, core checks passed, and the case is ready for human officer review."
+            return "The applicant passed the core checks and the case is ready for Sri Lanka officer review before any authorization is issued."
         if recommendation == "REQUEST_MORE_INFO":
-            return "The case needs additional evidence or clarification before a human officer can conclude review."
+            return "The case needs additional evidence, replacement documents, or governance clarification before officer review can conclude."
         if recommendation == "ENHANCED_REVIEW":
-            return "The case triggered document, security, or risk conditions that require enhanced human review."
+            return "The case triggered manual referral, security, document, or risk conditions that require enhanced Sri Lanka review."
         return "The case appears not to meet at least one policy requirement and a refusal draft can be prepared for officer review."
 
     def _brief_summary(self, output: dict) -> str:
-        for key in ("financial_summary", "applicant_message", "eligibility_status", "security_status", "risk_band", "status"):
+        for key in (
+            "financial_summary",
+            "applicant_message",
+            "eligibility_status",
+            "security_status",
+            "risk_band",
+            "status",
+        ):
             if key in output:
                 return str(output[key])
         return output["agent_name"]
@@ -444,9 +770,13 @@ class TouristVisaWorkflow:
         return "INFO"
 
     def _officer_questions(self, supervisor: dict) -> list[str]:
-        questions = ["Confirm that the recommendation aligns with the full case record and local operating procedures."]
+        questions = ["Confirm that the recommendation aligns with the Sri Lanka case record, active rule pack, and local operating procedures."]
+        if supervisor["manual_referral_reason"]:
+            questions.append("Review whether the manual referral reason still applies and whether sponsor or head-office handling is complete.")
         if supervisor["recommendation"] == "ENHANCED_REVIEW":
-            questions.append("Review highlighted risk or security signals before taking legal action.")
+            questions.append("Review highlighted risk, document, or security signals before taking legal action.")
         if supervisor["recommendation"] == "REQUEST_MORE_INFO":
             questions.append("Confirm the exact missing evidence wording before the applicant is contacted.")
+        if supervisor["eta_status"] == "ETA_UNDER_OFFICER_REVIEW":
+            questions.append("Remember that ETA issuance does not remove port-of-entry clearance requirements.")
         return questions

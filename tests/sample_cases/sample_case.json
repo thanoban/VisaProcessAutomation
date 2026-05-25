@@ -1,20 +1,20 @@
 {
   "case_id": "VISA-2026-0001",
   "applicant": {
-    "full_name": "Kamal Perera",
+    "full_name": "Arjun Mehta",
     "date_of_birth": "1998-04-12",
-    "nationality": "Sri Lankan",
-    "passport_number": "N1234567",
-    "contact_email": "kamal@example.com"
+    "nationality": "Indian",
+    "passport_number": "P1234567",
+    "contact_email": "arjun@example.com"
   },
   "visa_application": {
     "visa_class": "TOURIST",
-    "purpose_of_travel": "Tourism and sightseeing",
+    "purpose_of_travel": "Tourism and sightseeing in Sri Lanka",
     "arrival_date": "2026-08-10",
     "departure_date": "2026-08-20",
     "sponsor": null,
-    "destination_address": "Hotel Example, City Center",
-    "country_of_application": "Sri Lanka",
+    "destination_address": "Hotel Example, Colombo",
+    "country_of_application": "India",
     "payment_status": "PAID"
   },
   "documents": [

@@ -7,11 +7,14 @@ from sqlalchemy import select
 from backend.database.session import SessionLocal
 from backend.models.db import AuditEventRecord, CaseRecord, NotificationRecord, OfficerBriefRecord
 from backend.models.schemas import (
+    AuthorizationStatusResponse,
     ApplicationCreateRequest,
     CasePacket,
+    CaseTimelineEvent,
     CaseStatusResponse,
     DocumentItem,
     OfficerBrief,
+    WorkflowState,
 )
 from backend.services.utils import utc_now
 
@@ -28,7 +31,22 @@ class CaseService:
             decision_due_at=payload.decision_due_at,
             retention_class=payload.retention_class,
             mock_profile=payload.mock_profile,
-            status_timeline=[{"state": "SUBMITTED", "timestamp": utc_now(), "actor": "SYSTEM"}],
+            workflow=WorkflowState(
+                current_state="SUBMITTED",
+                current_holder="SYSTEM",
+                next_action="PRECHECK_APPLICATION",
+                action_required_from="SYSTEM",
+                eta_status="ETA_SUBMITTED",
+            ),
+            status_timeline=[
+                CaseTimelineEvent(
+                    state="SUBMITTED",
+                    timestamp=utc_now(),
+                    actor="SYSTEM",
+                    description="Sri Lanka tourist visit case submitted for pre-check.",
+                    action_owner="SYSTEM",
+                )
+            ],
         )
         with SessionLocal() as session:
             record = CaseRecord(
@@ -41,7 +59,7 @@ class CaseService:
                 workflow=case.workflow.model_dump(),
                 audit=case.audit.model_dump(),
                 submission_channel=case.submission_channel,
-                status_timeline=case.status_timeline,
+                status_timeline=[event.model_dump() for event in case.status_timeline],
                 applicant_message_history=case.applicant_message_history,
                 security_handling_code=case.security_handling_code,
                 decision_due_at=case.decision_due_at,
@@ -71,7 +89,7 @@ class CaseService:
                 workflow=case.workflow.model_dump(),
                 audit=case.audit.model_dump(),
                 submission_channel=case.submission_channel,
-                status_timeline=case.status_timeline,
+                status_timeline=[event.model_dump() for event in case.status_timeline],
                 applicant_message_history=case.applicant_message_history,
                 security_handling_code=case.security_handling_code,
                 decision_due_at=case.decision_due_at,
@@ -90,11 +108,48 @@ class CaseService:
         case.documents.extend(documents)
         return self.save_case(case)
 
-    def update_state(self, case: CasePacket, new_state: str, actor: str = "SYSTEM") -> CasePacket:
+    def update_state(
+        self,
+        case: CasePacket,
+        new_state: str,
+        actor: str = "SYSTEM",
+        description: str = "",
+        action_owner: str | None = None,
+    ) -> CasePacket:
         if case.workflow.current_state != new_state:
             case.workflow.previous_states.append(case.workflow.current_state)
             case.workflow.current_state = new_state
-            case.status_timeline.append({"state": new_state, "timestamp": utc_now(), "actor": actor})
+            case.status_timeline.append(
+                CaseTimelineEvent(
+                    state=new_state,
+                    timestamp=utc_now(),
+                    actor=actor,
+                    description=description,
+                    action_owner=action_owner,
+                )
+            )
+        if action_owner:
+            case.workflow.current_holder = action_owner
+        return self.save_case(case)
+
+    def append_timeline_event(
+        self,
+        case: CasePacket,
+        *,
+        state: str,
+        actor: str,
+        description: str,
+        action_owner: str | None = None,
+    ) -> CasePacket:
+        case.status_timeline.append(
+            CaseTimelineEvent(
+                state=state,
+                timestamp=utc_now(),
+                actor=actor,
+                description=description,
+                action_owner=action_owner,
+            )
+        )
         return self.save_case(case)
 
     def save_officer_brief(self, brief: OfficerBrief) -> None:
@@ -113,9 +168,28 @@ class CaseService:
             records = session.execute(stmt).scalars().all()
             return [record.payload for record in records]
 
+    def get_case_timeline(self, case: CasePacket) -> list[dict]:
+        return [event.model_dump() for event in case.status_timeline]
+
+    def list_cases(self) -> list[CasePacket]:
+        with SessionLocal() as session:
+            records = session.execute(select(CaseRecord)).scalars().all()
+            return [self._record_to_case(record) for record in records]
+
     def get_case_status(self, case: CasePacket) -> CaseStatusResponse:
         latest_message = case.applicant_message_history[-1] if case.applicant_message_history else None
         required_actions = latest_message.get("required_actions", []) if latest_message else []
+        authorization_status = AuthorizationStatusResponse(
+            case_id=case.case_id,
+            workflow_pack=case.workflow.workflow_pack,
+            eta_status=case.workflow.eta_status,
+            port_clearance_state=case.workflow.port_clearance_state,
+            manual_referral_reason=case.workflow.manual_referral_reason,
+            action_required_from=case.workflow.action_required_from,
+            next_action=case.workflow.next_action,
+            rule_version_used=case.policy_context.effective_rule_version,
+            publication_reference=case.policy_context.publication_reference,
+        )
         return CaseStatusResponse(
             case_id=case.case_id,
             status=case.workflow.current_state,
@@ -126,7 +200,13 @@ class CaseService:
             service_notices=[
                 {"code": "HUMAN_REVIEW_REQUIRED", "message": "Final legal decision remains with an immigration officer."}
             ],
-            timeline=case.status_timeline,
+            timeline=[event.model_dump() for event in case.status_timeline],
+            current_holder=case.workflow.current_holder,
+            next_action=case.workflow.next_action,
+            action_required_from=case.workflow.action_required_from,
+            authorization_status=authorization_status.model_dump(),
+            port_clearance_state=case.workflow.port_clearance_state,
+            extension_state=case.workflow.extension_state,
         )
 
     def add_notification(self, case_id: str, payload: dict) -> None:
