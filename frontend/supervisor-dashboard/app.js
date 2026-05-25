@@ -10,8 +10,13 @@ const elements = {
   apiPill: document.querySelector("#supervisor-api-pill"),
   heroCopy: document.querySelector("#supervisor-hero-copy"),
   refreshButton: document.querySelector("#refresh-queues-button"),
+  filterForm: document.querySelector("#supervisor-filter-form"),
+  stateFilter: document.querySelector("#supervisor-state-filter"),
+  holderFilter: document.querySelector("#supervisor-holder-filter"),
   metrics: document.querySelector("#supervisor-metrics"),
   stateCounts: document.querySelector("#state-counts-list"),
+  caseMeta: document.querySelector("#supervisor-case-meta"),
+  caseList: document.querySelector("#supervisor-case-list"),
   hotspotList: document.querySelector("#hotspot-list"),
   noticeList: document.querySelector("#supervisor-notice-list"),
 };
@@ -19,12 +24,17 @@ const elements = {
 const state = {
   apiBaseUrl: localStorage.getItem("visaFlowApiBaseUrl") || "http://127.0.0.1:8000",
   apiAvailable: false,
+  filters: {
+    state: "",
+    holder: "",
+  },
 };
 
 const api = createApiClient(state.apiBaseUrl);
 
 async function initialize() {
   elements.refreshButton.addEventListener("click", loadSupervisorData);
+  elements.filterForm.addEventListener("change", handleFilterChange);
   await loadSupervisorData();
 }
 
@@ -33,20 +43,28 @@ async function loadSupervisorData() {
     await api.getHealth();
     state.apiAvailable = true;
     elements.apiPill.textContent = `Live API: ${api.baseUrl}`;
-    const [queues, notices] = await Promise.all([api.getSupervisorQueues(), api.getSystemNotices()]);
+    const [queues, notices, cases] = await Promise.all([
+      api.getSupervisorQueues(),
+      api.getSystemNotices(),
+      api.getSupervisorCases(state.filters),
+    ]);
     elements.heroCopy.textContent =
       "Live API connected. Queue counts below reflect the current workflow inventory and supervisor-visible backlog signals.";
-    renderSupervisorDashboard(queues, notices);
+    renderSupervisorDashboard(queues, notices, cases);
   } catch {
     state.apiAvailable = false;
     elements.apiPill.textContent = "Mock preview mode";
     elements.heroCopy.textContent =
       "The backend is not currently reachable, so this screen is showing a contract-aligned mock operations view.";
-    renderSupervisorDashboard(supervisorDashboardMock.queues, supervisorDashboardMock.notices);
+    renderSupervisorDashboard(
+      supervisorDashboardMock.queues,
+      supervisorDashboardMock.notices,
+      applyMockFilters(supervisorDashboardMock.cases, state.filters)
+    );
   }
 }
 
-function renderSupervisorDashboard(queues, notices) {
+function renderSupervisorDashboard(queues, notices, casesResponse) {
   const totalCases = Object.values(queues.counts_by_state || {}).reduce((sum, value) => sum + value, 0);
   const metrics = [
     ["Total active cases", totalCases, "info"],
@@ -87,6 +105,45 @@ function renderSupervisorDashboard(queues, notices) {
     "No queue states are available yet."
   );
 
+  elements.caseMeta.textContent = `Showing ${casesResponse.filtered_count} of ${casesResponse.total_cases} supervisor-visible cases.`;
+  elements.caseList.innerHTML = listMarkup(
+    (casesResponse.cases || []).map(
+      (item) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${item.case_id}</span>
+              <h3 class="mt-2 text-lg font-extrabold text-slate-900">${item.applicant_name}</h3>
+              <p class="mt-2 text-sm leading-7 text-slate-600">${titleCase(item.nationality)} | ${titleCase(item.visa_class)} | Updated ${formatCaseTimestamp(item.updated_at)}</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              ${buildStatusChip(item.current_state)}
+              ${buildStatusChip(item.current_holder)}
+            </div>
+          </div>
+          <div class="grid gap-4 md:grid-cols-2">
+            <div class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-7 text-slate-600">
+              <strong class="text-slate-900">Next action:</strong> ${titleCase(item.next_action)}<br />
+              <strong class="text-slate-900">Action required from:</strong> ${titleCase(item.action_required_from)}<br />
+              <strong class="text-slate-900">ETA status:</strong> ${titleCase(item.eta_status)}
+            </div>
+            <div class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-7 text-slate-600">
+              <strong class="text-slate-900">Rule version:</strong> ${item.rule_version_used || "Not available"}<br />
+              <strong class="text-slate-900">Publication reference:</strong> ${item.publication_reference || "Not available"}<br />
+              <strong class="text-slate-900">Decision due:</strong> ${formatCaseTimestamp(item.decision_due_at)}
+            </div>
+          </div>
+          ${
+            item.manual_referral_reason
+              ? `<div class="mt-4 rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900"><strong>Manual referral reason:</strong> ${item.manual_referral_reason}</div>`
+              : ""
+          }
+        </article>
+      `
+    ),
+    "No cases match the current supervisor filters."
+  );
+
   const hotspots = buildHotspots(queues);
   elements.hotspotList.innerHTML = listMarkup(
     hotspots.map(
@@ -123,6 +180,50 @@ function renderSupervisorDashboard(queues, notices) {
     ),
     "No service notices are currently published."
   );
+}
+
+function handleFilterChange() {
+  state.filters.state = elements.stateFilter.value;
+  state.filters.holder = elements.holderFilter.value;
+  loadSupervisorData();
+}
+
+function applyMockFilters(casesResponse, filters) {
+  const stateFilter = String(filters.state || "").toUpperCase();
+  const holderFilter = String(filters.holder || "").toUpperCase();
+  const cases = (casesResponse.cases || []).filter((item) => {
+    if (stateFilter && item.current_state !== stateFilter) {
+      return false;
+    }
+    if (holderFilter && item.current_holder !== holderFilter) {
+      return false;
+    }
+    return true;
+  });
+  return {
+    ...casesResponse,
+    filtered_count: cases.length,
+    state_filter: stateFilter,
+    holder_filter: holderFilter,
+    cases,
+  };
+}
+
+function formatCaseTimestamp(value) {
+  if (!value) {
+    return "Not set";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(parsed);
 }
 
 function buildHotspots(queues) {

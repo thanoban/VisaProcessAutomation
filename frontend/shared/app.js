@@ -43,6 +43,17 @@ export function createApiClient(baseUrl) {
     getSupervisorQueues() {
       return request("/supervisor/queues");
     },
+    getSupervisorCases(filters = {}) {
+      const params = new URLSearchParams();
+      if (filters.state) {
+        params.set("state", filters.state);
+      }
+      if (filters.holder) {
+        params.set("holder", filters.holder);
+      }
+      const query = params.toString();
+      return request(`/supervisor/cases${query ? `?${query}` : ""}`);
+    },
     getChecklist() {
       return request("/checklists/tourist-visit");
     },
@@ -485,6 +496,83 @@ export const supervisorDashboardMock = {
     manual_referrals: 2,
     waiting_for_documents: 3,
     ready_for_officer_review: 6,
+  },
+  cases: {
+    workflow_pack: "SRI_LANKA_TOURIST_VISIT",
+    total_cases: 4,
+    filtered_count: 4,
+    state_filter: "",
+    holder_filter: "",
+    cases: [
+      {
+        case_id: "VISA-2026-0041",
+        applicant_name: "Arjun Mehta",
+        nationality: "Indian",
+        visa_class: "TOURIST",
+        current_state: "READY_FOR_OFFICER_REVIEW",
+        current_holder: "OFFICER",
+        next_action: "HUMAN_OFFICER_FINAL_REVIEW",
+        action_required_from: "OFFICER",
+        eta_status: "ETA_UNDER_OFFICER_REVIEW",
+        manual_referral_reason: null,
+        policy_version: "sl-tourist-policy-v1",
+        rule_version_used: "sl-rule-pack-2026-05-25",
+        publication_reference: "ETA-40-COUNTRY-SCHEME-2026-05-25",
+        decision_due_at: "2026-06-03T17:00:00Z",
+        updated_at: "2026-05-26T07:40:00Z",
+      },
+      {
+        case_id: "VISA-2026-0042",
+        applicant_name: "Amina Yusuf",
+        nationality: "Nigerian",
+        visa_class: "TOURIST",
+        current_state: "REFERRED_TO_MANUAL_REVIEW",
+        current_holder: "MISSION_OR_HEAD_OFFICE",
+        next_action: "MANUAL_SPONSOR_OR_EXCEPTION_REVIEW",
+        action_required_from: "MISSION_OR_HEAD_OFFICE",
+        eta_status: "ETA_MANUAL_REVIEW",
+        manual_referral_reason: "Tourist or business ETA should be routed through Sri Lankan sponsor and head-office handling.",
+        policy_version: "sl-tourist-policy-v1",
+        rule_version_used: "sl-rule-pack-2026-05-25",
+        publication_reference: "ETA-40-COUNTRY-SCHEME-2026-05-25",
+        decision_due_at: "2026-06-05T12:00:00Z",
+        updated_at: "2026-05-26T07:32:00Z",
+      },
+      {
+        case_id: "VISA-2026-0043",
+        applicant_name: "Nimal Perera",
+        nationality: "Sri Lankan Sponsor Route",
+        visa_class: "TOURIST",
+        current_state: "WAITING_FOR_DOCUMENTS",
+        current_holder: "APPLICANT",
+        next_action: "RESPOND_TO_INFORMATION_REQUEST",
+        action_required_from: "APPLICANT",
+        eta_status: "ETA_ADDITIONAL_EVIDENCE_REQUIRED",
+        manual_referral_reason: null,
+        policy_version: "sl-tourist-policy-v1",
+        rule_version_used: "sl-rule-pack-2026-05-25",
+        publication_reference: "ETA-40-COUNTRY-SCHEME-2026-05-25",
+        decision_due_at: "2026-06-01T09:00:00Z",
+        updated_at: "2026-05-26T07:25:00Z",
+      },
+      {
+        case_id: "VISA-2026-0044",
+        applicant_name: "Sara Ahmed",
+        nationality: "Syrian",
+        visa_class: "TOURIST",
+        current_state: "REFERRED_TO_MANUAL_REVIEW",
+        current_holder: "MISSION_OR_HEAD_OFFICE",
+        next_action: "MANUAL_SPONSOR_OR_EXCEPTION_REVIEW",
+        action_required_from: "MISSION_OR_HEAD_OFFICE",
+        eta_status: "ETA_MANUAL_REVIEW",
+        manual_referral_reason: "Tourist or business ETA should be routed through Sri Lankan sponsor and head-office handling.",
+        policy_version: "sl-tourist-policy-v1",
+        rule_version_used: "sl-rule-pack-2026-05-25",
+        publication_reference: "ETA-40-COUNTRY-SCHEME-2026-05-25",
+        decision_due_at: "2026-06-07T16:30:00Z",
+        updated_at: "2026-05-26T07:18:00Z",
+      },
+    ],
   },
   notices: applicantPortalMock.notices,
 };

@@ -12,6 +12,7 @@ from backend.models.schemas import (
     OfficerBrief,
     OfficerDecisionRequest,
     PolicyRequirementsResponse,
+    SupervisorCaseListResponse,
     SupervisorQueueSummary,
     SystemNotice,
 )
@@ -156,3 +157,12 @@ def get_active_governance_rules() -> GovernanceRulesResponse:
 @router.get("/supervisor/queues", response_model=SupervisorQueueSummary)
 def get_supervisor_queues() -> SupervisorQueueSummary:
     return sri_lanka_reference.build_queue_summary(case_service.list_cases())
+
+
+@router.get("/supervisor/cases", response_model=SupervisorCaseListResponse)
+def get_supervisor_cases(state: str = "", holder: str = "") -> SupervisorCaseListResponse:
+    return sri_lanka_reference.build_supervisor_case_list(
+        case_service.list_cases(),
+        state_filter=state,
+        holder_filter=holder,
+    )

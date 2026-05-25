@@ -365,3 +365,30 @@ class SupervisorQueueSummary(BaseModel):
     manual_referrals: int
     waiting_for_documents: int
     ready_for_officer_review: int
+
+
+class SupervisorCaseSummary(BaseModel):
+    case_id: str
+    applicant_name: str
+    nationality: str
+    visa_class: str
+    current_state: str
+    current_holder: str
+    next_action: str
+    action_required_from: str
+    eta_status: str
+    manual_referral_reason: str | None = None
+    policy_version: str = ""
+    rule_version_used: str = ""
+    publication_reference: str = ""
+    decision_due_at: str | None = None
+    updated_at: str = ""
+
+
+class SupervisorCaseListResponse(BaseModel):
+    workflow_pack: str
+    total_cases: int
+    filtered_count: int
+    state_filter: str = ""
+    holder_filter: str = ""
+    cases: list[SupervisorCaseSummary] = Field(default_factory=list)

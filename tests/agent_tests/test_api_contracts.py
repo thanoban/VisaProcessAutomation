@@ -38,6 +38,8 @@ def test_case_status_and_brief_contract(client):
     checklist_response = client.get("/checklists/tourist-visit")
     governance_response = client.get("/governance/rules/active")
     queue_response = client.get("/supervisor/queues")
+    queue_cases_response = client.get("/supervisor/cases")
+    filtered_queue_cases_response = client.get("/supervisor/cases?state=READY_FOR_OFFICER_REVIEW&holder=OFFICER")
     assert status_response.status_code == 200
     assert brief_response.status_code == 200
     assert timeline_response.status_code == 200
@@ -46,12 +48,16 @@ def test_case_status_and_brief_contract(client):
     assert checklist_response.status_code == 200
     assert governance_response.status_code == 200
     assert queue_response.status_code == 200
+    assert queue_cases_response.status_code == 200
+    assert filtered_queue_cases_response.status_code == 200
     body = brief_response.json()
     status_body = status_response.json()
     auth_body = auth_response.json()
     policy_body = policy_response.json()
     checklist_body = checklist_response.json()
     governance_body = governance_response.json()
+    queue_cases_body = queue_cases_response.json()
+    filtered_queue_cases_body = filtered_queue_cases_response.json()
     assert "recommendation_panel" in body
     assert "evidence_viewer" in body
     assert body["human_decision_required"] is True
@@ -70,6 +76,12 @@ def test_case_status_and_brief_contract(client):
     assert governance_body["active_circulars"]
     assert governance_body["active_circulars"][0]["publications"]
     assert any(rule["nationality"] == "NIGERIA" for rule in governance_body["nationality_exception_rules"])
+    assert queue_cases_body["total_cases"] >= 1
+    assert queue_cases_body["cases"]
+    assert queue_cases_body["cases"][0]["rule_version_used"] == "sl-rule-pack-2026-05-25"
+    assert filtered_queue_cases_body["filtered_count"] >= 1
+    assert filtered_queue_cases_body["state_filter"] == "READY_FOR_OFFICER_REVIEW"
+    assert all(item["current_holder"] == "OFFICER" for item in filtered_queue_cases_body["cases"])
 
 
 def test_document_response_upload_reprocesses_case(client):

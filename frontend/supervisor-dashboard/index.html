@@ -121,6 +121,41 @@
               </div>
               <div class="grid gap-4 md:grid-cols-2" id="state-counts-list"></div>
             </div>
+
+            <div class="mt-6 rounded-[1.75rem] border border-slate-200/80 bg-white/75 p-5">
+              <div class="mb-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Queue drill-down</span>
+                  <h3 class="mt-2 text-xl font-extrabold text-slate-900">Cases behind the backlog</h3>
+                </div>
+                <form class="grid gap-3 md:grid-cols-2" id="supervisor-filter-form">
+                  <div class="grid gap-2">
+                    <label class="text-sm font-semibold text-slate-700" for="supervisor-state-filter">State</label>
+                    <select class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="supervisor-state-filter" name="state">
+                      <option value="">All states</option>
+                      <option value="WAITING_FOR_DOCUMENTS">Waiting for documents</option>
+                      <option value="REFERRED_TO_MANUAL_REVIEW">Manual review</option>
+                      <option value="READY_FOR_OFFICER_REVIEW">Ready for officer review</option>
+                      <option value="POST_DECISION_FULFILLMENT">Post-decision fulfillment</option>
+                    </select>
+                  </div>
+                  <div class="grid gap-2">
+                    <label class="text-sm font-semibold text-slate-700" for="supervisor-holder-filter">Current holder</label>
+                    <select class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="supervisor-holder-filter" name="holder">
+                      <option value="">All holders</option>
+                      <option value="APPLICANT">Applicant</option>
+                      <option value="SYSTEM">System</option>
+                      <option value="OFFICER">Officer</option>
+                      <option value="MISSION_OR_HEAD_OFFICE">Mission or head office</option>
+                      <option value="PORT_OF_ENTRY">Port of entry</option>
+                      <option value="SUPERVISOR">Supervisor</option>
+                    </select>
+                  </div>
+                </form>
+              </div>
+              <div class="mb-4 text-sm text-slate-500" id="supervisor-case-meta">Loading supervisor case drill-down.</div>
+              <div class="grid gap-4" id="supervisor-case-list"></div>
+            </div>
           </section>
         </main>
 
