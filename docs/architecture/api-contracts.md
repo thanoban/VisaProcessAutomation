@@ -1,61 +1,89 @@
 # API Contracts
 
-## `POST /applications`
+## Core case APIs
 
-Creates a new case record with applicant data, application details, and optional initial documents.
+### `POST /applications`
 
-## `POST /cases/{case_id}/documents`
+Creates a Sri Lanka Tourist Visit case with applicant data, ETA-related facts, and optional initial documents.
 
-Attaches additional uploaded documents to the case.
+### `POST /cases/{case_id}/documents`
 
-## `POST /cases/{case_id}/process`
+Attaches or replaces uploaded documents for the case.
 
-Runs the deterministic Tourist visa workflow and returns the supervisor output.
+### `POST /cases/{case_id}/process`
 
-## `GET /cases/{case_id}`
+Runs the deterministic Sri Lanka case workflow and returns the current supervisor output.
+
+### `GET /cases/{case_id}`
 
 Returns the full case packet.
 
-## `GET /cases/{case_id}/status`
+## Applicant-facing operational APIs
+
+### `GET /cases/{case_id}/status`
 
 Returns the applicant-facing status view:
 
-- current state
+- current operational state
 - latest message
 - required actions
-- uploaded-doc summary
-- decision deadline
-- service notices
+- uploaded-document summary
+- next deadline
+- action owner
 - status timeline
 
-## `GET /cases/{case_id}/officer-brief`
+### `GET /cases/{case_id}/timeline`
 
-Returns the officer dashboard payload:
+Returns timeline events for applicant and operational tracking.
+
+### `GET /checklists/tourist-visit`
+
+Returns the Sri Lanka Tourist Visit checklist starter.
+
+### `GET /cases/{case_id}/authorization-status`
+
+Planned endpoint for ETA or authorization state and manual-referral status.
+
+### `POST /cases/{case_id}/additional-evidence-request`
+
+Planned endpoint for creating and tracking additional-document loops.
+
+## Officer and supervisor APIs
+
+### `GET /cases/{case_id}/officer-brief`
+
+Returns the officer dashboard payload with:
 
 - case summary
 - recommendation panel
 - agent cards
 - evidence viewer
-- policy references
-- risk flags
+- rule and policy references
+- risk and manual-referral flags
 - audit timeline
 
-## `GET /cases/{case_id}/audit`
-
-Returns audit events for the case.
-
-## `POST /cases/{case_id}/officer-decision`
+### `POST /cases/{case_id}/officer-decision`
 
 Stores the final human action and optional override reason.
 
-## `POST /cases/{case_id}/messages`
+### `GET /cases/{case_id}/audit`
 
-Returns or creates the latest applicant-facing message.
+Returns audit events for the case.
 
-## `GET /policies/{visa_class}/requirements`
+### `GET /supervisor/queues`
 
-Returns policy requirements for the given visa class from the local policy corpus starter.
+Planned endpoint for queue visibility such as pending ETA cases, manual referrals, and extension bottlenecks.
 
-## `GET /system/notices`
+## Governance APIs
 
-Returns system-wide service notices such as maintenance or operational banners.
+### `GET /policies/{visa_class}/requirements`
+
+Returns policy requirements for the given visa class.
+
+### `GET /system/notices`
+
+Returns system-wide public service notices and operational banners.
+
+### `GET /governance/rules/active`
+
+Planned endpoint for the active circular and effective policy version.

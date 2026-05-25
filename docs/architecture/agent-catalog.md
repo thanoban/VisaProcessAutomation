@@ -4,24 +4,25 @@
 
 ### Purpose
 
-Own workflow coordination and recommendation routing.
+Own workflow coordination, lifecycle transitions, and recommendation routing for the Sri Lanka workflow pack.
 
 ### Must do
 
 - call the right agents in the right order
 - enforce deterministic routing rules
-- always require human decision
+- preserve operational states separately from legal recommendation categories
+- always require human decision for legal outcome
 
 ### Must not do
 
 - make the final legal decision
-- invent facts or policy
+- invent facts, policy, or circular status
 
 ## Intake & Completeness Agent
 
 ### Purpose
 
-Stop incomplete or obviously invalid cases before they reach deeper analysis or officer review.
+Stop incomplete, unreadable, or obviously misrouted cases before they reach deeper analysis or officer review.
 
 ### Checks
 
@@ -29,7 +30,8 @@ Stop incomplete or obviously invalid cases before they reach deeper analysis or 
 - required uploads
 - payment state
 - duplicate uploads
-- basic invalid or unreadable input conditions
+- unreadable or invalid files
+- obvious nationality or sponsor exception triggers
 
 ## Document Validator Agent
 
@@ -44,6 +46,7 @@ Normalize identity and travel-document evidence into a consistent structure.
 - MRZ consistency
 - name match
 - basic tampering indicators
+- file-openability and replacement need
 
 ## Financial & Employment Evaluator Agent
 
@@ -55,19 +58,18 @@ Convert financial evidence into a fast officer-readable summary and detect obvio
 
 - average balance
 - suspicious deposits
-- salary consistency
-- employment tie strength
-- home-country tie strength
+- employment and sponsor consistency
+- home-country ties where relevant
 
 ## Policy & Compliance Agent
 
 ### Purpose
 
-Map case facts against retrieved official visa policy requirements.
+Map case facts against the active official policy version for the Sri Lanka workflow pack.
 
 ### Output style
 
-Requirement-by-requirement matrix with status, evidence IDs, and reasons.
+Requirement-by-requirement matrix with status, evidence IDs, reasons, and rule version context.
 
 ## Security & Background Auditor Agent
 
@@ -77,7 +79,7 @@ Represent restricted system checks without leaking raw sensitive data.
 
 ### Output style
 
-Minimal codes only.
+Minimal codes only, suitable for routing and officer awareness.
 
 ## Risk & Fraud Assessment Agent
 
@@ -101,22 +103,24 @@ Package the case for fast officer review.
 - recommendation
 - policy references
 - risk flags
+- manual-referral context
+- operational timeline summary
 - questions for officer
-- evidence viewer payload
 
 ## Applicant Communication Agent
 
 ### Purpose
 
-Turn workflow state into respectful, simple next-step messages.
+Turn workflow state into respectful, simple next-step messages for ETA, re-upload, referral, extension, and decision-notice stages.
 
 ### Restrictions
 
 - no legal conclusion before human action
 - no security disclosure
+- no ambiguous wording about ETA versus final clearance
 
 ## Audit & Compliance Agent
 
 ### Purpose
 
-Create the history needed for governance, appeal review, and internal integrity monitoring.
+Create the history needed for governance, appeal review, operational oversight, and circular/version traceability.

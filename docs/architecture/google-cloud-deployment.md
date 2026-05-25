@@ -2,58 +2,63 @@
 
 ## Objective
 
-Keep the PoC runnable locally while shaping it for a Google Cloud production path that supports sovereignty, observability, and controlled AI integration.
+Keep the PoC runnable locally while shaping it for a Google Cloud production path that can support a Sri Lanka Immigration-scale service model, strong audit requirements, and controlled AI integration.
+
+## Sri Lanka-first deployment concerns
+
+- public service reliability for ETA and status traffic
+- operational visibility for manual referrals and extension queues
+- separation of public applicant traffic from internal officer tooling
+- strong rule and circular version control
+- auditability suitable for ministry, parliamentary, and integrity review
 
 ## Target component map
 
 ### Cloud Run
 
-Hosts the API and orchestration service.
+Hosts API and orchestration services. Over time, these may split into:
+
+- public intake API
+- officer and supervisor API
+- workflow orchestration service
+- governance and rule service
 
 ### Cloud SQL PostgreSQL
 
-Stores transactional case, brief, and audit metadata.
+Stores transactional case, timeline, brief, and audit metadata.
 
 ### Cloud Storage
 
-Stores uploaded documents and processed artifacts.
+Stores uploaded documents, transformed artifacts, and generated evidence bundles.
 
 ### Pub/Sub or Cloud Tasks
 
-Used later for asynchronous workload fan-out, retries, and long-running processing.
+Supports asynchronous orchestration for:
+
+- document processing
+- notifications
+- queue recovery
+- extension and appointment workflows
 
 ### Vertex AI Agent Builder / Gemini Enterprise Agent Platform
 
-Future production runtime for managed agent execution.
+Future managed runtime for agent execution once the PoC stabilizes.
 
 ### Document AI
 
-Future production OCR and document parsing layer.
+Future production OCR and document extraction service.
 
 ### BigQuery
 
-Target audit analytics and operational reporting sink.
+Stores audit analytics, queue metrics, and operational reporting aggregates.
 
-### Cloud Logging and Monitoring
+### Secret Manager and Cloud KMS
 
-Operational logs, metrics, alerting, and incident support.
-
-### Secret Manager
-
-Protects service credentials and integration secrets.
-
-### Cloud KMS
-
-Protects encryption keys and supports envelope encryption patterns.
-
-### Cloud Armor and VPC Service Controls
-
-Add external protection and data-perimeter controls.
+Protect system credentials, encryption keys, and service-to-service trust material.
 
 ## Deployment principles
 
-- keep business logic platform-neutral
+- keep the Sri Lanka domain model platform-neutral
 - isolate cloud integrations behind adapters
-- treat security screening as a stronger trust boundary
-- separate operational logs from case evidence stores
-- preserve portability for sovereign or private-cloud variants
+- separate public, officer, and governance responsibilities clearly
+- preserve portability for sovereign or private-cloud variants if required later

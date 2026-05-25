@@ -1,50 +1,63 @@
 # Workflow and Routing
 
-## End-to-end flow
+## Sri Lanka phase-1 lifecycle
 
-1. Applicant submits the case.
-2. System creates a case record and initial timeline event.
-3. Supervisor starts processing.
-4. Intake checks completeness and payment state.
-5. If incomplete, applicant message is created and the case waits for documents.
-6. If complete, document, financial, policy, security, and risk analysis execute.
-7. Supervisor applies deterministic routing precedence.
-8. Officer Liaison produces the officer brief.
-9. Audit records the processing outputs.
-10. Case moves to officer review.
-11. Officer takes the final legal action.
-12. Final human action and override reason are audited.
+1. Applicant begins a Tourist Visit case.
+2. System generates a Sri Lanka-specific checklist.
+3. Applicant submits ETA and supporting details.
+4. Intake verifies completeness, readability, and obvious defects.
+5. If the case matches a nationality or sponsor exception, it is referred to manual review early.
+6. If the case passes intake, it moves through document, policy, financial, security, and risk analysis.
+7. Supervisor applies deterministic recommendation routing.
+8. Officer Liaison prepares the case brief.
+9. Officer reviews and records the legal action when required.
+10. If relevant, the case tracks port-of-entry and extension-related operational states.
 
-## Routing precedence
+## Planned operational states
 
-### 1. Missing evidence comes first
+- `DRAFT`
+- `CHECKLIST_READY`
+- `SUBMITTED`
+- `WAITING_FOR_PAYMENT`
+- `WAITING_FOR_DOCUMENTS`
+- `UNDER_PRECHECK`
+- `REFERRED_TO_MANUAL_REVIEW`
+- `READY_FOR_PORT_CLEARANCE`
+- `ENTERED_SRI_LANKA`
+- `EXTENSION_REQUESTED`
+- `EXTENSION_APPOINTMENT_REQUIRED`
+- `UNDER_ANALYSIS`
+- `READY_FOR_OFFICER_REVIEW`
+- `DECISION_RECORDED`
+- `POST_DECISION_FULFILLMENT`
+- `CLOSED`
 
-If required documents are missing, request more information before deeper eligibility decisions.
+## Routing precedence for recommendation categories
 
-### 2. Security or restricted-system uncertainty outranks approval readiness
+### 1. Missing or unreadable evidence first
 
-Any `POSSIBLE_MATCH`, `CONFIRMED_HIT`, or `SYSTEM_UNAVAILABLE` result routes to enhanced review.
+If required information is missing or unusable, request more information before deeper legal preparation.
 
-### 3. Identity and document integrity matter early
+### 2. Security and restricted handling outrank approval readiness
 
-Invalid or questionable passport/document outputs route to enhanced review.
+Any restricted screening issue, system outage, or manual-security condition routes to enhanced review.
 
-### 4. High-risk anomalies escalate
+### 3. Identity and document integrity come early
 
-High or critical fraud/risk outcomes route to enhanced review.
+Invalid or questionable identity evidence routes to enhanced review.
 
-### 5. Policy non-compliance can prepare a refusal draft
+### 4. High-risk anomaly signals escalate
 
-If policy requirements are clearly not met, the system prepares a refusal-ready recommendation for officer review.
+High or critical risk findings route to enhanced review.
 
-### 6. Policy uncertainty requests more evidence
+### 5. Policy failure can prepare refusal drafting
 
-If policy evaluation is unclear or missing evidence, the system asks for more information rather than forcing a legal conclusion.
+If the active policy version clearly shows the case does not meet requirements, the system may prepare a refusal-draft-ready recommendation for officer review.
 
-### 7. Weak finances request more information
+### 6. Policy uncertainty and operational ambiguity request more information
 
-If funds are below threshold or insufficiently supported, the system can request more evidence before final officer action.
+If policy status is unclear, circular versions conflict, or mission-specific evidence is missing, the system requests more information or manual review instead of forcing legal certainty.
 
 ## Why deterministic routing matters
 
-The final recommendation category must be reproducible and explainable. It should not vary because a language model “felt” more cautious on one run than another.
+Sri Lanka’s process already contains exceptions, public-rule mismatch risk, and manual handoffs. Deterministic routing is what prevents those realities from turning into inconsistent machine behavior.

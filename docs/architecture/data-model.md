@@ -2,64 +2,81 @@
 
 ## Case record
 
-The case record is the center of the system. It combines:
+The case record is the center of the system. For the Sri Lanka-first model, it must hold both:
+
+- the legal-review preparation state
+- the operational case-handling state
+
+That means the case has to represent ETA, manual referral, extension handling, and officer review in one place.
+
+## Core case fields
 
 - applicant identity
 - visa application facts
+- ETA-related status
 - uploaded documents
 - workflow state
-- agent outputs
+- recommendation history
 - timeline history
+- policy and circular version references
 - retention and sensitivity metadata
 
-## Why the model is case-centric
-
-Government review work is fundamentally case-based. Officers, auditors, and appeals bodies all need a coherent view of what happened to one case over time.
-
-## Important fields
+## Important Sri Lanka-first fields
 
 ### `status_timeline`
 
-Supports applicant transparency, operational reporting, and later SLA analytics.
+Tracks the operational history across intake, referral, ETA, extension, and officer review.
 
 ### `applicant_message_history`
 
-Captures what the applicant was told and when.
-
-### `agent_outputs`
-
-Preserves the structured result of each analysis stage.
+Stores what the applicant was told and when.
 
 ### `security_handling_code`
 
-Allows sensitive handling rules without leaking raw security detail.
+Supports restricted handling without leaking sensitive detail.
 
 ### `override_required`
 
-Highlights that the officer diverged from the recommendation path.
+Shows whether the officer diverged from the recommendation path.
 
-### `retention_class`
+### `rule_version_used`
 
-Supports future retention and deletion rules.
+Should capture the active internal rule or circular version used for the case.
 
-## Supporting records
+### `manual_referral_reason`
 
-### Document extraction records
+Should capture why the case was routed outside the straight-through path.
 
-Track normalized document extraction results separately from the case summary.
+## Supporting entities planned by the updated architecture
 
-### Agent runs
+### `RuleCircular`
 
-Track prompt version, model version, hashes, tool calls, evidence IDs, and policy IDs.
+Stores a rule or circular notice with effective date, owner, publication channel, and supersession metadata.
 
-### Audit events
+### `EffectivePolicyVersion`
 
-Track the compliance-grade timeline of both automated and human actions.
+Stores the active internal version used for officer-facing processing.
 
-### Officer briefs
+### `ChannelPublication`
 
-Store the exact dashboard-ready payload prepared for the officer.
+Tracks where a rule, notice, or scheme was publicly published.
 
-### Notifications
+### `NationalityExceptionRule`
 
-Track outbound applicant messaging for transparency and troubleshooting.
+Captures sponsor requirements, restricted-nationality rules, or special handling conditions.
+
+### `CaseTimelineEvent`
+
+Captures state changes and handoffs in a normalized way.
+
+### `PortClearanceEvent`
+
+Represents the border-side clearance outcome when relevant.
+
+### `ExtensionRequest`
+
+Represents extension-related requests, appointment needs, and endorsement status.
+
+### `DecisionNotice`
+
+Represents what the system communicates after the officer action is recorded.

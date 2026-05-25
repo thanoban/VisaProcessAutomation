@@ -1,96 +1,95 @@
 # Real-World Visa Processing Issues and Automation Response
 
-## 1. Incomplete applications flood the queue
+## 1. ETA does not equal final clearance
 
 ### Real issue
 
-Officers spend time opening cases that are missing core documents, unreadable scans, payment confirmation, or basic form details.
+In the Sri Lanka model, ETA is only part of the short-visit journey. The traveler may still face port-of-entry clearance and final officer discretion on arrival.
 
 ### System response
 
-- Intake Agent blocks the case before officer review
-- applicant gets a structured missing-items request
-- case is moved to `WAITING_FOR_DOCUMENTS`
+- store ETA state separately from final entry-related state
+- expose `READY_FOR_PORT_CLEARANCE` and `ENTERED_SRI_LANKA` as operational states
+- keep the applicant and officer timeline explicit about what has and has not been finalized
 
-## 2. Identity and travel-document checking is repetitive
+## 2. Official rule publication can be inconsistent across channels
 
 ### Real issue
 
-Passport details, expiry, name matching, and document quality are checked manually again and again across simple cases.
+Sri Lanka official channels can display policy or notice mismatches across ETA, immigration pages, and other public service surfaces.
 
 ### System response
 
-- Document Validator extracts fields early
-- passport validity and name matching are normalized into one output
-- unresolved identity issues route to enhanced review
+- introduce rule circular and publication-governance entities
+- keep an internal effective policy version separate from public notice wording
+- record which version was used for officer-facing processing
 
-## 3. Financial evidence is slow to assess manually
+## 3. Manual referral and sponsor exceptions create hidden operational work
 
 ### Real issue
 
-Bank statements take time to review, especially when salary patterns or sudden deposits matter.
+Some nationalities or case types may require sponsor-backed or head-office/manual handling that is not obvious from a basic online form flow.
 
 ### System response
 
-- Financial Agent calculates average balance and suspicious deposit patterns
-- summary is exposed directly in officer brief payload
-- weak or unclear funds evidence is routed before final officer action
+- add `REFERRED_TO_MANUAL_REVIEW` as a first-class state
+- record referral reason and responsible office
+- make the exception visible in applicant, officer, and supervisor views
 
-## 4. Policy application becomes inconsistent across teams
+## 4. Extension handling is fragmented
 
 ### Real issue
 
-Rules change, local teams interpret them differently, and old habits override updated policy.
+Visit visa extension handling can move between online self-service, appointment-based handling, and head-office/manual exceptions.
 
 ### System response
 
-- Policy Agent retrieves active sections from a managed policy corpus
-- every requirement is evaluated into `SATISFIED`, `NOT_SATISFIED`, `MISSING_EVIDENCE`, or `UNCLEAR`
-- officer can see policy ID and evidence citation together
+- model extension as a case sub-flow, not an afterthought
+- add extension request, appointment, and endorsement states
+- keep deadlines and responsible-office ownership visible
 
-## 5. Security and overstay checks are fragmented
+## 5. Upload and re-upload failures waste time
 
 ### Real issue
 
-Officers often need to rely on separate systems or hidden teams to confirm background signals.
+Unreadable files, missing required evidence, or unclear replacement instructions cause repeated delay and avoidable applicant support load.
 
 ### System response
 
-- Security Adapter is isolated
-- general workflow receives only minimal result codes
-- any possible hit or outage forces enhanced review
+- validate file readability earlier
+- generate clearer evidence-request messages
+- record replacement-required events explicitly in the timeline
 
-## 6. Fraud signals are hard to triage consistently
+## 6. Status tracking is usually weaker than the actual process
 
 ### Real issue
 
-Suspicious sponsor patterns, story conflicts, duplicate contacts, and unusual deposits can be missed or over-weighted.
+Applicants often cannot tell if they are waiting on ETA, biometrics, additional documents, border-side clearance, extension endorsement, or final officer review.
 
 ### System response
 
-- Risk Agent records only evidence-based indicators
-- protected attributes are excluded
-- high-risk patterns trigger enhanced review rather than automatic refusal
+- provide a case timeline with state, action owner, next step, and deadline
+- keep applicant-facing wording procedural and plain-language
 
-## 7. Audit trails are too weak for appeals and oversight
+## 7. Supervisors lack a joined operational picture
 
 ### Real issue
 
-When decisions are challenged, it is often difficult to reconstruct what the system suggested, what the officer saw, and why the final action changed.
+Backlogs often come from exceptions, unreadable submissions, rule changes, or extension bottlenecks, but the data is split across channels.
 
 ### System response
 
-- every agent output is audited
-- prompt, model, policy, evidence, and tool references are stored
-- officer overrides must include a reason
+- unify ETA, review, referral, extension, and override signals
+- design queue and backlog views around exception categories and stuck states
 
-## 8. Applicants do not know what is happening
+## 8. Officers still need better preparation, not automation of legal authority
 
 ### Real issue
 
-Status inquiries increase because the applicant cannot tell whether the case is waiting for documents, under review, or awaiting a human officer.
+The main value is better preparation and cleaner evidence handling, not replacing officer judgment.
 
 ### System response
 
-- applicant status endpoint exposes current state, latest message, required actions, and deadline context
-- applicant communication never states legal outcomes before human action
+- produce better officer briefs
+- keep evidence, policy references, and referral reasons linked together
+- always preserve human legal accountability

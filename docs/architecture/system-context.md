@@ -2,60 +2,68 @@
 
 ## Purpose
 
-VisaFlow MAS is designed to sit between a visa application intake channel and a human immigration officer. It absorbs repetitive verification work, prepares structured recommendations, and preserves a defensible record of how the case was processed.
+VisaFlow MAS sits between Sri Lanka’s applicant-facing short-visit intake surfaces and the human immigration officer. It absorbs repetitive verification work, keeps ETA and case operations joined, and preserves a defensible record of what happened at every stage.
 
 ## Primary stakeholders
 
 ### Applicants
 
-- submit applications
+- submit ETA and supporting information
 - upload supporting evidence
-- receive missing-information requests
-- track case progress
+- receive requests for more information
+- track ETA, case, and extension-related status
 
 ### Immigration officers
 
 - inspect AI-prepared briefs
-- verify evidence and policy alignment
-- make the final legal decision
-- add notes and override recommendations
+- verify policy and evidence alignment
+- handle manual referrals and complex cases
+- record the final human action
 
-### Supervisors
+### Port and border officers
 
-- monitor queues and SLA pressure
-- review escalated and sensitive cases
-- inspect officer override patterns
-- manage operational consistency
+- perform final entry clearance where relevant
+- need visibility into ETA and case status without relying on fragmented channels
 
-### Security and partner agencies
+### Supervisors and operations managers
 
-- provide restricted check outcomes
-- expose only minimal result codes to general workflow components
+- monitor pending ETA cases
+- monitor extension bottlenecks
+- review rule-change fallout and manual-referral load
+- inspect override patterns and stuck-state queues
 
-### Audit, appeals, and integrity bodies
+### Policy owners and ministry stakeholders
 
-- review case history, reasoning chain, and override trails
-- verify that no hidden auto-decision path exists
+- publish rules, circulars, and temporary schemes
+- need confidence that active officer workflow is using the correct version
+
+### Audit and integrity bodies
+
+- review history, overrides, rule versions, and case handling consistency
 
 ## External systems represented in the PoC
 
-- document storage
-- policy knowledge base
-- security screening service
-- previous visa history service
-- notification channel
-- audit sink
+- ETA authorization channel
+- document storage and upload handling
+- policy and circular knowledge base
+- security and previous-history adapters
+- notification and messaging channel
+- appointment or extension handling channel
 
 ## Trust boundaries
 
 ### General processing boundary
 
-Receives case data, runs core document, financial, policy, and risk analysis, and prepares officer-facing outputs.
+Runs intake, analysis, recommendation preparation, and timeline management.
 
 ### Restricted security boundary
 
-Queries sensitive systems and returns only approved codes such as `CLEAR`, `POSSIBLE_MATCH`, `CONFIRMED_HIT`, or `SYSTEM_UNAVAILABLE`.
+Queries sensitive systems and returns minimal codes only.
 
-### Human decision boundary
+### Human legal decision boundary
 
-Only an authenticated officer can submit the final action.
+Only an authenticated officer can record the legal outcome.
+
+### Policy governance boundary
+
+Controls which rule version, circular, or publication is active for internal workflow use.

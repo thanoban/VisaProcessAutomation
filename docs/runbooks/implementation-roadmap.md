@@ -1,33 +1,34 @@
 # Implementation Roadmap
 
-## Phase 1 - Foundation
+## Phase 1 - Sri Lanka documentation and operating-model correction
 
-- repository structure
-- agent specs
-- schemas
-- deployment notes
-- issue analysis and architecture markdown
+- rewrite repo docs around Sri Lanka short-visit processing
+- add ETA, extension, and rule-governance architecture docs
+- define benchmark advantages over existing methods
+- add pilot discovery plan and pain hypotheses
 
-## Phase 2 - Core workflow
+## Phase 2 - Sri Lanka workflow pack implementation
 
-- case persistence
-- application submit flow
-- deterministic orchestration
-- mock tool and agent integrations
-- officer brief generation
-- applicant status tracking
+- case persistence upgrades
+- Sri Lanka lifecycle states
+- ETA and manual-referral handling
+- richer applicant timeline and status payloads
+- policy and circular governance starter
+- officer brief updates
 
 ## Phase 3 - Validation
 
-- routing tests
-- contract tests
-- security boundary tests
+- Sri Lanka workflow tests
+- rule-conflict tests
+- applicant status clarity checks
 - audit behavior checks
+- security and governance boundary checks
 
 ## Phase 4 - Hardening and expansion
 
 - stronger auth and role enforcement
 - async processing
-- frontend implementation
-- richer policy corpus
-- additional visa classes
+- supervisor queue surfaces
+- extension workflow expansion
+- Business and Transit packs
+- richer foreign-benchmark-inspired UX and orchestration
