@@ -1,10 +1,16 @@
-# Officer Dashboard Contract Notes
+# Officer Dashboard
 
-This phase exposes officer-facing APIs for:
+The officer dashboard is now moving from contract-only notes into a professional frontend MVP aligned with [frontend/FRONTEND_IMPLEMENTATION_PLAN.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/frontend/FRONTEND_IMPLEMENTATION_PLAN.md).
+
+Current scope:
 
 - case retrieval
 - officer brief retrieval
-- audit timeline
+- audit timeline visibility
 - final decision submission
 
-The UI is intentionally deferred while backend contracts stabilize.
+Frontend priorities:
+
+- single-screen operational case understanding
+- explicit separation between recommendation and legal human decision
+- clear evidence, risk, policy, and audit framing for officer review
