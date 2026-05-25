@@ -30,6 +30,9 @@ const elements = {
   auditList: document.querySelector("#audit-list"),
   decisionOutcomePanel: document.querySelector("#decision-outcome-panel"),
   decisionForm: document.querySelector("#decision-form"),
+  decisionChoice: document.querySelector("#decision-choice"),
+  decisionGuidance: document.querySelector("#decision-guidance"),
+  overrideReason: document.querySelector("#decision-override"),
   decisionFeedback: document.querySelector("#decision-feedback"),
   caseIdInput: document.querySelector("#dashboard-case-id"),
 };
@@ -38,6 +41,7 @@ const state = {
   apiBaseUrl: localStorage.getItem("visaFlowApiBaseUrl") || "http://127.0.0.1:8000",
   apiAvailable: false,
   currentCaseId: officerDashboardMock.casePacket.case_id,
+  currentRecommendation: officerDashboardMock.officerBrief.recommendation,
 };
 
 const api = createApiClient(state.apiBaseUrl);
@@ -57,6 +61,7 @@ function wireEvents() {
     renderDashboard(officerDashboardMock.casePacket, officerDashboardMock.officerBrief, true);
   });
   elements.decisionForm.addEventListener("submit", handleDecisionSubmit);
+  elements.decisionChoice.addEventListener("change", syncDecisionGuidance);
 }
 
 async function loadDashboardChrome() {
@@ -103,6 +108,7 @@ async function handleLookup(event) {
 }
 
 function renderDashboard(casePacket, brief, useMock) {
+  state.currentRecommendation = brief.recommendation;
   elements.results.hidden = false;
   elements.empty.hidden = true;
   elements.recommendationValue.innerHTML = buildStatusChip(brief.recommendation);
@@ -253,6 +259,7 @@ function renderDashboard(casePacket, brief, useMock) {
   elements.decisionFeedback.textContent = useMock
     ? "Decision submission is disabled in mock mode and becomes live when the API is reachable."
     : `Ready to submit an officer action for ${casePacket.case_id}.`;
+  syncDecisionGuidance();
 }
 
 async function handleDecisionSubmit(event) {
@@ -315,6 +322,42 @@ function mergeBriefWithCurrentCase(brief, casePacket, auditTimeline) {
     },
     audit_timeline: auditTimeline,
   };
+}
+
+function syncDecisionGuidance() {
+  const selectedDecision = elements.decisionChoice.value;
+  const requiresOverride = overrideReasonRequired(state.currentRecommendation, selectedDecision);
+  elements.overrideReason.required = requiresOverride;
+
+  if (!state.currentRecommendation) {
+    elements.decisionGuidance.textContent =
+      "The override requirement will update once a recommendation is loaded for this case.";
+    return;
+  }
+
+  if (requiresOverride) {
+    elements.decisionGuidance.textContent =
+      `The current recommendation is ${titleCase(state.currentRecommendation)}. Because ${titleCase(selectedDecision)} differs from that route, an override reason is required before submission.`;
+    return;
+  }
+
+  elements.decisionGuidance.textContent =
+    `The current recommendation is ${titleCase(state.currentRecommendation)}. ${titleCase(selectedDecision)} can be submitted without an override reason for this case.`;
+}
+
+function overrideReasonRequired(recommendation, decision) {
+  const allowedDecisions = {
+    APPROVE_READY: new Set(["APPROVE"]),
+    REQUEST_MORE_INFO: new Set(["REQUEST_MORE_INFO"]),
+    REFUSAL_DRAFT_READY: new Set(["REJECT"]),
+    ENHANCED_REVIEW: new Set(["APPROVE", "REJECT", "REQUEST_MORE_INFO", "ESCALATE"]),
+  };
+  const normalizedRecommendation = String(recommendation || "").toUpperCase();
+  const normalizedDecision = String(decision || "").toUpperCase();
+  if (!allowedDecisions[normalizedRecommendation]) {
+    return false;
+  }
+  return !allowedDecisions[normalizedRecommendation].has(normalizedDecision);
 }
 
 function buildDecisionOutcomeMarkup(casePacket) {
