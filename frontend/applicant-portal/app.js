@@ -28,6 +28,7 @@ const elements = {
   holderValue: document.querySelector("#holder-value"),
   nextActionValue: document.querySelector("#next-action-value"),
   statusDefinitionGrid: document.querySelector("#status-definition-grid"),
+  documentSummaryList: document.querySelector("#document-summary-list"),
   timelineList: document.querySelector("#timeline-list"),
 };
 
@@ -269,6 +270,25 @@ function renderCaseStatus(casePacket, options) {
       `
     )
     .join("");
+
+  const uploadedDocuments = status.uploaded_documents?.length ? status.uploaded_documents : casePacket.documents;
+  elements.documentSummaryList.innerHTML = listMarkup(
+    (uploadedDocuments || []).map(
+      (document) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${document.document_id}</span>
+              <h3 class="mt-2 text-lg font-extrabold text-slate-900">${titleCase(document.document_type)}</h3>
+            </div>
+            ${buildStatusChip(document.status || "UPLOADED")}
+          </div>
+          <p class="text-sm leading-7 text-slate-600 break-all">${document.file_uri || "No file reference available."}</p>
+        </article>
+      `
+    ),
+    "No uploaded documents are attached to this case yet."
+  );
 
   const timelineMarkup = (status.timeline || casePacket.status_timeline || []).map(
     (event) => `
