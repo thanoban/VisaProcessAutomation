@@ -24,7 +24,7 @@ def test_security_payload_is_minimal_and_audit_exists(client):
         ],
         "policy_context": {
             "country": "Sri Lanka",
-            "policy_version": "tourist-policy-v1",
+            "policy_version": "sl-tourist-policy-v1",
             "effective_date": "2026-05-25"
         },
         "mock_profile": {
@@ -71,7 +71,7 @@ def test_officer_decision_records_override_reason(client):
         ],
         "policy_context": {
             "country": "Sri Lanka",
-            "policy_version": "tourist-policy-v1",
+            "policy_version": "sl-tourist-policy-v1",
             "effective_date": "2026-05-25"
         }
     }
@@ -117,7 +117,7 @@ def test_officer_approval_moves_case_to_port_clearance_follow_up(client):
         ],
         "policy_context": {
             "country": "Sri Lanka",
-            "policy_version": "tourist-policy-v1",
+            "policy_version": "sl-tourist-policy-v1",
             "effective_date": "2026-05-25"
         }
     }

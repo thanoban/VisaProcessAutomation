@@ -24,7 +24,7 @@ def test_case_status_and_brief_contract(client):
         ],
         "policy_context": {
             "country": "Sri Lanka",
-            "policy_version": "tourist-policy-v1",
+            "policy_version": "sl-tourist-policy-v1",
             "effective_date": "2026-05-25"
         }
     }
@@ -34,6 +34,7 @@ def test_case_status_and_brief_contract(client):
     brief_response = client.get(f"/cases/{payload['case_id']}/officer-brief")
     timeline_response = client.get(f"/cases/{payload['case_id']}/timeline")
     auth_response = client.get(f"/cases/{payload['case_id']}/authorization-status")
+    policy_response = client.get("/policies/TOURIST/requirements")
     checklist_response = client.get("/checklists/tourist-visit")
     governance_response = client.get("/governance/rules/active")
     queue_response = client.get("/supervisor/queues")
@@ -41,15 +42,18 @@ def test_case_status_and_brief_contract(client):
     assert brief_response.status_code == 200
     assert timeline_response.status_code == 200
     assert auth_response.status_code == 200
+    assert policy_response.status_code == 200
     assert checklist_response.status_code == 200
     assert governance_response.status_code == 200
     assert queue_response.status_code == 200
     body = brief_response.json()
     status_body = status_response.json()
     auth_body = auth_response.json()
+    policy_body = policy_response.json()
     assert "recommendation_panel" in body
     assert "evidence_viewer" in body
     assert body["human_decision_required"] is True
     assert status_body["current_holder"] == "OFFICER"
     assert status_body["authorization_status"]["rule_version_used"] == "sl-rule-pack-2026-05-25"
     assert auth_body["workflow_pack"] == "SRI_LANKA_TOURIST_VISIT"
+    assert policy_body["policy_version"] == "sl-tourist-policy-v1"

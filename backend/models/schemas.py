@@ -131,9 +131,9 @@ class ChecklistItem(BaseModel):
 
 
 class PolicyContext(BaseModel):
-    country: str = "UNSPECIFIED"
-    policy_version: str = "tourist-policy-v1"
-    effective_date: str = "2026-01-01"
+    country: str = "Sri Lanka"
+    policy_version: str = "sl-tourist-policy-v1"
+    effective_date: str = "2026-05-25"
     effective_rule_version: str = "sl-rule-pack-2026-05-25"
     publication_reference: str = "ETA-40-COUNTRY-SCHEME-2026-05-25"
     publication_channels: list[ChannelPublication] = Field(default_factory=list)

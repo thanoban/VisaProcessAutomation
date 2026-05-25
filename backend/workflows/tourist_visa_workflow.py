@@ -264,7 +264,12 @@ class TouristVisaWorkflow:
         return self.notification_service.store_message(case_id, message)
 
     def get_policy_requirements(self, visa_class: str) -> PolicyRequirementsResponse:
-        retrieved = retrieve_policy_sections(visa_class, "Sri Lanka", "2026-05-25")
+        active_rules = self.reference_service.get_active_rules()
+        retrieved = retrieve_policy_sections(
+            visa_class,
+            "Sri Lanka",
+            active_rules.active_policy_version.effective_date,
+        )
         return PolicyRequirementsResponse(
             visa_class=visa_class.upper(),
             policy_version=retrieved["policy_version"],
