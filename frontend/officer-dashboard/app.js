@@ -28,6 +28,7 @@ const elements = {
   policyList: document.querySelector("#policy-list"),
   questionList: document.querySelector("#question-list"),
   auditList: document.querySelector("#audit-list"),
+  decisionOutcomePanel: document.querySelector("#decision-outcome-panel"),
   decisionForm: document.querySelector("#decision-form"),
   decisionFeedback: document.querySelector("#decision-feedback"),
   caseIdInput: document.querySelector("#dashboard-case-id"),
@@ -247,6 +248,8 @@ function renderDashboard(casePacket, brief, useMock) {
     "No audit events have been recorded yet."
   );
 
+  elements.decisionOutcomePanel.innerHTML = buildDecisionOutcomeMarkup(casePacket);
+
   elements.decisionFeedback.textContent = useMock
     ? "Decision submission is disabled in mock mode and becomes live when the API is reachable."
     : `Ready to submit an officer action for ${casePacket.case_id}.`;
@@ -312,6 +315,80 @@ function mergeBriefWithCurrentCase(brief, casePacket, auditTimeline) {
     },
     audit_timeline: auditTimeline,
   };
+}
+
+function buildDecisionOutcomeMarkup(casePacket) {
+  const workflow = casePacket.workflow || {};
+  const decisionNotice = workflow.decision_notice;
+  const portEvents = workflow.port_clearance_events || [];
+  const outcomeCards = [
+    `
+      <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+        <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Current workflow state</span>
+            <h3 class="mt-2 text-lg font-extrabold text-slate-900">${titleCase(workflow.current_state || "UNKNOWN")}</h3>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            ${buildStatusChip(workflow.current_holder || "SYSTEM")}
+            ${casePacket.override_required ? buildStatusChip("override required", "warning") : buildStatusChip("no override", "success")}
+          </div>
+        </div>
+        <p class="text-sm leading-7 text-slate-600">
+          <strong class="text-slate-900">Next action:</strong> ${titleCase(workflow.next_action || "Not available")}<br />
+          <strong class="text-slate-900">Action required from:</strong> ${titleCase(workflow.action_required_from || "SYSTEM")}
+        </p>
+      </article>
+    `,
+  ];
+
+  if (decisionNotice) {
+    outcomeCards.push(`
+      <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+        <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${decisionNotice.subject || "Decision notice"}</span>
+        <p class="mt-3 text-sm leading-7 text-slate-600">${decisionNotice.summary || "No decision summary is available yet."}</p>
+        <div class="mt-4 grid gap-2">
+          ${(decisionNotice.next_steps || [])
+            .map(
+              (step) => `<div class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-6 text-slate-700">${step}</div>`
+            )
+            .join("")}
+        </div>
+      </article>
+    `);
+  }
+
+  if (portEvents.length) {
+    outcomeCards.push(`
+      <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+        <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Port-of-entry follow-up</span>
+        <div class="mt-4 grid gap-3">
+          ${portEvents
+            .map(
+              (event) => `
+                <div class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-6 text-slate-700">
+                  <strong class="text-slate-900">${titleCase(event.event_type)}</strong><br />
+                  Status: ${titleCase(event.status)}<br />
+                  Recorded: ${formatDateTime(event.timestamp)}<br />
+                  ${event.notes || ""}
+                </div>
+              `
+            )
+            .join("")}
+        </div>
+      </article>
+    `);
+  }
+
+  if (!decisionNotice && !portEvents.length) {
+    outcomeCards.push(`
+      <div class="rounded-[1.5rem] border border-dashed border-slate-300 bg-white/45 p-5 text-sm leading-7 text-slate-600">
+        No final decision outcome has been recorded for this case yet. Once an officer action is submitted, the dashboard will show the decision notice and any port-of-entry follow-up requirements here.
+      </div>
+    `);
+  }
+
+  return outcomeCards.join("");
 }
 
 function objectPairsMarkup(value) {
