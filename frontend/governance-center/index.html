@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VisaFlow MAS Governance Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Manrope", "Segoe UI", "sans-serif"],
+              display: ["Source Serif 4", "Georgia", "serif"],
+            },
+            colors: {
+              visa: {
+                ink: "#123042",
+                navy: "#12364D",
+              },
+            },
+            boxShadow: {
+              soft: "0 24px 60px rgba(17, 24, 39, 0.10)",
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="stylesheet" href="../shared/styles.css" />
+  </head>
+  <body class="min-h-screen text-visa-ink">
+    <div class="mx-auto w-[min(calc(100%-1.5rem),82rem)] py-4 md:w-[min(calc(100%-2rem),82rem)] md:py-6">
+      <header class="mb-7 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div class="flex items-center gap-4">
+          <div class="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-visa-navy to-amber-700 text-lg font-extrabold tracking-[0.18em] text-white shadow-soft">
+            VF
+          </div>
+          <div>
+            <small class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Rule pack and publication visibility</small>
+            <strong class="block text-lg text-slate-900">VisaFlow MAS Governance Center</strong>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-3 md:justify-end">
+          <span class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+            Source traceability
+          </span>
+          <span class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600" id="governance-api-pill">
+            Awaiting API check
+          </span>
+        </div>
+      </header>
+
+      <section class="rounded-[2.25rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-8">
+        <div class="grid gap-6 xl:grid-cols-[1.45fr_minmax(18rem,0.9fr)]">
+          <div>
+            <span class="block text-[0.72rem] uppercase tracking-[0.22em] text-slate-500">Governance reference</span>
+            <h1 class="font-display mt-3 text-4xl leading-none tracking-[-0.05em] text-slate-950 md:text-6xl">
+              Make the active rule pack explicit before it disappears into case processing.
+            </h1>
+            <p class="mt-4 max-w-3xl text-sm leading-7 text-slate-600 md:text-base">
+              This center exposes the active policy version, circular publications, official sources, and nationality
+              exception handling so officers and supervisors can verify what the workflow is actually using.
+            </p>
+          </div>
+
+          <div class="grid gap-4">
+            <div class="rounded-[1.75rem] border border-slate-200/80 bg-white/75 p-5 backdrop-blur">
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Why it matters</span>
+              <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                <div class="rounded-3xl border border-slate-200/70 bg-white/80 p-4">
+                  <small class="text-slate-500">Active version</small>
+                  <strong class="mt-2 block text-lg text-slate-900">Operationally explicit</strong>
+                </div>
+                <div class="rounded-3xl border border-slate-200/70 bg-white/80 p-4">
+                  <small class="text-slate-500">Public wording drift</small>
+                  <strong class="mt-2 block text-lg text-slate-900">Visible, not silent</strong>
+                </div>
+                <div class="rounded-3xl border border-slate-200/70 bg-white/80 p-4">
+                  <small class="text-slate-500">Exception handling</small>
+                  <strong class="mt-2 block text-lg text-slate-900">Sponsor and referral aware</strong>
+                </div>
+                <div class="rounded-3xl border border-slate-200/70 bg-white/80 p-4">
+                  <small class="text-slate-500">Source list</small>
+                  <strong class="mt-2 block text-lg text-slate-900">Officer-reviewable</strong>
+                </div>
+              </div>
+            </div>
+            <div class="rounded-[1.5rem] border border-slate-200/80 bg-white/75 p-5">
+              <strong class="text-sm uppercase tracking-[0.18em] text-slate-700">Governance posture</strong>
+              <p class="mt-2 text-sm leading-7 text-slate-600" id="governance-hero-copy">
+                Loading rule pack, publication, and source state.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="mt-6 grid gap-6 xl:grid-cols-[1.2fr_minmax(20rem,0.95fr)]">
+        <main class="grid gap-6">
+          <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7">
+            <div class="mb-5">
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Active policy version</span>
+              <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Workflow rule pack in force</h2>
+            </div>
+            <div class="grid gap-4 md:grid-cols-2" id="active-policy-grid"></div>
+            <div class="mt-5 rounded-[1.75rem] border border-slate-200/80 bg-white/75 p-5">
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Tourist policy requirements</span>
+              <h3 class="mt-2 text-xl font-extrabold text-slate-900">Requirements driving the workflow</h3>
+              <div class="mt-5 grid gap-4" id="requirements-list"></div>
+            </div>
+          </section>
+
+          <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7">
+            <div class="mb-5">
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Circulars and publications</span>
+              <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Publication and notice visibility</h2>
+            </div>
+            <div class="grid gap-4" id="circulars-list"></div>
+          </section>
+        </main>
+
+        <aside class="grid gap-6">
+          <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7">
+            <div class="mb-5">
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Official sources</span>
+              <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Reference endpoints</h2>
+            </div>
+            <div class="grid gap-3" id="sources-list"></div>
+          </section>
+
+          <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7">
+            <div class="mb-5">
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Nationality exceptions</span>
+              <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Manual-routing rules</h2>
+            </div>
+            <div class="grid gap-4" id="exception-rules-list"></div>
+          </section>
+        </aside>
+      </div>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

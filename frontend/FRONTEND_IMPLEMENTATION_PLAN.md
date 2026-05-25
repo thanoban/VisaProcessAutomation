@@ -62,6 +62,21 @@ Initial modules:
 - bottleneck callouts
 - service notice visibility
 
+### Governance reference center
+
+Primary goals:
+
+- expose the active rule pack and policy version clearly
+- make publication mismatches visible instead of implicit
+- give officers and supervisors quick access to official source references
+
+Initial modules:
+
+- active policy version summary
+- circular and publication panels
+- nationality exception rules
+- tourist policy requirement list
+
 ## 3. Experience Principles
 
 - professional government-grade visual language, not startup novelty UI
@@ -114,6 +129,7 @@ Initial modules:
 - terminology consistency pass against Sri Lanka workflow docs
 - integration path into FastAPI static serving or a future dedicated frontend build pipeline
 - supervisor dashboard refinement and richer operations drill-down
+- governance center refinement and deeper source traceability
 
 ## 7. Verification Standard
 
@@ -131,4 +147,5 @@ Each frontend slice is only considered finished when:
 2. applicant portal landing, intake, and status shell
 3. officer dashboard overview and brief shell
 4. supervisor queue visibility shell
-5. FastAPI integration and UI hardening
+5. governance and reference visibility shell
+6. FastAPI integration and UI hardening

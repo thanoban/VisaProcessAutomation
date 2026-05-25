@@ -46,6 +46,12 @@ export function createApiClient(baseUrl) {
     getChecklist() {
       return request("/checklists/tourist-visit");
     },
+    getPolicyRequirements(visaClass = "TOURIST") {
+      return request(`/policies/${encodeURIComponent(visaClass)}/requirements`);
+    },
+    getActiveGovernanceRules() {
+      return request("/governance/rules/active");
+    },
     createApplication(payload) {
       return request("/applications", {
         method: "POST",
@@ -481,4 +487,117 @@ export const supervisorDashboardMock = {
     ready_for_officer_review: 6,
   },
   notices: applicantPortalMock.notices,
+};
+
+export const governanceCenterMock = {
+  requirements: {
+    visa_class: "TOURIST",
+    workflow_pack: "SRI_LANKA_TOURIST_VISIT",
+    policy_version: "sl-tourist-policy-v1",
+    effective_date: "2026-05-25",
+    source_uri: "https://www.immigration.gov.lk/pages_e.php?id=14&os=av..",
+    official_sources: [
+      "https://www.eta.gov.lk/",
+      "https://www.eta.gov.lk/slvisa/visainfo/weta.jsp?ch1=current&locale=en_US",
+      "https://www.immigration.gov.lk/pages_e.php?id=14&os=av..",
+    ],
+    verified_at: "2026-05-25",
+    requirements: [
+      {
+        policy_id: "TOURIST-01-A",
+        requirement: "Applicant must hold a passport valid for at least six months from the intended arrival date.",
+      },
+      {
+        policy_id: "TOURIST-12-B",
+        requirement: "Applicant must show adequate funds for the intended short stay in Sri Lanka.",
+      },
+      {
+        policy_id: "TOURIST-20-C",
+        requirement: "Applicant must show return or onward travel assurance consistent with a temporary tourist visit.",
+      },
+    ],
+  },
+  rules: {
+    workflow_pack: "SRI_LANKA_TOURIST_VISIT",
+    country: "Sri Lanka",
+    verified_at: "2026-05-25",
+    official_sources: [
+      "https://www.eta.gov.lk/",
+      "https://www.eta.gov.lk/slvisa/visainfo/weta.jsp?ch1=current&locale=en_US",
+      "https://www.immigration.gov.lk/pages_e.php?id=14&os=vb..",
+      "https://www.immigration.gov.lk/pages_e.php?id=14&os=av..",
+      "https://www.immigration.gov.lk/pages_e.php?id=58",
+      "https://eservices.immigration.gov.lk/appointment_service.html",
+    ],
+    active_policy_version: {
+      workflow_pack: "SRI_LANKA_TOURIST_VISIT",
+      policy_version: "sl-tourist-policy-v1",
+      rule_version: "sl-rule-pack-2026-05-25",
+      effective_date: "2026-05-25",
+      publication_reference: "ETA-40-COUNTRY-SCHEME-2026-05-25",
+      notes: "Officer workflow should use the active internal rule pack even when public channels lag.",
+    },
+    active_circulars: [
+      {
+        circular_id: "SL-ETA-2026-05-25",
+        title: "40-country free-of-charge tourist ETA scheme",
+        effective_date: "2026-05-25",
+        status: "ACTIVE",
+        legal_owner: "Department of Immigration and Emigration",
+        public_summary: "Certain nationalities can obtain a 30-day tourist ETA free of charge.",
+        internal_summary: "Apply the active 2026 tourist ETA pack and preserve nationality-based exceptions separately.",
+        publications: [
+          {
+            channel: "ETA_PORTAL",
+            published_at: "2026-05-25",
+            reference: "https://www.eta.gov.lk/",
+            notes: "40-country free-of-charge tourist ETA notice visible on ETA site.",
+          },
+        ],
+      },
+      {
+        circular_id: "SL-ETA-2025-10-13-REVOKED",
+        title: "ETA mandatory announcement revoked until further notice",
+        effective_date: "2025-10-13",
+        status: "REVOKED_NOTICE_REMAINS_VISIBLE",
+        legal_owner: "Department of Immigration and Emigration",
+        public_summary: "Some public pages still show wording about the revocation of the ETA-mandatory notice.",
+        internal_summary: "Public channel inconsistency must not override the active internal rule pack.",
+        publications: [
+          {
+            channel: "IMMIGRATION_GENERAL_INFO",
+            published_at: "2025-10-13",
+            reference: "https://www.immigration.gov.lk/pages_e.php?id=14&os=vb..",
+            notes: "General information page still references revoked ETA wording.",
+          },
+        ],
+      },
+    ],
+    nationality_exception_rules: [
+      {
+        rule_id: "SL-SPONSOR-001",
+        nationality: "AFGHANISTAN",
+        requires_sponsor: true,
+        requires_manual_review: true,
+        routing_target: "HEAD_OFFICE",
+        reason: "Tourist or business ETA should be routed through Sri Lankan sponsor and head-office handling.",
+      },
+      {
+        rule_id: "SL-SPONSOR-004",
+        nationality: "NIGERIA",
+        requires_sponsor: true,
+        requires_manual_review: true,
+        routing_target: "HEAD_OFFICE",
+        reason: "Tourist or business ETA should be routed through Sri Lankan sponsor and head-office handling.",
+      },
+      {
+        rule_id: "SL-SPONSOR-006",
+        nationality: "SYRIA",
+        requires_sponsor: true,
+        requires_manual_review: true,
+        routing_target: "HEAD_OFFICE",
+        reason: "Tourist or business ETA should be routed through Sri Lankan sponsor and head-office handling.",
+      },
+    ],
+  },
 };

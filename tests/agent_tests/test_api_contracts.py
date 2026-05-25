@@ -61,9 +61,15 @@ def test_case_status_and_brief_contract(client):
     assert auth_body["policy_version"] == "sl-tourist-policy-v1"
     assert auth_body["source_uri"].startswith("https://www.immigration.gov.lk/")
     assert policy_body["policy_version"] == "sl-tourist-policy-v1"
+    assert policy_body["workflow_pack"] == "SRI_LANKA_TOURIST_VISIT"
+    assert policy_body["source_uri"].startswith("https://www.immigration.gov.lk/")
     assert policy_body["official_sources"]
     assert checklist_body["country"] == "Sri Lanka"
     assert governance_body["verified_at"] == "2026-05-25"
+    assert governance_body["country"] == "Sri Lanka"
+    assert governance_body["active_circulars"]
+    assert governance_body["active_circulars"][0]["publications"]
+    assert any(rule["nationality"] == "NIGERIA" for rule in governance_body["nationality_exception_rules"])
 
 
 def test_document_response_upload_reprocesses_case(client):
