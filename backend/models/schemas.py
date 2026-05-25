@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
+
+from backend.services.utils import utc_now
 
 
 Recommendation = Literal["APPROVE_READY", "REQUEST_MORE_INFO", "ENHANCED_REVIEW", "REFUSAL_DRAFT_READY"]
@@ -84,7 +85,7 @@ class NationalityExceptionRule(BaseModel):
 
 class CaseTimelineEvent(BaseModel):
     state: str
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = Field(default_factory=utc_now)
     actor: str
     description: str = ""
     action_owner: str | None = None
@@ -110,7 +111,7 @@ class Appointment(BaseModel):
 class PortClearanceEvent(BaseModel):
     event_type: str
     status: str
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = Field(default_factory=utc_now)
     notes: str = ""
 
 
@@ -119,7 +120,7 @@ class DecisionNotice(BaseModel):
     subject: str
     summary: str
     next_steps: list[str] = Field(default_factory=list)
-    issued_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    issued_at: str = Field(default_factory=utc_now)
 
 
 class ChecklistItem(BaseModel):
@@ -159,8 +160,8 @@ class WorkflowState(BaseModel):
 
 
 class AuditInfo(BaseModel):
-    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
-    updated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = Field(default_factory=utc_now)
+    updated_at: str = Field(default_factory=utc_now)
     workflow_version: str = "v1.0"
 
 
@@ -174,7 +175,7 @@ class AgentEnvelope(BaseModel):
     policy_ids: list[str] = Field(default_factory=list)
     confidence: float
     requires_human_review: bool = True
-    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = Field(default_factory=utc_now)
     details: dict[str, Any] = Field(default_factory=dict)
 
 
