@@ -184,12 +184,19 @@ async function handleApplicationSubmit(event) {
     }
 
     const createdCase = await api.createApplication(payload);
+    await api.processCase(createdCase.case_id);
+
+    const [processedCase, caseStatus] = await Promise.all([
+      api.getCase(createdCase.case_id),
+      api.getCaseStatus(createdCase.case_id),
+    ]);
+
     elements.lookupCaseIdInput.value = createdCase.case_id;
-    renderCaseStatus(createdCase, {
-      latestStatus: await api.getCaseStatus(createdCase.case_id),
+    renderCaseStatus(processedCase, {
+      latestStatus: caseStatus,
       useMock: false,
     });
-    elements.formFeedback.textContent = `Application ${createdCase.case_id} created successfully.`;
+    elements.formFeedback.textContent = `Application ${createdCase.case_id} created and entered the Sri Lanka processing workflow.`;
   } catch (error) {
     elements.formFeedback.textContent = `Submission failed: ${error.message}`;
   }
