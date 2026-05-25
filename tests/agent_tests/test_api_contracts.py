@@ -183,3 +183,49 @@ def test_waiting_case_status_exposes_evidence_request_details(client):
     assert body["required_actions"]
     assert body["additional_evidence_requests"]
     assert body["additional_evidence_requests"][0]["status"] == "OPEN"
+
+
+def test_reprocessing_waiting_case_does_not_duplicate_open_evidence_requests(client):
+    payload = {
+        "case_id": "VISA-2026-API-DUPE-001",
+        "applicant": {
+            "full_name": "Arjun Mehta",
+            "date_of_birth": "1998-04-12",
+            "nationality": "Indian",
+            "passport_number": "P1234567",
+            "contact_email": "arjun@example.com",
+        },
+        "visa_application": {
+            "visa_class": "TOURIST",
+            "purpose_of_travel": "Tourism and sightseeing in Sri Lanka",
+            "arrival_date": "2026-08-10",
+            "departure_date": "2026-08-20",
+            "destination_address": "Hotel Example",
+            "country_of_application": "India",
+            "payment_status": "PAID",
+        },
+        "documents": [
+            {"document_id": "DOC-001", "document_type": "PASSPORT", "file_uri": "gs://x/passport.pdf"},
+            {"document_id": "DOC-003", "document_type": "FLIGHT_ITINERARY", "file_uri": "gs://x/flight.pdf"},
+        ],
+        "policy_context": {
+            "country": "Sri Lanka",
+            "policy_version": "sl-tourist-policy-v1",
+            "effective_date": "2026-05-25",
+        },
+    }
+    assert client.post("/applications", json=payload).status_code == 201
+    first = client.post(f"/cases/{payload['case_id']}/process")
+    second = client.post(f"/cases/{payload['case_id']}/process")
+    assert first.status_code == 200
+    assert second.status_code == 200
+
+    case_response = client.get(f"/cases/{payload['case_id']}")
+    assert case_response.status_code == 200
+    open_requests = [
+        request
+        for request in case_response.json()["workflow"]["additional_evidence_requests"]
+        if request["status"] == "OPEN"
+    ]
+    assert len(open_requests) == 1
+    assert open_requests[0]["requested_items"] == ["BANK_STATEMENT"]

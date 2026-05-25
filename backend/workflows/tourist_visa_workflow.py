@@ -173,13 +173,12 @@ class TouristVisaWorkflow:
                 action_owner="PORT_OF_ENTRY",
             )
         elif payload.decision == "REQUEST_MORE_INFO":
-            request = AdditionalEvidenceRequest(
-                request_id=f"REQ-{uuid4()}",
+            self._upsert_open_evidence_request(
+                case,
                 requested_items=["ADDITIONAL_SUPPORTING_EVIDENCE"],
                 reason=payload.reason,
-                status="OPEN",
+                deadline=case.decision_due_at or "",
             )
-            case.workflow.additional_evidence_requests.append(request)
             case.workflow.eta_status = "ETA_ADDITIONAL_EVIDENCE_REQUIRED"
             case.workflow.current_holder = "APPLICANT"
             case.workflow.action_required_from = "APPLICANT"
@@ -581,14 +580,12 @@ class TouristVisaWorkflow:
     def _handle_evidence_loop(self, case: CasePacket, intake: dict) -> dict:
         case = self.case_service.get_case(case.case_id)
         missing_items = intake["missing_items"] + intake.get("invalid_items", [])
-        request = AdditionalEvidenceRequest(
-            request_id=f"REQ-{uuid4()}",
+        self._upsert_open_evidence_request(
+            case,
             requested_items=missing_items,
             reason="Sri Lanka tourist visit processing requires the missing or replacement evidence listed.",
             deadline=case.decision_due_at or "",
-            status="OPEN",
         )
-        case.workflow.additional_evidence_requests.append(request)
         case.workflow.current_holder = "APPLICANT"
         case.workflow.action_required_from = "APPLICANT"
         case.workflow.next_action = "UPLOAD_REQUIRED_DOCUMENTS"
@@ -700,14 +697,12 @@ class TouristVisaWorkflow:
         missing_evidence: list[str],
     ) -> CasePacket:
         if recommendation == "REQUEST_MORE_INFO":
-            request = AdditionalEvidenceRequest(
-                request_id=f"REQ-{uuid4()}",
+            self._upsert_open_evidence_request(
+                case,
                 requested_items=missing_evidence or blocking_issues,
                 reason="Additional evidence or governance clarification is required for this Sri Lanka tourist visit case.",
                 deadline=case.decision_due_at or "",
-                status="OPEN",
             )
-            case.workflow.additional_evidence_requests.append(request)
             case.workflow.current_holder = "APPLICANT"
             case.workflow.action_required_from = "APPLICANT"
             case.workflow.next_action = "RESPOND_TO_INFORMATION_REQUEST"
@@ -732,6 +727,31 @@ class TouristVisaWorkflow:
             description="Case has completed automated preparation and is ready for officer review.",
             action_owner="OFFICER",
         )
+
+    def _upsert_open_evidence_request(
+        self,
+        case: CasePacket,
+        *,
+        requested_items: list[str],
+        reason: str,
+        deadline: str,
+    ) -> AdditionalEvidenceRequest:
+        normalized_items = sorted({item for item in requested_items if item})
+        for request in case.workflow.additional_evidence_requests:
+            if request.status == "OPEN" and sorted(set(request.requested_items)) == normalized_items:
+                request.reason = reason
+                request.deadline = deadline
+                return request
+
+        request = AdditionalEvidenceRequest(
+            request_id=f"REQ-{uuid4()}",
+            requested_items=normalized_items,
+            reason=reason,
+            deadline=deadline,
+            status="OPEN",
+        )
+        case.workflow.additional_evidence_requests.append(request)
+        return request
 
     def _supervisor_output(
         self,
