@@ -130,3 +130,44 @@ def test_document_response_upload_reprocesses_case(client):
     final_case = client.get(f"/cases/{payload['case_id']}").json()
     bank_documents = [doc for doc in final_case["documents"] if doc["document_type"] == "BANK_STATEMENT"]
     assert len(bank_documents) == 1
+
+
+def test_waiting_case_status_exposes_evidence_request_details(client):
+    payload = {
+        "case_id": "VISA-2026-API-WAIT-001",
+        "applicant": {
+            "full_name": "Arjun Mehta",
+            "date_of_birth": "1998-04-12",
+            "nationality": "Indian",
+            "passport_number": "P1234567",
+            "contact_email": "arjun@example.com",
+        },
+        "visa_application": {
+            "visa_class": "TOURIST",
+            "purpose_of_travel": "Tourism and sightseeing in Sri Lanka",
+            "arrival_date": "2026-08-10",
+            "departure_date": "2026-08-20",
+            "destination_address": "Hotel Example",
+            "country_of_application": "India",
+            "payment_status": "PAID",
+        },
+        "documents": [
+            {"document_id": "DOC-001", "document_type": "PASSPORT", "file_uri": "gs://x/passport.pdf"},
+            {"document_id": "DOC-003", "document_type": "FLIGHT_ITINERARY", "file_uri": "gs://x/flight.pdf"},
+        ],
+        "policy_context": {
+            "country": "Sri Lanka",
+            "policy_version": "sl-tourist-policy-v1",
+            "effective_date": "2026-05-25",
+        },
+    }
+    assert client.post("/applications", json=payload).status_code == 201
+    assert client.post(f"/cases/{payload['case_id']}/process").status_code == 200
+
+    status_response = client.get(f"/cases/{payload['case_id']}/status")
+    assert status_response.status_code == 200
+    body = status_response.json()
+    assert body["status"] == "WAITING_FOR_DOCUMENTS"
+    assert body["required_actions"]
+    assert body["additional_evidence_requests"]
+    assert body["additional_evidence_requests"][0]["status"] == "OPEN"

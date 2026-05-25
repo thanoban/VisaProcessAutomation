@@ -226,6 +226,7 @@ class CaseService:
             status=case.workflow.current_state,
             latest_message=latest_message,
             required_actions=required_actions,
+            additional_evidence_requests=[request.model_dump() for request in case.workflow.additional_evidence_requests],
             uploaded_documents=[doc.model_dump() for doc in case.documents],
             deadlines={"decision_due_at": case.decision_due_at},
             service_notices=[

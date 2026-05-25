@@ -312,6 +312,7 @@ class CaseStatusResponse(BaseModel):
     status: str
     latest_message: dict[str, Any] | None = None
     required_actions: list[str] = Field(default_factory=list)
+    additional_evidence_requests: list[dict[str, Any]] = Field(default_factory=list)
     uploaded_documents: list[dict[str, Any]] = Field(default_factory=list)
     deadlines: dict[str, Any] = Field(default_factory=dict)
     service_notices: list[dict[str, Any]] = Field(default_factory=list)

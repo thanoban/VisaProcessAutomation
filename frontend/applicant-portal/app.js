@@ -31,6 +31,8 @@ const elements = {
   holderValue: document.querySelector("#holder-value"),
   nextActionValue: document.querySelector("#next-action-value"),
   statusDefinitionGrid: document.querySelector("#status-definition-grid"),
+  latestMessagePanel: document.querySelector("#latest-message-panel"),
+  requiredActionsPanel: document.querySelector("#required-actions-panel"),
   documentSummaryList: document.querySelector("#document-summary-list"),
   timelineList: document.querySelector("#timeline-list"),
 };
@@ -314,6 +316,52 @@ function renderCaseStatus(casePacket, options) {
     )
     .join("");
 
+  const latestMessage = status.latest_message;
+  elements.latestMessagePanel.innerHTML = latestMessage
+    ? `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${latestMessage.subject || "Status update"}</span>
+          <p class="mt-3 text-sm leading-7 text-slate-600">${latestMessage.message || "No message body is available yet."}</p>
+        </article>
+      `
+    : `<div class="rounded-[1.5rem] border border-dashed border-slate-300 bg-white/45 p-5 text-sm leading-7 text-slate-600">No applicant-facing message has been recorded for this case yet.</div>`;
+
+  const requiredActionCards = [
+    ...(status.required_actions || []).map(
+      (action) => `
+        <article class="rounded-[1.5rem] border border-amber-200 bg-amber-50 p-5 text-sm leading-7 text-amber-900">
+          ${action}
+        </article>
+      `
+    ),
+    ...((status.additional_evidence_requests || []).map(
+      (request) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <div class="mb-3 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${request.request_id || "Evidence request"}</span>
+              <h3 class="mt-2 text-base font-extrabold text-slate-900">${titleCase(request.status || "OPEN")}</h3>
+            </div>
+            ${buildStatusChip(request.status || "OPEN")}
+          </div>
+          <p class="text-sm leading-7 text-slate-600">${request.reason || "Additional evidence has been requested for this case."}</p>
+          <div class="mt-4 text-sm text-slate-500">
+            <strong class="text-slate-700">Requested items:</strong> ${(request.requested_items || []).join(", ") || "No items listed."}
+          </div>
+          ${
+            request.deadline
+              ? `<div class="mt-2 text-sm text-slate-500"><strong class="text-slate-700">Deadline:</strong> ${formatDateTime(request.deadline)}</div>`
+              : ""
+          }
+        </article>
+      `
+    )),
+  ];
+  elements.requiredActionsPanel.innerHTML = listMarkup(
+    requiredActionCards,
+    "No applicant action is currently outstanding for this case."
+  );
+
   const uploadedDocuments = status.uploaded_documents?.length ? status.uploaded_documents : casePacket.documents;
   hydrateDocumentResponseForm(casePacket, uploadedDocuments);
   elements.documentSummaryList.innerHTML = listMarkup(
@@ -375,11 +423,13 @@ function setDocumentInputValue(fieldName, documents, documentType) {
 }
 
 function buildMockStatus(casePacket) {
+  const latestMessage = casePacket.applicant_message_history.at(-1) || null;
   return {
     case_id: casePacket.case_id,
     status: casePacket.workflow.current_state,
-    latest_message: casePacket.applicant_message_history.at(-1) || null,
-    required_actions: [],
+    latest_message: latestMessage,
+    required_actions: latestMessage?.required_actions || [],
+    additional_evidence_requests: casePacket.workflow.additional_evidence_requests || [],
     uploaded_documents: casePacket.documents,
     deadlines: {
       decision_due_at: casePacket.decision_due_at,
