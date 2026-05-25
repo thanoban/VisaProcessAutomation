@@ -252,6 +252,12 @@ export const applicantPortalMock = {
         file_uri: "gs://visa-docs/case-0001/bank.pdf",
         status: "UPLOADED",
       },
+      {
+        document_id: "DOC-003",
+        document_type: "FLIGHT_ITINERARY",
+        file_uri: "gs://visa-docs/case-0001/flight.pdf",
+        status: "UPLOADED",
+      },
     ],
     workflow: {
       current_state: "UNDER_PRECHECK",

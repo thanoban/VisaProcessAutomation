@@ -155,6 +155,14 @@ function loadSampleIntoForm() {
   form.sponsor.value = sample.visa_application.sponsor || "";
   form.decisionDueAt.value = "2026-06-03T17:00";
   form.paymentStatus.value = sample.visa_application.payment_status;
+  form.passportDocumentUri.value =
+    sample.documents.find((document) => document.document_type === "PASSPORT")?.file_uri || "";
+  form.bankDocumentUri.value =
+    sample.documents.find((document) => document.document_type === "BANK_STATEMENT")?.file_uri || "";
+  form.flightDocumentUri.value =
+    sample.documents.find((document) => document.document_type === "FLIGHT_ITINERARY")?.file_uri || "";
+  form.accommodationDocumentUri.value =
+    sample.documents.find((document) => document.document_type === "HOTEL_BOOKING_OR_INVITATION")?.file_uri || "";
   elements.formFeedback.textContent = "Sample application data loaded into the intake form.";
 }
 
@@ -331,9 +339,27 @@ function buildApplicationPayload(formData) {
       country_of_application: formData.get("countryOfApplication"),
       payment_status: formData.get("paymentStatus"),
     },
-    documents: [],
+    documents: buildDocumentsPayload(formData),
     decision_due_at: decisionDueAt ? new Date(decisionDueAt).toISOString() : null,
   };
+}
+
+function buildDocumentsPayload(formData) {
+  const documentSpecs = [
+    ["DOC-001", "PASSPORT", formData.get("passportDocumentUri")],
+    ["DOC-002", "BANK_STATEMENT", formData.get("bankDocumentUri")],
+    ["DOC-003", "FLIGHT_ITINERARY", formData.get("flightDocumentUri")],
+    ["DOC-004", "HOTEL_BOOKING_OR_INVITATION", formData.get("accommodationDocumentUri")],
+  ];
+
+  return documentSpecs
+    .filter(([, , fileUri]) => String(fileUri || "").trim())
+    .map(([documentId, documentType, fileUri]) => ({
+      document_id: documentId,
+      document_type: documentType,
+      file_uri: String(fileUri).trim(),
+      status: "UPLOADED",
+    }));
 }
 
 initialize();
