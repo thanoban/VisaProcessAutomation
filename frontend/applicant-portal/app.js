@@ -99,9 +99,21 @@ function renderChecklist(payload) {
 
   elements.checklistList.innerHTML = listMarkup(items, "Checklist guidance has not been loaded yet.");
   elements.checklistNotes.innerHTML = listMarkup(
-    (payload.notes || []).map(
-      (note) => `<div class="rounded-[1.25rem] border border-slate-200/80 bg-white/75 p-4 text-sm leading-6 text-slate-600">${note}</div>`
-    ),
+    [
+      ...(payload.verified_at
+        ? [
+            `<div class="rounded-[1.25rem] border border-teal-200 bg-teal-50 p-4 text-sm leading-6 text-teal-900">Verified against the current Sri Lanka reference pack on ${formatDate(payload.verified_at)}.</div>`,
+          ]
+        : []),
+      ...((payload.official_sources || []).length
+        ? [
+            `<div class="rounded-[1.25rem] border border-slate-200/80 bg-white/75 p-4 text-sm leading-6 text-slate-600"><strong class="text-slate-900">Official sources:</strong> ${payload.official_sources.join(", ")}</div>`,
+          ]
+        : []),
+      ...(payload.notes || []).map(
+        (note) => `<div class="rounded-[1.25rem] border border-slate-200/80 bg-white/75 p-4 text-sm leading-6 text-slate-600">${note}</div>`
+      ),
+    ],
     ""
   );
 }
@@ -226,8 +238,10 @@ function renderCaseStatus(casePacket, options) {
     ["ETA status", buildStatusChip(status.authorization_status?.eta_status || casePacket.workflow.eta_status)],
     ["Port clearance", buildStatusChip(status.port_clearance_state || casePacket.workflow.port_clearance_state)],
     ["Action required from", titleCase(status.action_required_from)],
+    ["Policy version", status.authorization_status?.policy_version || casePacket.policy_context.policy_version],
     ["Rule version", status.authorization_status?.rule_version_used || casePacket.policy_context.effective_rule_version],
     ["Publication reference", status.authorization_status?.publication_reference || casePacket.policy_context.publication_reference],
+    ["Policy source", status.authorization_status?.source_uri || casePacket.policy_context.source_uri],
   ];
 
   elements.statusDefinitionGrid.innerHTML = detailItems
@@ -281,9 +295,15 @@ function buildMockStatus(casePacket) {
     next_action: casePacket.workflow.next_action,
     action_required_from: casePacket.workflow.action_required_from,
     authorization_status: {
+      workflow_pack: casePacket.workflow.workflow_pack,
       eta_status: casePacket.workflow.eta_status,
+      policy_version: casePacket.policy_context.policy_version,
+      effective_date: casePacket.policy_context.effective_date,
       rule_version_used: casePacket.policy_context.effective_rule_version,
       publication_reference: casePacket.policy_context.publication_reference,
+      source_uri: casePacket.policy_context.source_uri,
+      official_sources: casePacket.policy_context.official_sources,
+      verified_at: casePacket.policy_context.verified_at,
     },
     port_clearance_state: casePacket.workflow.port_clearance_state,
   };

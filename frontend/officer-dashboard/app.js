@@ -128,6 +128,8 @@ function renderDashboard(casePacket, brief, useMock) {
     ["Departure date", formatDate(casePacket.visa_application.departure_date)],
     ["ETA status", buildStatusChip(casePacket.workflow.eta_status)],
     ["Port clearance", buildStatusChip(casePacket.workflow.port_clearance_state)],
+    ["Policy version", casePacket.policy_context.policy_version],
+    ["Rule version", casePacket.policy_context.effective_rule_version],
   ];
 
   elements.briefDefinitionGrid.innerHTML = detailItems
@@ -183,6 +185,7 @@ function renderDashboard(casePacket, brief, useMock) {
     ["Itinerary evidence", arrayMarkup(evidence.itinerary_evidence)],
     ["Rule version used", evidence.rule_version_used || "Not available"],
     ["Publication reference", evidence.publication_reference || "Not available"],
+    ["Policy source", evidence.policy_source_uri || "Not available"],
     ["Official sources", arrayMarkup(evidence.official_sources)],
     ["Verified at", formatDateTime(evidence.verified_at)],
   ];

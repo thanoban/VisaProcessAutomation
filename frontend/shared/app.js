@@ -169,33 +169,47 @@ export function listMarkup(items, emptyText) {
 export const applicantPortalMock = {
   checklist: {
     workflow_pack: "SRI_LANKA_TOURIST_VISIT",
+    country: "Sri Lanka",
     visa_class: "TOURIST",
+    verified_at: "2026-05-25",
+    official_sources: [
+      "https://www.immigration.gov.lk/pages_e.php?id=14&os=av..",
+      "https://www.eta.gov.lk/slvisa/visainfo/weta.jsp?ch1=current&locale=en_US",
+    ],
     checklist: [
       {
         code: "PASSPORT",
-        title: "Passport biodata page",
-        description: "Provide a clear scan of the passport biodata page.",
+        title: "Valid Passport",
+        description: "Provide a passport valid for at least six months from the intended date of arrival in Sri Lanka.",
         required: true,
-        guidance: "Ensure the MRZ and passport number are legible.",
-      },
-      {
-        code: "FLIGHT_ITINERARY",
-        title: "Flight itinerary",
-        description: "Provide a tentative arrival and departure itinerary.",
-        required: true,
-        guidance: "Dates should align with the application stay window.",
+        guidance: "Use a clear, readable copy. The passport details must match the application data.",
       },
       {
         code: "FUNDS",
-        title: "Proof of funds",
-        description: "Show the ability to support the proposed visit.",
+        title: "Funds and Return Assurance",
+        description: "Show evidence of adequate funds and return or onward travel assurance for the intended short visit.",
         required: true,
-        guidance: "Recent statements are preferred for manual review readiness.",
+        guidance: "Recent bank statements and onward ticket or itinerary evidence are the baseline support set in this PoC.",
+      },
+      {
+        code: "PURPOSE",
+        title: "Tourist Visit Purpose",
+        description: "Provide travel purpose details consistent with a short tourist visit to Sri Lanka.",
+        required: true,
+        guidance: "Avoid mixing tourist travel with work, long-stay, or business-only activity in the same purpose statement.",
+      },
+      {
+        code: "OFFICIAL_PAYMENT",
+        title: "Official Payment Channel",
+        description: "Use only the official ETA and immigration payment channels.",
+        required: true,
+        guidance: "The product should make official payment and case references explicit to reduce scam exposure.",
       },
     ],
     notes: [
-      "Final entry clearance is still decided at the port of entry.",
-      "Manual referral may require additional sponsor or mission review.",
+      "ETA is not the same as final port-of-entry clearance.",
+      "Some nationalities or special cases may require sponsor-backed or manual handling.",
+      "Extension handling may require online steps, appointments, or head-office action.",
     ],
   },
   notices: [
@@ -240,11 +254,11 @@ export const applicantPortalMock = {
       },
     ],
     workflow: {
-      current_state: "DOCUMENT_REVIEW",
+      current_state: "UNDER_PRECHECK",
       current_holder: "SYSTEM",
-      next_action: "VERIFY_UPLOADED_DOCUMENTS",
+      next_action: "RUN_INTAKE_PRECHECK",
       action_required_from: "SYSTEM",
-      eta_status: "ETA_SUBMITTED",
+      eta_status: "ETA_UNDER_PRECHECK",
       port_clearance_state: "NOT_STARTED",
       extension_state: "NOT_REQUESTED",
       workflow_pack: "SRI_LANKA_TOURIST_VISIT",
@@ -254,6 +268,13 @@ export const applicantPortalMock = {
       effective_rule_version: "sl-rule-pack-2026-05-25",
       publication_reference: "ETA-40-COUNTRY-SCHEME-2026-05-25",
       policy_version: "sl-tourist-policy-v1",
+      effective_date: "2026-05-25",
+      source_uri: "https://www.immigration.gov.lk/pages_e.php?id=14&os=av..",
+      official_sources: [
+        "https://www.immigration.gov.lk/pages_e.php?id=14&os=av..",
+        "https://www.eta.gov.lk/slvisa/visainfo/weta.jsp?ch1=current&locale=en_US",
+      ],
+      verified_at: "2026-05-25",
     },
     status_timeline: [
       {
@@ -264,10 +285,10 @@ export const applicantPortalMock = {
         action_owner: "SYSTEM",
       },
       {
-        state: "DOCUMENT_REVIEW",
+        state: "UNDER_PRECHECK",
         timestamp: "2026-05-25T08:40:00Z",
         actor: "SYSTEM",
-        description: "Documents entered the pre-check and readability review stage.",
+        description: "The case entered the Sri Lanka tourist visit pre-check and readability review stage.",
         action_owner: "SYSTEM",
       },
     ],
@@ -283,7 +304,27 @@ export const applicantPortalMock = {
 };
 
 export const officerDashboardMock = {
-  casePacket: applicantPortalMock.casePacket,
+  casePacket: {
+    ...applicantPortalMock.casePacket,
+    workflow: {
+      ...applicantPortalMock.casePacket.workflow,
+      current_state: "READY_FOR_OFFICER_REVIEW",
+      current_holder: "OFFICER",
+      next_action: "HUMAN_OFFICER_FINAL_REVIEW",
+      action_required_from: "OFFICER",
+      eta_status: "ETA_UNDER_OFFICER_REVIEW",
+    },
+    status_timeline: [
+      ...applicantPortalMock.casePacket.status_timeline,
+      {
+        state: "READY_FOR_OFFICER_REVIEW",
+        timestamp: "2026-05-25T09:05:00Z",
+        actor: "SYSTEM",
+        description: "Automated checks completed and the case moved to human officer review.",
+        action_owner: "OFFICER",
+      },
+    ],
+  },
   officerBrief: {
     case_id: "VISA-2026-0001",
     visa_class: "TOURIST",
@@ -333,13 +374,18 @@ export const officerDashboardMock = {
     key_evidence: ["DOC-001", "DOC-002", "DOC-003"],
     policy_references: [
       {
-        policy_id: "TOURIST-12-A",
-        requirement: "Valid passport and travel purpose must align with a short tourist visit.",
+        policy_id: "TOURIST-01-A",
+        requirement: "Applicant must hold a passport valid for at least six months from the intended date of arrival in Sri Lanka.",
         status: "SATISFIED",
       },
       {
         policy_id: "TOURIST-12-B",
-        requirement: "Applicant must demonstrate sufficient support for the travel period.",
+        requirement: "Applicant must show adequate funds for maintenance during the intended short stay in Sri Lanka.",
+        status: "SATISFIED",
+      },
+      {
+        policy_id: "TOURIST-20-C",
+        requirement: "Applicant must provide return or onward travel assurance consistent with a temporary tourist visit to Sri Lanka.",
         status: "SATISFIED",
       },
     ],
@@ -373,9 +419,12 @@ export const officerDashboardMock = {
       itinerary_evidence: ["DOC-003"],
       rule_version_used: "sl-rule-pack-2026-05-25",
       publication_reference: "ETA-40-COUNTRY-SCHEME-2026-05-25",
-      policy_source_uri: "https://example.gov.lk/tourist-policy",
-      official_sources: ["https://eta.gov.lk", "https://immigration.gov.lk"],
-      verified_at: "2026-05-25T10:15:00Z",
+      policy_source_uri: "https://www.immigration.gov.lk/pages_e.php?id=14&os=av..",
+      official_sources: [
+        "https://www.immigration.gov.lk/pages_e.php?id=14&os=av..",
+        "https://www.eta.gov.lk/slvisa/visainfo/weta.jsp?ch1=current&locale=en_US",
+      ],
+      verified_at: "2026-05-25",
     },
     audit_timeline: [
       {
@@ -383,6 +432,8 @@ export const officerDashboardMock = {
         event_type: "CASE_CREATED",
         actor_type: "SYSTEM",
         actor_id: "portal",
+        policy_version: "sl-tourist-policy-v1",
+        rule_version_used: "sl-rule-pack-2026-05-25",
         recommendation: "",
         human_action: "",
       },
@@ -391,6 +442,8 @@ export const officerDashboardMock = {
         event_type: "CASE_READY_FOR_OFFICER_REVIEW",
         actor_type: "SYSTEM",
         actor_id: "workflow",
+        policy_version: "sl-tourist-policy-v1",
+        rule_version_used: "sl-rule-pack-2026-05-25",
         recommendation: "APPROVE_READY",
         human_action: "",
       },
