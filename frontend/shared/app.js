@@ -158,6 +158,11 @@ export function isMissingFileUploadSupport(error) {
   return message.includes("404") || message.includes("not found") || message.includes("405");
 }
 
+export function isExtensionWorkflowActive(value) {
+  const normalized = String(value || "").trim().toUpperCase();
+  return Boolean(normalized && normalized !== "NOT_REQUESTED");
+}
+
 export function getRecentCases() {
   try {
     const parsed = JSON.parse(localStorage.getItem(RECENT_CASES_KEY) || "[]");
@@ -174,6 +179,7 @@ export function rememberRecentCase(entry) {
     current_state: String(entry.current_state || "").trim(),
     current_holder: String(entry.current_holder || "").trim(),
     next_action: String(entry.next_action || "").trim(),
+    extension_state: String(entry.extension_state || "").trim(),
     updated_at: entry.updated_at || new Date().toISOString(),
   };
   if (!normalizedEntry.case_id) {
@@ -255,6 +261,9 @@ export function createApiClient(baseUrl) {
     },
     getActiveGovernanceRules() {
       return request("/governance/rules/active");
+    },
+    getObservabilityStatus() {
+      return request("/governance/observability/status");
     },
     createApplication(payload) {
       return request("/applications", {
@@ -1038,5 +1047,14 @@ export const governanceCenterMock = {
         reason: "Tourist or business ETA should be routed through Sri Lankan sponsor and head-office handling.",
       },
     ],
+  },
+  observability: {
+    enabled: false,
+    target: "LOCAL_ONLY",
+    project_name: "visaflow-mas",
+    provider: "Phoenix",
+    google_genai_instrumentation_enabled: false,
+    phoenix_mcp_expected: true,
+    status: "DISABLED",
   },
 };

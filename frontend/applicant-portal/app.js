@@ -7,6 +7,7 @@ import {
   formatDate,
   formatDateTime,
   getStoredApiBaseUrl,
+  isExtensionWorkflowActive,
   isMissingFileUploadSupport,
   linkListMarkup,
   linkMarkup,
@@ -469,6 +470,7 @@ function renderCaseStatus(casePacket, options) {
   elements.workspaceLinksPanel.innerHTML = buildWorkspaceLinks(casePacket.case_id, "applicant", {
     state: status.status,
     holder: status.current_holder,
+    extensionState: extensionStatus.extension_state || status.extension_state || casePacket.workflow.extension_state,
   });
 
   if (!options.useMock) {
@@ -480,6 +482,7 @@ function renderCaseStatus(casePacket, options) {
       current_state: status.status,
       current_holder: status.current_holder,
       next_action: status.next_action,
+      extension_state: extensionStatus.extension_state || status.extension_state || casePacket.workflow.extension_state,
     });
   }
 
@@ -981,6 +984,9 @@ function buildWorkspaceLinks(caseId, currentSurface, queueContext = {}) {
   const links = [
     ["Applicant Portal", "../applicant-portal/", "applicant"],
     ["Officer Dashboard", "../officer-dashboard/", "officer"],
+    ...(isExtensionWorkflowActive(queueContext.extensionState)
+      ? [["Officer Extension Ops", "../officer-dashboard/", "officer-extension"]]
+      : []),
     ["Supervisor Dashboard", "../supervisor-dashboard/", "supervisor"],
     ["Governance Center", "../governance-center/", "governance"],
   ];
@@ -1003,6 +1009,9 @@ function buildSurfaceHref(surface, href, caseId, queueContext = {}) {
 
   const params = new URLSearchParams();
   params.set("case", caseId);
+  if (surface === "officer-extension") {
+    return appendWorkspacePreviewParam(`${href}?${params.toString()}#extension-operations-panel`);
+  }
   if (surface === "supervisor") {
     if (queueContext.state) {
       params.set("state", queueContext.state);

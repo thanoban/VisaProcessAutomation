@@ -6,6 +6,7 @@ import {
   formatDate,
   formatDateTime,
   getStoredApiBaseUrl,
+  isExtensionWorkflowActive,
   linkListMarkup,
   linkMarkup,
   listMarkup,
@@ -206,6 +207,7 @@ function renderDashboard(casePacket, brief, useMock, extensionStatus = buildFall
   elements.workspaceLinks.innerHTML = buildWorkspaceLinks(casePacket.case_id, "officer", {
     state: casePacket.workflow.current_state,
     holder: casePacket.workflow.current_holder,
+    extensionState: extensionStatus.extension_state || casePacket.workflow.extension_state,
   });
 
   if (!useMock) {
@@ -217,6 +219,7 @@ function renderDashboard(casePacket, brief, useMock, extensionStatus = buildFall
       current_state: casePacket.workflow.current_state,
       current_holder: casePacket.workflow.current_holder,
       next_action: casePacket.workflow.next_action,
+      extension_state: extensionStatus.extension_state || casePacket.workflow.extension_state,
     });
   }
 
@@ -989,6 +992,9 @@ function buildWorkspaceLinks(caseId, currentSurface, queueContext = {}) {
   const links = [
     ["Applicant Portal", "../applicant-portal/", "applicant"],
     ["Officer Dashboard", "../officer-dashboard/", "officer"],
+    ...(isExtensionWorkflowActive(queueContext.extensionState)
+      ? [["Officer Extension Ops", "../officer-dashboard/", "officer-extension"]]
+      : []),
     ["Supervisor Dashboard", "../supervisor-dashboard/", "supervisor"],
     ["Governance Center", "../governance-center/", "governance"],
   ];
@@ -1011,6 +1017,9 @@ function buildSurfaceHref(surface, href, caseId, queueContext = {}) {
 
   const params = new URLSearchParams();
   params.set("case", caseId);
+  if (surface === "officer-extension") {
+    return appendWorkspacePreviewParam(`${href}?${params.toString()}#extension-operations-panel`);
+  }
   if (surface === "supervisor") {
     if (queueContext.state) {
       params.set("state", queueContext.state);

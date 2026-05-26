@@ -3,6 +3,7 @@ import {
   buildStatusChip,
   createApiClient,
   getStoredApiBaseUrl,
+  isExtensionWorkflowActive,
   listMarkup,
   renderInternalSurfaceGate,
   renderSurfaceNavigation,
@@ -639,6 +640,18 @@ function buildCrossSurfaceActions(item) {
   }
 
   return `
+    ${
+      isExtensionWorkflowActive(item.extension_state)
+        ? `
+          <a
+            class="rounded-full border border-teal-200 bg-teal-50 px-4 py-2 text-sm font-semibold text-teal-900 transition hover:-translate-y-0.5"
+            href="${appendWorkspacePreviewParam(`../officer-dashboard/?case=${encodeURIComponent(item.case_id)}#extension-operations-panel`)}"
+          >
+            Open extension ops
+          </a>
+        `
+        : ""
+    }
     <a
       class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5"
       href="${appendWorkspacePreviewParam(`../officer-dashboard/?case=${encodeURIComponent(item.case_id)}`)}"
