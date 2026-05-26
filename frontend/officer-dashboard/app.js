@@ -48,6 +48,7 @@ const elements = {
   questionList: document.querySelector("#question-list"),
   auditList: document.querySelector("#audit-list"),
   decisionOutcomePanel: document.querySelector("#decision-outcome-panel"),
+  extensionPanel: document.querySelector("#extension-operations-panel"),
   extensionSummaryPanel: document.querySelector("#extension-summary-panel"),
   extensionRequestList: document.querySelector("#extension-request-list"),
   extensionAppointmentForm: document.querySelector("#extension-appointment-form"),
@@ -116,6 +117,7 @@ async function initialize() {
   wireEvents();
   await loadDashboardChrome();
   renderDashboard(officerDashboardMock.casePacket, officerDashboardMock.officerBrief, true, state.currentExtensionStatus);
+  syncExtensionDeepLinkState();
   if (state.apiAvailable && state.currentCaseId) {
     await loadAndRenderCase(state.currentCaseId);
   }
@@ -127,12 +129,18 @@ function wireEvents() {
     state.currentCaseId = officerDashboardMock.casePacket.case_id;
     elements.caseIdInput.value = state.currentCaseId;
     syncCaseQueryParam(state.currentCaseId);
-    renderDashboard(officerDashboardMock.casePacket, officerDashboardMock.officerBrief, true);
+    renderDashboard(
+      officerDashboardMock.casePacket,
+      officerDashboardMock.officerBrief,
+      true,
+      buildFallbackExtensionStatus(officerDashboardMock.casePacket)
+    );
   });
   elements.decisionForm.addEventListener("submit", handleDecisionSubmit);
   elements.decisionChoice.addEventListener("change", syncDecisionGuidance);
   elements.extensionAppointmentForm.addEventListener("submit", handleExtensionAppointmentSubmit);
   elements.extensionDecisionForm.addEventListener("submit", handleExtensionDecisionSubmit);
+  window.addEventListener("hashchange", syncExtensionDeepLinkState);
 }
 
 async function loadDashboardChrome() {
@@ -430,6 +438,7 @@ function renderDashboard(casePacket, brief, useMock, extensionStatus = buildFall
 
   elements.decisionOutcomePanel.innerHTML = buildDecisionOutcomeMarkup(casePacket);
   renderExtensionOperations(casePacket, extensionStatus, useMock);
+  syncExtensionDeepLinkState();
 
   elements.decisionFeedback.textContent = useMock
     ? "Decision submission is disabled in mock mode and becomes live when the API is reachable."
@@ -967,6 +976,27 @@ function buildFallbackExtensionStatus(casePacket) {
         String(entry.state || "").includes("EXTENSION") || String(entry.description || "").toLowerCase().includes("extension")
     ),
   };
+}
+
+function syncExtensionDeepLinkState() {
+  if (!elements.extensionPanel) {
+    return;
+  }
+
+  const isExtensionTarget = window.location.hash === "#extension-operations-panel";
+  elements.extensionPanel.classList.toggle("ring-2", isExtensionTarget);
+  elements.extensionPanel.classList.toggle("ring-teal-300", isExtensionTarget);
+  elements.extensionPanel.classList.toggle("border-teal-300", isExtensionTarget);
+
+  if (isExtensionTarget) {
+    elements.extensionPanel.setAttribute("tabindex", "-1");
+    window.requestAnimationFrame(() => {
+      elements.extensionPanel.focus({ preventScroll: true });
+    });
+    return;
+  }
+
+  elements.extensionPanel.removeAttribute("tabindex");
 }
 
 function syncCaseQueryParam(caseId) {
