@@ -987,6 +987,7 @@ function buildWorkspaceLinks(caseId, currentSurface, queueContext = {}) {
     ...(isExtensionWorkflowActive(queueContext.extensionState)
       ? [["Officer Extension Ops", "../officer-dashboard/", "officer-extension"]]
       : []),
+    ["Governance Review", "../governance-center/", "governance-review"],
     ["Supervisor Dashboard", "../supervisor-dashboard/", "supervisor"],
     ["Governance Center", "../governance-center/", "governance"],
   ];
@@ -1009,6 +1010,9 @@ function buildSurfaceHref(surface, href, caseId, queueContext = {}) {
 
   const params = new URLSearchParams();
   params.set("case", caseId);
+  if (surface === "governance-review") {
+    return appendWorkspacePreviewParam(`${href}?${params.toString()}#self-improvement-panel`);
+  }
   if (surface === "officer-extension") {
     return appendWorkspacePreviewParam(`${href}?${params.toString()}#extension-operations-panel`);
   }

@@ -19,6 +19,11 @@ The frontend now distinguishes between:
 
 Cross-surface navigation should only appear in workspace preview mode.
 
+Case-aware deep links now support jumping straight into:
+
+- officer extension handling via `#extension-operations-panel`
+- governance self-improvement review via `#self-improvement-panel`
+
 ## Local preview
 
 1. Install dependencies:
@@ -50,6 +55,7 @@ For the hackathon demo, the frontend should visibly prove:
 - governance and Arize observability posture visibility
 - Phoenix readiness and redaction guardrail visibility
 - case-driven self-improvement review visibility inside governance
+- case-aware governance review jumps from applicant, officer, supervisor, and recent-case surfaces
 - launchpad-level observability summary before entering internal surfaces
 
 ## Verification steps

@@ -32,6 +32,7 @@ const elements = {
   agentRuntimeNotesList: document.querySelector("#agent-runtime-notes-list"),
   observabilityReadinessList: document.querySelector("#observability-readiness-list"),
   observabilityGuardrailsList: document.querySelector("#observability-guardrails-list"),
+  selfImprovementPanel: document.querySelector("#self-improvement-panel"),
   selfImprovementForm: document.querySelector("#self-improvement-form"),
   selfImprovementCaseId: document.querySelector("#self-improvement-case-id"),
   selfImprovementFeedback: document.querySelector("#self-improvement-feedback"),
@@ -125,11 +126,13 @@ async function initialize() {
     setRegionBusy(elements.agentRuntimeNotesList, false);
     setRegionBusy(elements.observabilityReadinessList, false);
     setRegionBusy(elements.observabilityGuardrailsList, false);
+    syncSelfImprovementDeepLinkState();
   }
 }
 
 function wireEvents() {
   elements.selfImprovementForm.addEventListener("submit", handleSelfImprovementSubmit);
+  window.addEventListener("hashchange", syncSelfImprovementDeepLinkState);
 }
 
 function renderGovernanceCenter(requirements, rules, observability, agentRuntime) {
@@ -451,6 +454,7 @@ async function handleSelfImprovementSubmit(event) {
       ? await api.requestSelfImprovementReview(caseId)
       : buildMockSelfImprovementReview(caseId);
     renderSelfImprovementReview(review, !state.apiAvailable);
+    syncSelfImprovementDeepLinkState();
     elements.selfImprovementFeedback.textContent = state.apiAvailable
       ? `Self-improvement review recorded for ${caseId}. All proposed changes still require explicit human approval.`
       : `Mock self-improvement review loaded for ${caseId}.`;
@@ -704,6 +708,29 @@ function syncCaseQueryParam(caseId) {
   const nextQuery = params.toString();
   const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${window.location.hash}`;
   window.history.replaceState({}, "", nextUrl);
+}
+
+function syncSelfImprovementDeepLinkState() {
+  const panel = elements.selfImprovementPanel;
+  if (!panel) {
+    return;
+  }
+
+  const isReviewHash = window.location.hash === "#self-improvement-panel";
+  panel.classList.toggle("ring-2", isReviewHash);
+  panel.classList.toggle("ring-teal-300", isReviewHash);
+  panel.classList.toggle("border-teal-300", isReviewHash);
+
+  if (isReviewHash) {
+    panel.setAttribute("tabindex", "-1");
+    window.requestAnimationFrame(() => {
+      panel.focus({ preventScroll: true });
+      panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return;
+  }
+
+  panel.removeAttribute("tabindex");
 }
 
 function toneForRisk(value) {
