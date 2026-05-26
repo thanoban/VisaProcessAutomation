@@ -33,6 +33,9 @@ const elements = {
   statusDefinitionGrid: document.querySelector("#status-definition-grid"),
   latestMessagePanel: document.querySelector("#latest-message-panel"),
   requiredActionsPanel: document.querySelector("#required-actions-panel"),
+  specialHandlingPanel: document.querySelector("#special-handling-panel"),
+  caseServiceNoticesPanel: document.querySelector("#case-service-notices-panel"),
+  travelFollowUpPanel: document.querySelector("#travel-follow-up-panel"),
   documentSummaryList: document.querySelector("#document-summary-list"),
   timelineList: document.querySelector("#timeline-list"),
 };
@@ -191,6 +194,7 @@ async function handleApplicationSubmit(event) {
     }
 
     const createdCase = await api.createApplication(payload);
+    await uploadSelectedFiles(createdCase.case_id, elements.applicationForm);
     await api.processCase(createdCase.case_id);
 
     const [processedCase, caseStatus] = await Promise.all([
@@ -242,14 +246,15 @@ async function handleDocumentResponseSubmit(event) {
   const formData = new FormData(elements.documentResponseForm);
   const caseId = String(formData.get("documentResponseCaseId") || "").trim();
   const documents = buildDocumentsPayload(formData, "documentResponse");
+  const selectedFiles = collectSelectedFiles(elements.documentResponseForm, "documentResponse");
 
   if (!caseId) {
     elements.documentResponseFeedback.textContent = "Enter a case ID before submitting document updates.";
     return;
   }
 
-  if (!documents.length) {
-    elements.documentResponseFeedback.textContent = "Provide at least one document URI to continue.";
+  if (!documents.length && !selectedFiles.length) {
+    elements.documentResponseFeedback.textContent = "Provide at least one document file or URI to continue.";
     return;
   }
 
@@ -261,7 +266,10 @@ async function handleDocumentResponseSubmit(event) {
     }
 
     elements.documentResponseFeedback.textContent = "Submitting document response and triggering re-check...";
-    await api.uploadDocuments(caseId, { documents });
+    if (documents.length) {
+      await api.uploadDocuments(caseId, { documents });
+    }
+    await uploadSelectedFiles(caseId, elements.documentResponseForm, "documentResponse");
     await api.processCase(caseId);
     const [casePacket, caseStatus] = await Promise.all([api.getCase(caseId), api.getCaseStatus(caseId)]);
     renderCaseStatus(casePacket, {
@@ -285,6 +293,15 @@ async function renderSampleCasePreview() {
 
 function renderCaseStatus(casePacket, options) {
   const status = options.latestStatus || buildMockStatus(casePacket);
+  const manualReferralReason =
+    status.manual_referral_reason ||
+    status.authorization_status?.manual_referral_reason ||
+    casePacket.workflow.manual_referral_reason ||
+    "";
+  const appointments = status.appointments?.length ? status.appointments : casePacket.workflow.appointments || [];
+  const decisionNotice = status.decision_notice || casePacket.workflow.decision_notice || null;
+  const portClearanceEvents =
+    status.port_clearance_events?.length ? status.port_clearance_events : casePacket.workflow.port_clearance_events || [];
   elements.statusResults.hidden = false;
   elements.statusEmpty.hidden = true;
   elements.stateValue.innerHTML = buildStatusChip(status.status);
@@ -298,6 +315,7 @@ function renderCaseStatus(casePacket, options) {
     ["Decision due", formatDateTime(casePacket.decision_due_at)],
     ["ETA status", buildStatusChip(status.authorization_status?.eta_status || casePacket.workflow.eta_status)],
     ["Port clearance", buildStatusChip(status.port_clearance_state || casePacket.workflow.port_clearance_state)],
+    ["Extension status", buildStatusChip(status.extension_state || casePacket.workflow.extension_state || "NOT_REQUESTED")],
     ["Action required from", titleCase(status.action_required_from)],
     ["Policy version", status.authorization_status?.policy_version || casePacket.policy_context.policy_version],
     ["Rule version", status.authorization_status?.rule_version_used || casePacket.policy_context.effective_rule_version],
@@ -360,6 +378,136 @@ function renderCaseStatus(casePacket, options) {
   elements.requiredActionsPanel.innerHTML = listMarkup(
     requiredActionCards,
     "No applicant action is currently outstanding for this case."
+  );
+
+  const specialHandlingCards = [
+    `
+      <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+        <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Manual referral route</span>
+        <div class="mt-3">${manualReferralReason ? buildStatusChip("manual referral active", "warning") : buildStatusChip("straight-through route", "success")}</div>
+        <p class="mt-4 text-sm leading-7 text-slate-600">${
+          manualReferralReason ||
+          "No sponsor, nationality, or exception-driven manual referral is currently attached to this case."
+        }</p>
+      </article>
+    `,
+    `
+      <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+        <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Extension handling</span>
+        <div class="mt-3">${buildStatusChip(status.extension_state || casePacket.workflow.extension_state || "NOT_REQUESTED")}</div>
+        <p class="mt-4 text-sm leading-7 text-slate-600">${
+          status.extension_state && status.extension_state !== "NOT_REQUESTED"
+            ? "An extension-related workflow is active. Follow the latest service instructions before assuming travel or stay dates can change."
+            : "No extension workflow is active for this case right now."
+        }</p>
+      </article>
+    `,
+    ...appointments.map(
+      (appointment) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${appointment.appointment_id || "Service appointment"}</span>
+              <h3 class="mt-2 text-lg font-extrabold text-slate-900">${titleCase(appointment.appointment_type || "Appointment")}</h3>
+            </div>
+            ${buildStatusChip(appointment.status || "PENDING")}
+          </div>
+          <p class="text-sm leading-7 text-slate-600">
+            <strong class="text-slate-900">Location:</strong> ${appointment.location || "Not assigned yet"}<br />
+            <strong class="text-slate-900">Scheduled for:</strong> ${formatDateTime(appointment.scheduled_for)}<br />
+            ${appointment.instructions || "Instructions will appear here when scheduling details are available."}
+          </p>
+        </article>
+      `
+    ),
+  ];
+  elements.specialHandlingPanel.innerHTML = listMarkup(
+    specialHandlingCards,
+    "No special-handling signals are currently active for this case."
+  );
+
+  elements.caseServiceNoticesPanel.innerHTML = listMarkup(
+    (status.service_notices || []).map(
+      (notice) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${notice.code || "Case notice"}</span>
+          <p class="mt-3 text-sm leading-7 text-slate-600">${notice.message || "No notice text is available for this item."}</p>
+        </article>
+      `
+    ),
+    "No additional case-specific notices are active right now."
+  );
+
+  const travelFollowUpCards = [
+    ...(decisionNotice
+      ? [
+          `
+            <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${decisionNotice.subject || "Decision notice"}</span>
+              <p class="mt-3 text-sm leading-7 text-slate-600">${decisionNotice.summary || "No traveler-facing summary is available yet."}</p>
+              <div class="mt-4 grid gap-3">
+                ${(decisionNotice.next_steps || [])
+                  .map(
+                    (step) =>
+                      `<div class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-6 text-slate-700">${step}</div>`
+                  )
+                  .join("")}
+              </div>
+            </article>
+          `,
+        ]
+      : []),
+    ...(appointments.length
+      ? [
+          `
+            <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Appointment instructions</span>
+              <div class="mt-4 grid gap-3">
+                ${appointments
+                  .map(
+                    (appointment) => `
+                      <div class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-6 text-slate-700">
+                        <strong class="text-slate-900">${titleCase(appointment.appointment_type || "Appointment")}</strong><br />
+                        Status: ${titleCase(appointment.status || "PENDING")}<br />
+                        Location: ${appointment.location || "Not assigned yet"}<br />
+                        Scheduled for: ${formatDateTime(appointment.scheduled_for)}<br />
+                        ${appointment.instructions || "Detailed appointment instructions will be shown here once available."}
+                      </div>
+                    `
+                  )
+                  .join("")}
+              </div>
+            </article>
+          `,
+        ]
+      : []),
+    ...(portClearanceEvents.length
+      ? [
+          `
+            <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Port-of-entry follow-up</span>
+              <div class="mt-4 grid gap-3">
+                ${portClearanceEvents
+                  .map(
+                    (event) => `
+                      <div class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-6 text-slate-700">
+                        <strong class="text-slate-900">${titleCase(event.event_type || "Port event")}</strong><br />
+                        Status: ${titleCase(event.status || "PENDING")}<br />
+                        Recorded: ${formatDateTime(event.timestamp)}<br />
+                        ${event.notes || "No additional port-of-entry note is available yet."}
+                      </div>
+                    `
+                  )
+                  .join("")}
+              </div>
+            </article>
+          `,
+        ]
+      : []),
+  ];
+  elements.travelFollowUpPanel.innerHTML = listMarkup(
+    travelFollowUpCards,
+    "No post-decision travel or appointment follow-up is active for this case yet."
   );
 
   const uploadedDocuments = status.uploaded_documents?.length ? status.uploaded_documents : casePacket.documents;
@@ -442,6 +590,7 @@ function buildMockStatus(casePacket) {
     authorization_status: {
       workflow_pack: casePacket.workflow.workflow_pack,
       eta_status: casePacket.workflow.eta_status,
+      manual_referral_reason: casePacket.workflow.manual_referral_reason || null,
       policy_version: casePacket.policy_context.policy_version,
       effective_date: casePacket.policy_context.effective_date,
       rule_version_used: casePacket.policy_context.effective_rule_version,
@@ -451,6 +600,11 @@ function buildMockStatus(casePacket) {
       verified_at: casePacket.policy_context.verified_at,
     },
     port_clearance_state: casePacket.workflow.port_clearance_state,
+    extension_state: casePacket.workflow.extension_state || "NOT_REQUESTED",
+    manual_referral_reason: casePacket.workflow.manual_referral_reason || null,
+    appointments: casePacket.workflow.appointments || [],
+    decision_notice: casePacket.workflow.decision_notice || null,
+    port_clearance_events: casePacket.workflow.port_clearance_events || [],
   };
 }
 
@@ -479,6 +633,28 @@ function buildApplicationPayload(formData) {
     documents: buildDocumentsPayload(formData),
     decision_due_at: decisionDueAt ? new Date(decisionDueAt).toISOString() : null,
   };
+}
+
+async function uploadSelectedFiles(caseId, form, prefix = "") {
+  const selectedFiles = collectSelectedFiles(form, prefix);
+  for (const upload of selectedFiles) {
+    await api.uploadDocumentFile(caseId, upload.documentType, upload.file);
+  }
+}
+
+function collectSelectedFiles(form, prefix = "") {
+  const input = (name) => form?.elements?.namedItem(`${prefix}${name}`);
+  return [
+    ["PASSPORT", input("PassportFile")],
+    ["BANK_STATEMENT", input("BankFile")],
+    ["FLIGHT_ITINERARY", input("FlightFile")],
+    ["HOTEL_BOOKING_OR_INVITATION", input("AccommodationFile")],
+  ]
+    .map(([documentType, element]) => ({
+      documentType,
+      file: element?.files?.[0] || null,
+    }))
+    .filter((entry) => entry.file);
 }
 
 function buildDocumentsPayload(formData, prefix = "") {

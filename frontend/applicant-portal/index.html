@@ -206,7 +206,10 @@
                       </div>
                       <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-amber-800">Required</span>
                     </div>
-                    <label class="text-sm font-semibold text-slate-700" for="passport-document-uri">File URI</label>
+                    <label class="text-sm font-semibold text-slate-700" for="passport-document-file">Upload file</label>
+                    <input class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="passport-document-file" name="passportDocumentFile" type="file" accept=".pdf,.jpg,.jpeg,.png" />
+                    <p class="mt-3 text-xs leading-6 text-slate-500">Or provide a file URI for seeded test data or external storage references.</p>
+                    <label class="mt-3 text-sm font-semibold text-slate-700" for="passport-document-uri">File URI</label>
                     <input class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="passport-document-uri" name="passportDocumentUri" placeholder="gs://visa-docs/case-0001/passport.pdf" />
                   </article>
 
@@ -218,7 +221,10 @@
                       </div>
                       <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-amber-800">Required</span>
                     </div>
-                    <label class="text-sm font-semibold text-slate-700" for="bank-document-uri">File URI</label>
+                    <label class="text-sm font-semibold text-slate-700" for="bank-document-file">Upload file</label>
+                    <input class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="bank-document-file" name="bankDocumentFile" type="file" accept=".pdf,.jpg,.jpeg,.png,.csv" />
+                    <p class="mt-3 text-xs leading-6 text-slate-500">Or provide a file URI for seeded test data or external storage references.</p>
+                    <label class="mt-3 text-sm font-semibold text-slate-700" for="bank-document-uri">File URI</label>
                     <input class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="bank-document-uri" name="bankDocumentUri" placeholder="gs://visa-docs/case-0001/bank.pdf" />
                   </article>
 
@@ -230,7 +236,10 @@
                       </div>
                       <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-amber-800">Required</span>
                     </div>
-                    <label class="text-sm font-semibold text-slate-700" for="flight-document-uri">File URI</label>
+                    <label class="text-sm font-semibold text-slate-700" for="flight-document-file">Upload file</label>
+                    <input class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="flight-document-file" name="flightDocumentFile" type="file" accept=".pdf,.jpg,.jpeg,.png" />
+                    <p class="mt-3 text-xs leading-6 text-slate-500">Or provide a file URI for seeded test data or external storage references.</p>
+                    <label class="mt-3 text-sm font-semibold text-slate-700" for="flight-document-uri">File URI</label>
                     <input class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="flight-document-uri" name="flightDocumentUri" placeholder="gs://visa-docs/case-0001/flight.pdf" />
                   </article>
 
@@ -242,7 +251,10 @@
                       </div>
                       <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-700">Optional</span>
                     </div>
-                    <label class="text-sm font-semibold text-slate-700" for="accommodation-document-uri">File URI</label>
+                    <label class="text-sm font-semibold text-slate-700" for="accommodation-document-file">Upload file</label>
+                    <input class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="accommodation-document-file" name="accommodationDocumentFile" type="file" accept=".pdf,.jpg,.jpeg,.png" />
+                    <p class="mt-3 text-xs leading-6 text-slate-500">Or provide a file URI for seeded test data or external storage references.</p>
+                    <label class="mt-3 text-sm font-semibold text-slate-700" for="accommodation-document-uri">File URI</label>
                     <input class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="accommodation-document-uri" name="accommodationDocumentUri" placeholder="gs://visa-docs/case-0001/hotel.pdf" />
                   </article>
                 </div>
@@ -301,18 +313,26 @@
                   <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="document-response-case-id" name="documentResponseCaseId" placeholder="VISA-2026-0001" required />
                 </div>
                 <div class="grid gap-2">
+                  <label class="text-sm font-semibold text-slate-700" for="document-response-passport-file">Passport upload</label>
+                  <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="document-response-passport-file" name="documentResponsePassportFile" type="file" accept=".pdf,.jpg,.jpeg,.png" />
                   <label class="text-sm font-semibold text-slate-700" for="document-response-passport-uri">Passport file URI</label>
                   <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="document-response-passport-uri" name="documentResponsePassportUri" placeholder="gs://visa-docs/case-0001/passport.pdf" />
                 </div>
                 <div class="grid gap-2">
+                  <label class="text-sm font-semibold text-slate-700" for="document-response-bank-file">Bank statement upload</label>
+                  <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="document-response-bank-file" name="documentResponseBankFile" type="file" accept=".pdf,.jpg,.jpeg,.png,.csv" />
                   <label class="text-sm font-semibold text-slate-700" for="document-response-bank-uri">Bank statement file URI</label>
                   <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="document-response-bank-uri" name="documentResponseBankUri" placeholder="gs://visa-docs/case-0001/bank.pdf" />
                 </div>
                 <div class="grid gap-2">
+                  <label class="text-sm font-semibold text-slate-700" for="document-response-flight-file">Flight itinerary upload</label>
+                  <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="document-response-flight-file" name="documentResponseFlightFile" type="file" accept=".pdf,.jpg,.jpeg,.png" />
                   <label class="text-sm font-semibold text-slate-700" for="document-response-flight-uri">Flight itinerary file URI</label>
                   <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="document-response-flight-uri" name="documentResponseFlightUri" placeholder="gs://visa-docs/case-0001/flight.pdf" />
                 </div>
                 <div class="grid gap-2">
+                  <label class="text-sm font-semibold text-slate-700" for="document-response-accommodation-file">Accommodation or invitation upload</label>
+                  <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="document-response-accommodation-file" name="documentResponseAccommodationFile" type="file" accept=".pdf,.jpg,.jpeg,.png" />
                   <label class="text-sm font-semibold text-slate-700" for="document-response-accommodation-uri">Accommodation or invitation file URI</label>
                   <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="document-response-accommodation-uri" name="documentResponseAccommodationUri" placeholder="gs://visa-docs/case-0001/hotel.pdf" />
                 </div>
@@ -363,6 +383,32 @@
                 </div>
               </div>
 
+              <div class="grid gap-4 md:grid-cols-2">
+                <div class="rounded-[1.75rem] border border-slate-200/80 bg-white/75 p-5">
+                  <div class="mb-5">
+                    <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Special handling</span>
+                    <h3 class="mt-2 text-xl font-extrabold text-slate-900">Manual review, extension, and appointments</h3>
+                  </div>
+                  <div id="special-handling-panel" class="grid gap-4"></div>
+                </div>
+
+                <div class="rounded-[1.75rem] border border-slate-200/80 bg-white/75 p-5">
+                  <div class="mb-5">
+                    <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Case notices</span>
+                    <h3 class="mt-2 text-xl font-extrabold text-slate-900">Operational guidance for this case</h3>
+                  </div>
+                  <div id="case-service-notices-panel" class="grid gap-4"></div>
+                </div>
+              </div>
+
+              <div class="rounded-[1.75rem] border border-slate-200/80 bg-white/75 p-5">
+                <div class="mb-5">
+                  <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Travel follow-up</span>
+                  <h3 class="mt-2 text-xl font-extrabold text-slate-900">Authorization, appointments, and port-of-entry steps</h3>
+                </div>
+                <div id="travel-follow-up-panel" class="grid gap-4"></div>
+              </div>
+
               <div class="rounded-[1.75rem] border border-slate-200/80 bg-white/75 p-5">
                 <div class="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
@@ -385,7 +431,7 @@
             </div>
 
             <div id="status-empty" class="mt-6 rounded-3xl border border-dashed border-slate-300 bg-white/45 p-6 text-sm leading-7 text-slate-600">
-              Load a case to review its operational status, document summary, and timeline.
+              Load a case to review its operational status, special-handling instructions, document summary, and timeline.
             </div>
           </section>
         </main>

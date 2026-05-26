@@ -1,3 +1,6 @@
+import io
+
+
 def test_case_status_and_brief_contract(client):
     payload = {
         "case_id": "VISA-2026-API-001",
@@ -229,3 +232,150 @@ def test_reprocessing_waiting_case_does_not_duplicate_open_evidence_requests(cli
     ]
     assert len(open_requests) == 1
     assert open_requests[0]["requested_items"] == ["BANK_STATEMENT"]
+
+
+def test_file_upload_endpoint_stores_document_locally(client, monkeypatch, tmp_path):
+    monkeypatch.setenv("VISAFLOW_UPLOAD_DIR", str(tmp_path))
+
+    payload = {
+        "case_id": "VISA-2026-API-FILE-001",
+        "applicant": {
+            "full_name": "Arjun Mehta",
+            "date_of_birth": "1998-04-12",
+            "nationality": "Indian",
+            "passport_number": "P1234567",
+            "contact_email": "arjun@example.com",
+        },
+        "visa_application": {
+            "visa_class": "TOURIST",
+            "purpose_of_travel": "Tourism and sightseeing in Sri Lanka",
+            "arrival_date": "2026-08-10",
+            "departure_date": "2026-08-20",
+            "destination_address": "Hotel Example",
+            "country_of_application": "India",
+            "payment_status": "PAID",
+        },
+        "documents": [],
+        "policy_context": {
+            "country": "Sri Lanka",
+            "policy_version": "sl-tourist-policy-v1",
+            "effective_date": "2026-05-25",
+        },
+    }
+    assert client.post("/applications", json=payload).status_code == 201
+
+    upload_response = client.post(
+        f"/cases/{payload['case_id']}/document-files",
+        data={"document_type": "PASSPORT"},
+        files={"file": ("passport.pdf", io.BytesIO(b"passport-content"), "application/pdf")},
+    )
+    assert upload_response.status_code == 200
+    body = upload_response.json()
+    assert len(body["documents"]) == 1
+    document = body["documents"][0]
+    assert document["document_type"] == "PASSPORT"
+    assert document["uploaded_at"]
+    assert document["file_uri"].endswith(".pdf")
+    assert tmp_path.name in document["file_uri"]
+
+
+def test_manual_referral_status_exposes_appointments_and_reason(client):
+    payload = {
+        "case_id": "VISA-2026-API-REFERRAL-001",
+        "applicant": {
+            "full_name": "Amina Yusuf",
+            "date_of_birth": "1992-11-22",
+            "nationality": "NIGERIA",
+            "passport_number": "N9988776",
+            "contact_email": "amina@example.com",
+        },
+        "visa_application": {
+            "visa_class": "TOURIST",
+            "purpose_of_travel": "Tourism in Sri Lanka with sponsor support",
+            "arrival_date": "2026-09-14",
+            "departure_date": "2026-09-24",
+            "destination_address": "Colombo guest house",
+            "country_of_application": "Nigeria",
+            "payment_status": "PAID",
+        },
+        "documents": [
+            {"document_id": "DOC-001", "document_type": "PASSPORT", "file_uri": "gs://x/passport.pdf"},
+            {"document_id": "DOC-002", "document_type": "BANK_STATEMENT", "file_uri": "gs://x/bank.pdf"},
+            {"document_id": "DOC-003", "document_type": "FLIGHT_ITINERARY", "file_uri": "gs://x/flight.pdf"},
+        ],
+        "policy_context": {
+            "country": "Sri Lanka",
+            "policy_version": "sl-tourist-policy-v1",
+            "effective_date": "2026-05-25",
+        },
+    }
+    assert client.post("/applications", json=payload).status_code == 201
+    process_response = client.post(f"/cases/{payload['case_id']}/process")
+    assert process_response.status_code == 200
+    assert process_response.json()["recommendation"] == "ENHANCED_REVIEW"
+
+    status_response = client.get(f"/cases/{payload['case_id']}/status")
+    assert status_response.status_code == 200
+    body = status_response.json()
+    assert body["status"] == "REFERRED_TO_MANUAL_REVIEW"
+    assert body["manual_referral_reason"]
+    assert body["appointments"]
+    assert body["appointments"][0]["appointment_type"] == "MANUAL_REFERRAL_REVIEW"
+    assert any(notice["code"] == "MANUAL_REFERRAL_ACTIVE" for notice in body["service_notices"])
+
+
+def test_approved_case_status_exposes_decision_notice_and_port_follow_up(client):
+    payload = {
+        "case_id": "VISA-2026-API-APPROVAL-001",
+        "applicant": {
+            "full_name": "Arjun Mehta",
+            "date_of_birth": "1998-04-12",
+            "nationality": "Indian",
+            "passport_number": "P1234567",
+            "contact_email": "arjun@example.com",
+        },
+        "visa_application": {
+            "visa_class": "TOURIST",
+            "purpose_of_travel": "Tourism and sightseeing in Sri Lanka",
+            "arrival_date": "2026-08-10",
+            "departure_date": "2026-08-20",
+            "destination_address": "Hotel Example",
+            "country_of_application": "India",
+            "payment_status": "PAID",
+        },
+        "documents": [
+            {"document_id": "DOC-001", "document_type": "PASSPORT", "file_uri": "gs://x/passport.pdf"},
+            {"document_id": "DOC-002", "document_type": "BANK_STATEMENT", "file_uri": "gs://x/bank.pdf"},
+            {"document_id": "DOC-003", "document_type": "FLIGHT_ITINERARY", "file_uri": "gs://x/flight.pdf"},
+        ],
+        "policy_context": {
+            "country": "Sri Lanka",
+            "policy_version": "sl-tourist-policy-v1",
+            "effective_date": "2026-05-25",
+        },
+    }
+    assert client.post("/applications", json=payload).status_code == 201
+    process_response = client.post(f"/cases/{payload['case_id']}/process")
+    assert process_response.status_code == 200
+    assert process_response.json()["recommendation"] == "APPROVE_READY"
+
+    decision_response = client.post(
+        f"/cases/{payload['case_id']}/officer-decision",
+        json={
+            "decision": "APPROVE",
+            "officer_id": "officer-007",
+            "reason": "Core tourist requirements satisfied.",
+            "override_reason": "",
+        },
+    )
+    assert decision_response.status_code == 200
+
+    status_response = client.get(f"/cases/{payload['case_id']}/status")
+    assert status_response.status_code == 200
+    body = status_response.json()
+    assert body["status"] == "POST_DECISION_FULFILLMENT"
+    assert body["decision_notice"]
+    assert body["decision_notice"]["subject"]
+    assert body["port_clearance_events"]
+    assert body["port_clearance_events"][0]["status"] == "PENDING_PORT_CLEARANCE"
+    assert any(notice["code"] == "PORT_CLEARANCE_PENDING" for notice in body["service_notices"])

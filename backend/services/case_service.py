@@ -221,6 +221,37 @@ class CaseService:
             official_sources=case.policy_context.official_sources,
             verified_at=case.policy_context.verified_at,
         )
+        service_notices = [
+            {"code": "HUMAN_REVIEW_REQUIRED", "message": "Final legal decision remains with an immigration officer."}
+        ]
+        if case.workflow.manual_referral_reason:
+            service_notices.append(
+                {
+                    "code": "MANUAL_REFERRAL_ACTIVE",
+                    "message": "This case is following a manual referral route and may require mission or head-office handling before ETA can proceed.",
+                }
+            )
+        if case.workflow.appointments:
+            service_notices.append(
+                {
+                    "code": "APPOINTMENT_TRACKING_ACTIVE",
+                    "message": "A review or service appointment is attached to this case. Check the appointment instructions and status before traveling or following up.",
+                }
+            )
+        if case.workflow.port_clearance_state == "PENDING_PORT_CLEARANCE":
+            service_notices.append(
+                {
+                    "code": "PORT_CLEARANCE_PENDING",
+                    "message": "Travel authorization is not the same as final port-of-entry clearance. Carry the same passport and supporting records for inspection.",
+                }
+            )
+        if case.workflow.extension_state != "NOT_REQUESTED":
+            service_notices.append(
+                {
+                    "code": "EXTENSION_WORKFLOW_ACTIVE",
+                    "message": "An extension-related workflow is active for this case. Follow the latest extension instructions and service channel guidance.",
+                }
+            )
         return CaseStatusResponse(
             case_id=case.case_id,
             status=case.workflow.current_state,
@@ -229,9 +260,7 @@ class CaseService:
             additional_evidence_requests=[request.model_dump() for request in case.workflow.additional_evidence_requests],
             uploaded_documents=[doc.model_dump() for doc in case.documents],
             deadlines={"decision_due_at": case.decision_due_at},
-            service_notices=[
-                {"code": "HUMAN_REVIEW_REQUIRED", "message": "Final legal decision remains with an immigration officer."}
-            ],
+            service_notices=service_notices,
             timeline=[event.model_dump() for event in case.status_timeline],
             current_holder=case.workflow.current_holder,
             next_action=case.workflow.next_action,
@@ -239,6 +268,10 @@ class CaseService:
             authorization_status=authorization_status.model_dump(),
             port_clearance_state=case.workflow.port_clearance_state,
             extension_state=case.workflow.extension_state,
+            manual_referral_reason=case.workflow.manual_referral_reason,
+            appointments=[appointment.model_dump() for appointment in case.workflow.appointments],
+            decision_notice=case.workflow.decision_notice.model_dump() if case.workflow.decision_notice else None,
+            port_clearance_events=[event.model_dump() for event in case.workflow.port_clearance_events],
         )
 
     def add_notification(self, case_id: str, payload: dict) -> None:

@@ -4,11 +4,15 @@ export function createApiClient(baseUrl) {
   const normalizedBaseUrl = (baseUrl || DEFAULT_API_BASE_URL).replace(/\/+$/, "");
 
   async function request(path, options = {}) {
+    const headers = {
+      ...(options.headers || {}),
+    };
+    if (!(options.body instanceof FormData) && !headers["Content-Type"]) {
+      headers["Content-Type"] = "application/json";
+    }
+
     const response = await fetch(`${normalizedBaseUrl}${path}`, {
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers || {}),
-      },
+      headers,
       ...options,
     });
 
@@ -76,6 +80,15 @@ export function createApiClient(baseUrl) {
       return request(`/cases/${encodeURIComponent(caseId)}/documents`, {
         method: "POST",
         body: JSON.stringify(payload),
+      });
+    },
+    uploadDocumentFile(caseId, documentType, file) {
+      const formData = new FormData();
+      formData.set("document_type", documentType);
+      formData.set("file", file);
+      return request(`/cases/${encodeURIComponent(caseId)}/document-files`, {
+        method: "POST",
+        body: formData,
       });
     },
     getCaseStatus(caseId) {
@@ -295,6 +308,9 @@ export const applicantPortalMock = {
       extension_state: "NOT_REQUESTED",
       workflow_pack: "SRI_LANKA_TOURIST_VISIT",
       manual_referral_reason: null,
+      appointments: [],
+      port_clearance_events: [],
+      decision_notice: null,
     },
     policy_context: {
       effective_rule_version: "sl-rule-pack-2026-05-25",

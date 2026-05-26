@@ -323,6 +323,10 @@ class CaseStatusResponse(BaseModel):
     authorization_status: dict[str, Any] = Field(default_factory=dict)
     port_clearance_state: str = "NOT_STARTED"
     extension_state: str = "NOT_REQUESTED"
+    manual_referral_reason: str | None = None
+    appointments: list[dict[str, Any]] = Field(default_factory=list)
+    decision_notice: dict[str, Any] | None = None
+    port_clearance_events: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class OfficerDecisionRequest(BaseModel):
