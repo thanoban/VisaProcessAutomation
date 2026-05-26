@@ -258,6 +258,20 @@ export function listMarkup(items, emptyText) {
   return items.join("");
 }
 
+export function linkMarkup(value) {
+  if (!value || value === "Not available") {
+    return "Not available";
+  }
+  return `<a class="text-teal-800 underline break-all" href="${value}" target="_blank" rel="noreferrer">${value}</a>`;
+}
+
+export function linkListMarkup(items) {
+  if (!items || !items.length) {
+    return "Not available";
+  }
+  return items.map((item) => linkMarkup(item)).join("<br />");
+}
+
 export const workflowGlossary = [
   {
     code: "ETA",

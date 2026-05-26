@@ -4,6 +4,8 @@ import {
   formatDate,
   formatDateTime,
   getStoredApiBaseUrl,
+  linkListMarkup,
+  linkMarkup,
   listMarkup,
   officerDashboardMock,
   rememberRecentCase,
@@ -279,8 +281,8 @@ function renderDashboard(casePacket, brief, useMock) {
     ["Itinerary evidence", arrayMarkup(evidence.itinerary_evidence)],
     ["Rule version used", evidence.rule_version_used || "Not available"],
     ["Publication reference", evidence.publication_reference || "Not available"],
-    ["Policy source", evidence.policy_source_uri || "Not available"],
-    ["Official sources", arrayMarkup(evidence.official_sources)],
+    ["Policy source", linkMarkup(evidence.policy_source_uri || "Not available")],
+    ["Official sources", linkListMarkup(evidence.official_sources)],
     ["Verified at", formatDateTime(evidence.verified_at)],
   ];
 

@@ -6,6 +6,8 @@ import {
   formatDateTime,
   getStoredApiBaseUrl,
   isMissingFileUploadSupport,
+  linkListMarkup,
+  linkMarkup,
   listMarkup,
   rememberRecentCase,
   setButtonBusy,
@@ -133,7 +135,7 @@ function renderChecklist(payload) {
         : []),
       ...((payload.official_sources || []).length
         ? [
-            `<div class="rounded-[1.25rem] border border-slate-200/80 bg-white/75 p-4 text-sm leading-6 text-slate-600"><strong class="text-slate-900">Official sources:</strong> ${payload.official_sources.join(", ")}</div>`,
+            `<div class="rounded-[1.25rem] border border-slate-200/80 bg-white/75 p-4 text-sm leading-6 text-slate-600"><strong class="text-slate-900">Official sources:</strong><div class="mt-3">${linkListMarkup(payload.official_sources)}</div></div>`,
           ]
         : []),
       ...(payload.notes || []).map(
@@ -396,7 +398,8 @@ function renderCaseStatus(casePacket, options) {
     ["Policy version", status.authorization_status?.policy_version || casePacket.policy_context.policy_version],
     ["Rule version", status.authorization_status?.rule_version_used || casePacket.policy_context.effective_rule_version],
     ["Publication reference", status.authorization_status?.publication_reference || casePacket.policy_context.publication_reference],
-    ["Policy source", status.authorization_status?.source_uri || casePacket.policy_context.source_uri],
+    ["Policy source", linkMarkup(status.authorization_status?.source_uri || casePacket.policy_context.source_uri)],
+    ["Official sources", linkListMarkup(status.authorization_status?.official_sources || casePacket.policy_context.official_sources)],
   ];
 
   elements.statusDefinitionGrid.innerHTML = detailItems
