@@ -1094,4 +1094,48 @@ export const governanceCenterMock = {
       "Google ADK is installed, but GOOGLE_API_KEY is not configured, so the self-improvement agent will run in mock mode.",
     ],
   },
+  selfImprovementReview: {
+    case_id: "VISA-2026-IMPROVE-001",
+    runtime_mode: "GOOGLE_ADK_MOCK",
+    review_status: "GENERATED",
+    human_approval_required: true,
+    failure_summary:
+      "Case VISA-2026-IMPROVE-001 reviewed with multiple improvement signals around citation completeness, low-confidence handling, and observability resilience.",
+    detected_issues: [
+      "Supervisor output is missing policy citations.",
+      "Supervisor confidence is weak for a legal-sensitive recommendation.",
+      "Some observability exports failed while local audit continued.",
+    ],
+    proposed_changes: [
+      {
+        scope: "PROMPT",
+        change: "Require every supervisor recommendation to include copied policy IDs from the policy-compliance output.",
+        reason: "Missing citations weaken officer trust and make review harder.",
+        risk_level: "LOW",
+      },
+      {
+        scope: "PROMPT",
+        change: "Escalate low-confidence cases more aggressively into ENHANCED_REVIEW with explicit blocking reasons.",
+        reason: "Low-confidence recommendations should stay conservative and easier to challenge.",
+        risk_level: "MEDIUM",
+      },
+      {
+        scope: "OBSERVABILITY",
+        change: "Alert on repeated Phoenix export failures while keeping local audit as the operational source of truth.",
+        reason: "Repeated export failures reduce debuggability even when case handling remains safe.",
+        risk_level: "LOW",
+      },
+    ],
+    comparison_questions: [
+      "Does the proposed change preserve deterministic routing and human_decision_required=true?",
+      "Would the change improve citation completeness without increasing hallucination risk?",
+      "Should this case be added to the mandatory regression suite before rollout?",
+    ],
+    source_trace_ids: ["019e0000abcd1234feed0001", "019e0000abcd1234feed0002"],
+    evaluation_labels: ["self_improvement", "mock_review", "citation_gap"],
+    trace_id: "019e0000abcd1234feedbeef00112233",
+    observation_id: "019e0000feed7788",
+    observability_export_status: "PENDING",
+    observability_target: "LOCAL_ONLY",
+  },
 };

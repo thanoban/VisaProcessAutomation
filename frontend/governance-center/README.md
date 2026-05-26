@@ -12,6 +12,7 @@ Current scope:
 - Google ADK and Gemini runtime posture visibility
 - Phoenix readiness checklist visibility
 - observability redaction guardrail visibility
+- case-driven self-improvement review visibility
 
 Frontend priorities:
 

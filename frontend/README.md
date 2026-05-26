@@ -49,6 +49,7 @@ For the hackathon demo, the frontend should visibly prove:
 - extension backlog visibility from the launchpad and supervisor surface
 - governance and Arize observability posture visibility
 - Phoenix readiness and redaction guardrail visibility
+- case-driven self-improvement review visibility inside governance
 - launchpad-level observability summary before entering internal surfaces
 
 ## Verification steps

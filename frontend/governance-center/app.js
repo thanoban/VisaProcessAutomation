@@ -9,6 +9,7 @@ import {
   listMarkup,
   renderInternalSurfaceGate,
   renderSurfaceNavigation,
+  setButtonBusy,
   setRegionBusy,
   titleCase,
 } from "../shared/app.js";
@@ -31,12 +32,24 @@ const elements = {
   agentRuntimeNotesList: document.querySelector("#agent-runtime-notes-list"),
   observabilityReadinessList: document.querySelector("#observability-readiness-list"),
   observabilityGuardrailsList: document.querySelector("#observability-guardrails-list"),
+  selfImprovementForm: document.querySelector("#self-improvement-form"),
+  selfImprovementCaseId: document.querySelector("#self-improvement-case-id"),
+  selfImprovementFeedback: document.querySelector("#self-improvement-feedback"),
+  selfImprovementResults: document.querySelector("#self-improvement-results"),
+  selfImprovementSummaryGrid: document.querySelector("#self-improvement-summary-grid"),
+  selfImprovementIssuesList: document.querySelector("#self-improvement-issues-list"),
+  selfImprovementQuestionsList: document.querySelector("#self-improvement-questions-list"),
+  selfImprovementChangesList: document.querySelector("#self-improvement-changes-list"),
+  selfImprovementMetaList: document.querySelector("#self-improvement-meta-list"),
+  selfImprovementEmpty: document.querySelector("#self-improvement-empty"),
+  selfImprovementSubmitButton: document.querySelector("#self-improvement-form button[type='submit']"),
   exceptionRulesList: document.querySelector("#exception-rules-list"),
 };
 
 const state = {
   apiBaseUrl: getStoredApiBaseUrl(),
   apiAvailable: false,
+  currentCaseId: new URLSearchParams(window.location.search).get("case")?.trim() || governanceCenterMock.selfImprovementReview.case_id,
 };
 
 const api = createApiClient(state.apiBaseUrl);
@@ -69,6 +82,8 @@ async function initialize() {
     elements.apiPill.textContent = "Role-scoped mode";
     return;
   }
+  wireEvents();
+  elements.selfImprovementCaseId.value = state.currentCaseId;
   setRegionBusy(elements.activePolicyGrid, true);
   setRegionBusy(elements.publicationSignalGrid, true);
   setRegionBusy(elements.traceabilityList, true);
@@ -111,6 +126,10 @@ async function initialize() {
     setRegionBusy(elements.observabilityReadinessList, false);
     setRegionBusy(elements.observabilityGuardrailsList, false);
   }
+}
+
+function wireEvents() {
+  elements.selfImprovementForm.addEventListener("submit", handleSelfImprovementSubmit);
 }
 
 function renderGovernanceCenter(requirements, rules, observability, agentRuntime) {
@@ -411,6 +430,40 @@ function renderGovernanceCenter(requirements, rules, observability, agentRuntime
   }
 }
 
+async function handleSelfImprovementSubmit(event) {
+  event.preventDefault();
+  const caseId = String(elements.selfImprovementCaseId.value || "").trim();
+  if (!caseId) {
+    elements.selfImprovementFeedback.textContent = "Enter a case ID before running the self-improvement review.";
+    return;
+  }
+
+  state.currentCaseId = caseId;
+  syncCaseQueryParam(caseId);
+  elements.selfImprovementFeedback.textContent = state.apiAvailable
+    ? `Running self-improvement review for ${caseId}...`
+    : `Mock mode is active. Showing a contract-aligned self-improvement review preview for ${caseId}.`;
+  setButtonBusy(elements.selfImprovementSubmitButton, true, "Running review...");
+  setRegionBusy(elements.selfImprovementResults, true);
+
+  try {
+    const review = state.apiAvailable
+      ? await api.requestSelfImprovementReview(caseId)
+      : buildMockSelfImprovementReview(caseId);
+    renderSelfImprovementReview(review, !state.apiAvailable);
+    elements.selfImprovementFeedback.textContent = state.apiAvailable
+      ? `Self-improvement review recorded for ${caseId}. All proposed changes still require explicit human approval.`
+      : `Mock self-improvement review loaded for ${caseId}.`;
+  } catch (error) {
+    elements.selfImprovementResults.hidden = true;
+    elements.selfImprovementEmpty.hidden = false;
+    elements.selfImprovementFeedback.textContent = `Self-improvement review failed: ${error.message}`;
+  } finally {
+    setButtonBusy(elements.selfImprovementSubmitButton, false, "Running review...");
+    setRegionBusy(elements.selfImprovementResults, false);
+  }
+}
+
 function renderAgentRuntime(agentRuntime) {
   const runtimeCards = [
     ["Runtime", agentRuntime.runtime || "GOOGLE_ADK", "info"],
@@ -463,6 +516,87 @@ function renderAgentRuntime(agentRuntime) {
     ),
     "No agent runtime notes are available yet."
   );
+}
+
+function renderSelfImprovementReview(review, useMock = false) {
+  elements.selfImprovementResults.hidden = false;
+  elements.selfImprovementEmpty.hidden = true;
+
+  const summaryCards = [
+    ["Case ID", review.case_id],
+    ["Runtime mode", titleCase(String(review.runtime_mode || "").replaceAll("_", " "))],
+    ["Review status", buildStatusChip(review.review_status || "FALLBACK", useMock ? "info" : "success")],
+    [
+      "Human approval required",
+      review.human_approval_required ? buildStatusChip("required", "warning") : buildStatusChip("not required", "success"),
+    ],
+    ["Observability export", buildStatusChip(review.observability_export_status || "DISABLED", toneForExportStatus(review.observability_export_status))],
+    ["Observability target", review.observability_target || "LOCAL_ONLY"],
+  ];
+
+  elements.selfImprovementSummaryGrid.innerHTML = summaryCards
+    .map(
+      ([label, value]) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/85 p-5">
+          <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${label}</span>
+          <strong class="mt-2 block text-base font-extrabold text-slate-900">${value || "Not available"}</strong>
+        </article>
+      `
+    )
+    .join("");
+
+  elements.selfImprovementIssuesList.innerHTML = listMarkup(
+    [
+      `<article class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-7 text-slate-700">${review.failure_summary}</article>`,
+      ...(review.detected_issues || []).map(
+        (issue) => `<article class="rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">${issue}</article>`
+      ),
+    ],
+    "No detected issues are available yet."
+  );
+
+  elements.selfImprovementQuestionsList.innerHTML = listMarkup(
+    (review.comparison_questions || []).map(
+      (question) => `<article class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-6 text-slate-700">${question}</article>`
+    ),
+    "No comparison questions are available yet."
+  );
+
+  elements.selfImprovementChangesList.innerHTML = listMarkup(
+    (review.proposed_changes || []).map(
+      (item) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/85 p-5">
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${item.scope || "PROMPT"}</span>
+              <h3 class="mt-2 text-lg font-extrabold text-slate-900">${item.change || "No change proposal was returned."}</h3>
+            </div>
+            ${buildStatusChip(item.risk_level || "LOW", toneForRisk(item.risk_level))}
+          </div>
+          <p class="text-sm leading-7 text-slate-600">${item.reason || "No change rationale is available."}</p>
+        </article>
+      `
+    ),
+    "No proposed changes are available yet."
+  );
+
+  const metaItems = [
+    ["Trace ID", review.trace_id || "Not available"],
+    ["Observation ID", review.observation_id || "Not available"],
+    ["Evaluation labels", listMarkup((review.evaluation_labels || []).map((label) => `<span>${label}</span>`), "None")],
+    ["Source trace IDs", listMarkup((review.source_trace_ids || []).map((traceId) => `<span>${traceId}</span>`), "None")],
+  ];
+
+  elements.selfImprovementMetaList.innerHTML = metaItems
+    .map(
+      ([label, value]) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/85 p-5">
+          <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${label}</span>
+          <div class="mt-3 text-sm leading-7 text-slate-600">${value}</div>
+        </article>
+      `
+    )
+    .join("");
 }
 
 function renderObservabilityReadiness(observability) {
@@ -551,6 +685,50 @@ function renderObservabilityGuardrails(observability) {
     ),
     "Observability guardrails are not available yet."
   );
+}
+
+function buildMockSelfImprovementReview(caseId) {
+  return {
+    ...governanceCenterMock.selfImprovementReview,
+    case_id: caseId || governanceCenterMock.selfImprovementReview.case_id,
+  };
+}
+
+function syncCaseQueryParam(caseId) {
+  const params = new URLSearchParams(window.location.search);
+  if (caseId) {
+    params.set("case", caseId);
+  } else {
+    params.delete("case");
+  }
+  const nextQuery = params.toString();
+  const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${window.location.hash}`;
+  window.history.replaceState({}, "", nextUrl);
+}
+
+function toneForRisk(value) {
+  switch (String(value || "").toUpperCase()) {
+    case "HIGH":
+      return "danger";
+    case "MEDIUM":
+      return "warning";
+    default:
+      return "info";
+  }
+}
+
+function toneForExportStatus(value) {
+  switch (String(value || "").toUpperCase()) {
+    case "EXPORTED":
+      return "success";
+    case "FAILED":
+      return "danger";
+    case "PENDING":
+    case "UNAVAILABLE":
+      return "warning";
+    default:
+      return "info";
+  }
 }
 
 function observabilityReadinessState(status, observability) {
