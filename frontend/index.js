@@ -79,6 +79,7 @@ function renderHomeAccessMode() {
     elements.operationalSnapshotSection.hidden = false;
     elements.recentWorkSection.hidden = false;
     elements.surfaceCards.forEach((card) => {
+      syncSurfaceCardHref(card, true);
       card.hidden = false;
     });
     return;
@@ -92,8 +93,17 @@ function renderHomeAccessMode() {
   elements.operationalSnapshotSection.hidden = true;
   elements.recentWorkSection.hidden = true;
   elements.surfaceCards.forEach((card) => {
+    syncSurfaceCardHref(card, false);
     card.hidden = card.dataset.surfaceCard !== "applicant";
   });
+}
+
+function syncSurfaceCardHref(card, workspaceMode = workspacePreviewModeEnabled()) {
+  if (!card) {
+    return;
+  }
+  const baseHref = card.dataset.baseHref || card.getAttribute("href") || "";
+  card.setAttribute("href", appendWorkspacePreviewParam(baseHref, workspaceMode));
 }
 
 async function handleSaveTarget(event) {
