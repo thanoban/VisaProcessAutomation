@@ -6,6 +6,7 @@ import {
   getStoredApiBaseUrl,
   listMarkup,
   officerDashboardMock,
+  rememberRecentCase,
   setButtonBusy,
   setRegionBusy,
   titleCase,
@@ -138,6 +139,17 @@ function renderDashboard(casePacket, brief, useMock) {
     brief.recommendation_panel.action_required_from || casePacket.workflow.action_required_from
   );
   elements.workspaceLinks.innerHTML = buildWorkspaceLinks(casePacket.case_id, "officer");
+
+  if (!useMock) {
+    rememberRecentCase({
+      case_id: casePacket.case_id,
+      surface: "officer",
+      current_state: casePacket.workflow.current_state,
+      current_holder: casePacket.workflow.current_holder,
+      next_action: casePacket.workflow.next_action,
+    });
+  }
+
   elements.applicantSummary.textContent = brief.applicant_summary;
   elements.confidenceChip.innerHTML = buildStatusChip(`confidence ${Math.round((brief.confidence || 0) * 100)}%`, "info");
 

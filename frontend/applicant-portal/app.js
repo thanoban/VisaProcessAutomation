@@ -7,6 +7,7 @@ import {
   getStoredApiBaseUrl,
   isMissingFileUploadSupport,
   listMarkup,
+  rememberRecentCase,
   setButtonBusy,
   setRegionBusy,
   startCaseId,
@@ -351,6 +352,16 @@ function renderCaseStatus(casePacket, options) {
   elements.holderValue.textContent = titleCase(status.current_holder);
   elements.nextActionValue.textContent = titleCase(status.next_action);
   elements.workspaceLinksPanel.innerHTML = buildWorkspaceLinks(casePacket.case_id, "applicant");
+
+  if (!options.useMock) {
+    rememberRecentCase({
+      case_id: casePacket.case_id,
+      surface: "applicant",
+      current_state: status.status,
+      current_holder: status.current_holder,
+      next_action: status.next_action,
+    });
+  }
 
   const detailItems = [
     ["Case ID", casePacket.case_id],

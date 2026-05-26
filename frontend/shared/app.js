@@ -1,4 +1,5 @@
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
+const RECENT_CASES_KEY = "visaFlowRecentCases";
 
 export function normalizeApiBaseUrl(value) {
   return (value || DEFAULT_API_BASE_URL).trim().replace(/\/+$/, "") || DEFAULT_API_BASE_URL;
@@ -22,6 +23,34 @@ export function clearStoredApiBaseUrl() {
 export function isMissingFileUploadSupport(error) {
   const message = String(error?.message || error || "").toLowerCase();
   return message.includes("404") || message.includes("not found") || message.includes("405");
+}
+
+export function getRecentCases() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(RECENT_CASES_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function rememberRecentCase(entry) {
+  const normalizedEntry = {
+    case_id: String(entry.case_id || "").trim(),
+    surface: String(entry.surface || "").trim(),
+    current_state: String(entry.current_state || "").trim(),
+    current_holder: String(entry.current_holder || "").trim(),
+    next_action: String(entry.next_action || "").trim(),
+    updated_at: entry.updated_at || new Date().toISOString(),
+  };
+  if (!normalizedEntry.case_id) {
+    return getRecentCases();
+  }
+
+  const recentCases = getRecentCases().filter((item) => item.case_id !== normalizedEntry.case_id);
+  const nextCases = [normalizedEntry, ...recentCases].slice(0, 8);
+  localStorage.setItem(RECENT_CASES_KEY, JSON.stringify(nextCases));
+  return nextCases;
 }
 
 export function createApiClient(baseUrl) {
