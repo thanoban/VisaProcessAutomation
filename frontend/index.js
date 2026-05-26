@@ -132,18 +132,19 @@ async function refreshHealthState(messagePrefix) {
 
   try {
     const health = await api.getHealth();
-    const [queues, notices, rules] = await Promise.all([
+    const [queues, notices, rules, observability] = await Promise.all([
       api.getSupervisorQueues(),
       api.getSystemNotices(),
       api.getActiveGovernanceRules(),
+      api.getObservabilityStatus(),
     ]);
     elements.apiPill.textContent = `Live API: ${apiBaseUrl}`;
     elements.healthChip.innerHTML = buildStatusChip(health.status || "connected", "success");
     elements.feedback.textContent = `${messagePrefix} Health check succeeded for ${apiBaseUrl}.`;
     setSnapshotMode(true);
     elements.snapshotFeedback.textContent =
-      "Queue, notice, and governance summaries below are being pulled from the selected live backend target.";
-    renderOperationalSnapshot(queues, notices, rules);
+      "Queue, notice, governance, and observability summaries below are being pulled from the selected live backend target.";
+    renderOperationalSnapshot(queues, notices, rules, observability);
   } catch (error) {
     elements.apiPill.textContent = `Saved target: ${apiBaseUrl}`;
     elements.healthChip.innerHTML = buildStatusChip("unreachable", "warning");
@@ -154,7 +155,8 @@ async function refreshHealthState(messagePrefix) {
     renderOperationalSnapshot(
       supervisorDashboardMock.queues,
       applicantPortalMock.notices,
-      governanceCenterMock.rules
+      governanceCenterMock.rules,
+      governanceCenterMock.observability
     );
   } finally {
     setButtonBusy(elements.apiForm.querySelector("button[type='submit']"), false, "Saving...");
@@ -174,7 +176,7 @@ function setSnapshotMode(isLive) {
   }`;
 }
 
-function renderOperationalSnapshot(queues, notices, rules) {
+function renderOperationalSnapshot(queues, notices, rules, observability = governanceCenterMock.observability) {
   const totalCases = Object.values(queues.counts_by_state || {}).reduce((sum, value) => sum + value, 0);
   const metrics = [
     ["Total active cases", totalCases, "info", appendWorkspacePreviewParam("./supervisor-dashboard/"), "Open supervisor operations"],
@@ -262,6 +264,9 @@ function renderOperationalSnapshot(queues, notices, rules) {
     ["Policy version", activeVersion.policy_version || "Not available"],
     ["Rule version", activeVersion.rule_version || "Not available"],
     ["Publication reference", activeVersion.publication_reference || "Not available"],
+    ["Phoenix status", observability.status || "DISABLED"],
+    ["Observability target", observability.target || "LOCAL_ONLY"],
+    ["Phoenix project", observability.project_name || "visaflow-mas"],
     ["Oldest due date", formatDateTime(queues.oldest_due_at || "")],
     ["Drift signals", driftSignals.length],
     ["Official sources", (rules.official_sources || []).length],
@@ -279,10 +284,66 @@ function renderOperationalSnapshot(queues, notices, rules) {
     )
     .join("") +
     `
+      <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/85 p-5">
+        <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Observability posture</span>
+            <h3 class="mt-2 text-lg font-extrabold text-slate-900">${observabilitySnapshotTitle(observability)}</h3>
+          </div>
+          ${buildStatusChip(
+            observability.status || "DISABLED",
+            toneForObservabilityStatus(observability.status || "DISABLED")
+          )}
+        </div>
+        <p class="text-sm leading-7 text-slate-600">${observabilitySnapshotMessage(observability)}</p>
+      </article>
       <a class="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="${appendWorkspacePreviewParam("./governance-center/")}">
         Open governance center
       </a>
     `;
+}
+
+function observabilitySnapshotTitle(observability) {
+  const status = String(observability.status || "DISABLED").toUpperCase();
+  switch (status) {
+    case "READY":
+      return "Phoenix runtime is ready";
+    case "DEGRADED":
+      return "Phoenix runtime needs attention";
+    case "PENDING":
+      return "Phoenix runtime is still warming up";
+    default:
+      return "Phoenix is still disabled";
+  }
+}
+
+function observabilitySnapshotMessage(observability) {
+  const status = String(observability.status || "DISABLED").toUpperCase();
+  switch (status) {
+    case "READY":
+      return `The selected backend is exporting observability data for project ${observability.project_name || "visaflow-mas"} on target ${
+        observability.target || "LOCAL_ONLY"
+      }.`;
+    case "DEGRADED":
+      return "The selected backend intends to export traces, but the runtime is degraded. Audit remains the fallback source of truth until Phoenix health is restored.";
+    case "PENDING":
+      return "The selected backend has observability enabled, but runtime readiness is still pending. Open the governance center to review the rollout checklist.";
+    default:
+      return "The selected backend is still in local-audit-only mode. Open the governance center for the enablement checklist and redaction guardrails.";
+  }
+}
+
+function toneForObservabilityStatus(value) {
+  switch (String(value || "").toUpperCase()) {
+    case "READY":
+      return "success";
+    case "DEGRADED":
+      return "warning";
+    case "PENDING":
+      return "info";
+    default:
+      return "warning";
+  }
 }
 
 function handleClearRecentCases() {
