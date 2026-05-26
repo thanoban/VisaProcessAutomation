@@ -147,7 +147,7 @@
                   <h3 class="mt-2 text-xl font-extrabold text-slate-900">Cases behind the backlog</h3>
                 </div>
                 <div class="flex flex-col gap-3 md:items-end">
-                  <form class="grid gap-3 md:grid-cols-2" id="supervisor-filter-form">
+                  <form class="grid gap-3 md:grid-cols-3" id="supervisor-filter-form">
                     <div class="grid gap-2">
                       <label class="text-sm font-semibold text-slate-700" for="supervisor-state-filter">State</label>
                       <select class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="supervisor-state-filter" name="state">
@@ -168,6 +168,16 @@
                         <option value="MISSION_OR_HEAD_OFFICE">Mission or head office</option>
                         <option value="PORT_OF_ENTRY">Port of entry</option>
                         <option value="SUPERVISOR">Supervisor</option>
+                      </select>
+                    </div>
+                    <div class="grid gap-2">
+                      <label class="text-sm font-semibold text-slate-700" for="supervisor-urgency-filter">Decision urgency</label>
+                      <select class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="supervisor-urgency-filter" name="urgency">
+                        <option value="">All urgency levels</option>
+                        <option value="OVERDUE">Overdue</option>
+                        <option value="DUE_WITHIN_48H">Due within 48 hours</option>
+                        <option value="ON_TRACK">On track</option>
+                        <option value="UNSCHEDULED">Unscheduled</option>
                       </select>
                     </div>
                   </form>

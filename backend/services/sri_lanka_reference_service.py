@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 from backend.models.schemas import (
     CasePacket,
     ChecklistResponse,
@@ -43,6 +45,11 @@ class SriLankaReferenceService:
         manual_referrals = 0
         waiting_for_documents = 0
         ready_for_officer_review = 0
+        overdue_cases = 0
+        due_within_48h = 0
+        due_dates: list[datetime] = []
+        now = datetime.now(timezone.utc)
+        due_soon_cutoff = now + timedelta(hours=48)
         for case in cases:
             state = case.workflow.current_state
             counts_by_state[state] = counts_by_state.get(state, 0) + 1
@@ -52,12 +59,22 @@ class SriLankaReferenceService:
                 waiting_for_documents += 1
             if state == "READY_FOR_OFFICER_REVIEW":
                 ready_for_officer_review += 1
+            due_at = self._parse_iso_datetime(case.decision_due_at)
+            if due_at:
+                due_dates.append(due_at)
+                if due_at < now:
+                    overdue_cases += 1
+                elif due_at <= due_soon_cutoff:
+                    due_within_48h += 1
         return SupervisorQueueSummary(
             workflow_pack=self.workflow_pack,
             counts_by_state=counts_by_state,
             manual_referrals=manual_referrals,
             waiting_for_documents=waiting_for_documents,
             ready_for_officer_review=ready_for_officer_review,
+            overdue_cases=overdue_cases,
+            due_within_48h=due_within_48h,
+            oldest_due_at=min(due_dates).isoformat().replace("+00:00", "Z") if due_dates else None,
         )
 
     def build_supervisor_case_list(
@@ -66,15 +83,19 @@ class SriLankaReferenceService:
         *,
         state_filter: str = "",
         holder_filter: str = "",
+        urgency_filter: str = "",
     ) -> SupervisorCaseListResponse:
         normalized_state = state_filter.strip().upper()
         normalized_holder = holder_filter.strip().upper()
+        normalized_urgency = urgency_filter.strip().upper()
 
         filtered_cases = []
         for case in cases:
             if normalized_state and case.workflow.current_state != normalized_state:
                 continue
             if normalized_holder and case.workflow.current_holder != normalized_holder:
+                continue
+            if normalized_urgency and self._case_urgency(case) != normalized_urgency:
                 continue
             filtered_cases.append(case)
 
@@ -94,13 +115,10 @@ class SriLankaReferenceService:
                 rule_version_used=case.policy_context.effective_rule_version,
                 publication_reference=case.policy_context.publication_reference,
                 decision_due_at=case.decision_due_at,
+                urgency_level=self._case_urgency(case),
                 updated_at=case.audit.updated_at,
             )
-            for case in sorted(
-                filtered_cases,
-                key=lambda item: (item.audit.updated_at or "", item.case_id),
-                reverse=True,
-            )
+            for case in sorted(filtered_cases, key=self._supervisor_sort_key)
         ]
 
         return SupervisorCaseListResponse(
@@ -109,5 +127,46 @@ class SriLankaReferenceService:
             filtered_count=len(filtered_cases),
             state_filter=normalized_state,
             holder_filter=normalized_holder,
+            urgency_filter=normalized_urgency,
             cases=summaries,
         )
+
+    def _supervisor_sort_key(self, case: CasePacket) -> tuple[int, datetime, str, str]:
+        urgency = self._case_urgency(case)
+        due_at = self._parse_iso_datetime(case.decision_due_at) or datetime.max.replace(tzinfo=timezone.utc)
+        urgency_priority = {
+            "OVERDUE": 0,
+            "DUE_WITHIN_48H": 1,
+            "ON_TRACK": 2,
+            "UNSCHEDULED": 3,
+        }
+        updated_at = self._parse_iso_datetime(case.audit.updated_at) or datetime.min.replace(tzinfo=timezone.utc)
+        return (
+            urgency_priority.get(urgency, 4),
+            due_at,
+            -int(updated_at.timestamp()) if updated_at != datetime.min.replace(tzinfo=timezone.utc) else 0,
+            case.case_id,
+        )
+
+    def _case_urgency(self, case: CasePacket) -> str:
+        due_at = self._parse_iso_datetime(case.decision_due_at)
+        if not due_at:
+            return "UNSCHEDULED"
+        now = datetime.now(timezone.utc)
+        if due_at < now:
+            return "OVERDUE"
+        if due_at <= now + timedelta(hours=48):
+            return "DUE_WITHIN_48H"
+        return "ON_TRACK"
+
+    def _parse_iso_datetime(self, value: str | None) -> datetime | None:
+        if not value:
+            return None
+        normalized = value.replace("Z", "+00:00")
+        try:
+            parsed = datetime.fromisoformat(normalized)
+        except ValueError:
+            return None
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)

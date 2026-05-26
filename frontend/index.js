@@ -118,6 +118,20 @@ function renderOperationalSnapshot(queues, notices, rules) {
   const metrics = [
     ["Total active cases", totalCases, "info", "./supervisor-dashboard/", "Open supervisor operations"],
     [
+      "Overdue decisions",
+      queues.overdue_cases || 0,
+      (queues.overdue_cases || 0) > 0 ? "danger" : "success",
+      "./supervisor-dashboard/?urgency=OVERDUE",
+      "Review overdue cases",
+    ],
+    [
+      "Due within 48 hours",
+      queues.due_within_48h || 0,
+      (queues.due_within_48h || 0) > 0 ? "warning" : "success",
+      "./supervisor-dashboard/?urgency=DUE_WITHIN_48H",
+      "Review due-soon cases",
+    ],
+    [
       "Manual referrals",
       queues.manual_referrals || 0,
       (queues.manual_referrals || 0) > 0 ? "warning" : "success",
@@ -187,6 +201,7 @@ function renderOperationalSnapshot(queues, notices, rules) {
     ["Policy version", activeVersion.policy_version || "Not available"],
     ["Rule version", activeVersion.rule_version || "Not available"],
     ["Publication reference", activeVersion.publication_reference || "Not available"],
+    ["Oldest due date", formatDateTime(queues.oldest_due_at || "")],
     ["Drift signals", driftSignals.length],
     ["Official sources", (rules.official_sources || []).length],
     ["Verified at", formatDateTime(rules.verified_at || "")],

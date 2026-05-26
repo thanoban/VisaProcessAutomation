@@ -1,4 +1,5 @@
 import io
+from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 
@@ -81,9 +82,15 @@ def test_case_status_and_brief_contract(client):
     assert governance_body["active_circulars"]
     assert governance_body["active_circulars"][0]["publications"]
     assert any(rule["nationality"] == "NIGERIA" for rule in governance_body["nationality_exception_rules"])
+    queue_body = queue_response.json()
+    assert "overdue_cases" in queue_body
+    assert "due_within_48h" in queue_body
+    assert isinstance(queue_body["overdue_cases"], int)
+    assert isinstance(queue_body["due_within_48h"], int)
     assert queue_cases_body["total_cases"] >= 1
     assert queue_cases_body["cases"]
     assert queue_cases_body["cases"][0]["rule_version_used"] == "sl-rule-pack-2026-05-25"
+    assert "urgency_level" in queue_cases_body["cases"][0]
     assert filtered_queue_cases_body["filtered_count"] >= 1
     assert filtered_queue_cases_body["state_filter"] == "READY_FOR_OFFICER_REVIEW"
     assert all(item["current_holder"] == "OFFICER" for item in filtered_queue_cases_body["cases"])
@@ -331,6 +338,73 @@ def test_manual_referral_status_exposes_appointments_and_reason(client):
     assert body["appointments"]
     assert body["appointments"][0]["appointment_type"] == "MANUAL_REFERRAL_REVIEW"
     assert any(notice["code"] == "MANUAL_REFERRAL_ACTIVE" for notice in body["service_notices"])
+
+
+def test_supervisor_queue_exposes_due_soon_and_overdue_signals(client):
+    base_payload = {
+        "applicant": {
+            "full_name": "Arjun Mehta",
+            "date_of_birth": "1998-04-12",
+            "nationality": "Indian",
+            "passport_number": "P1234567",
+            "contact_email": "arjun@example.com",
+        },
+        "visa_application": {
+            "visa_class": "TOURIST",
+            "purpose_of_travel": "Tourism and sightseeing in Sri Lanka",
+            "arrival_date": "2026-08-10",
+            "departure_date": "2026-08-20",
+            "destination_address": "Hotel Example",
+            "country_of_application": "India",
+            "payment_status": "PAID",
+        },
+        "documents": [
+            {"document_id": "DOC-001", "document_type": "PASSPORT", "file_uri": "gs://x/passport.pdf"},
+            {"document_id": "DOC-002", "document_type": "BANK_STATEMENT", "file_uri": "gs://x/bank.pdf"},
+            {"document_id": "DOC-003", "document_type": "FLIGHT_ITINERARY", "file_uri": "gs://x/flight.pdf"},
+        ],
+        "policy_context": {
+            "country": "Sri Lanka",
+            "policy_version": "sl-tourist-policy-v1",
+            "effective_date": "2026-05-25",
+        },
+    }
+    overdue_due_at = (datetime.now(timezone.utc) - timedelta(hours=4)).isoformat().replace("+00:00", "Z")
+    due_soon_due_at = (datetime.now(timezone.utc) + timedelta(hours=12)).isoformat().replace("+00:00", "Z")
+
+    overdue_payload = {
+        **base_payload,
+        "case_id": "VISA-2026-API-OVERDUE-001",
+        "decision_due_at": overdue_due_at,
+    }
+    due_soon_payload = {
+        **base_payload,
+        "case_id": "VISA-2026-API-DUESOON-001",
+        "decision_due_at": due_soon_due_at,
+    }
+
+    assert client.post("/applications", json=overdue_payload).status_code == 201
+    assert client.post("/applications", json=due_soon_payload).status_code == 201
+
+    queue_response = client.get("/supervisor/queues")
+    case_list_response = client.get("/supervisor/cases")
+    overdue_case_list_response = client.get("/supervisor/cases?urgency=OVERDUE")
+    assert queue_response.status_code == 200
+    assert case_list_response.status_code == 200
+    assert overdue_case_list_response.status_code == 200
+
+    queue_body = queue_response.json()
+    case_list_body = case_list_response.json()
+    overdue_case_list_body = overdue_case_list_response.json()
+    assert queue_body["overdue_cases"] >= 1
+    assert queue_body["due_within_48h"] >= 1
+    assert queue_body["oldest_due_at"] == overdue_due_at
+
+    urgency_by_case = {item["case_id"]: item["urgency_level"] for item in case_list_body["cases"]}
+    assert urgency_by_case["VISA-2026-API-OVERDUE-001"] == "OVERDUE"
+    assert urgency_by_case["VISA-2026-API-DUESOON-001"] == "DUE_WITHIN_48H"
+    assert overdue_case_list_body["urgency_filter"] == "OVERDUE"
+    assert all(item["urgency_level"] == "OVERDUE" for item in overdue_case_list_body["cases"])
 
 
 def test_approved_case_status_exposes_decision_notice_and_port_follow_up(client):

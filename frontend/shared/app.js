@@ -108,6 +108,9 @@ export function createApiClient(baseUrl) {
       if (filters.holder) {
         params.set("holder", filters.holder);
       }
+      if (filters.urgency) {
+        params.set("urgency", filters.urgency);
+      }
       const query = params.toString();
       return request(`/supervisor/cases${query ? `?${query}` : ""}`);
     },
@@ -645,6 +648,9 @@ export const supervisorDashboardMock = {
     manual_referrals: 2,
     waiting_for_documents: 3,
     ready_for_officer_review: 6,
+    overdue_cases: 1,
+    due_within_48h: 2,
+    oldest_due_at: "2026-06-01T09:00:00Z",
   },
   cases: {
     workflow_pack: "SRI_LANKA_TOURIST_VISIT",
@@ -668,6 +674,7 @@ export const supervisorDashboardMock = {
         rule_version_used: "sl-rule-pack-2026-05-25",
         publication_reference: "ETA-40-COUNTRY-SCHEME-2026-05-25",
         decision_due_at: "2026-06-03T17:00:00Z",
+        urgency_level: "DUE_WITHIN_48H",
         updated_at: "2026-05-26T07:40:00Z",
       },
       {
@@ -685,6 +692,7 @@ export const supervisorDashboardMock = {
         rule_version_used: "sl-rule-pack-2026-05-25",
         publication_reference: "ETA-40-COUNTRY-SCHEME-2026-05-25",
         decision_due_at: "2026-06-05T12:00:00Z",
+        urgency_level: "ON_TRACK",
         updated_at: "2026-05-26T07:32:00Z",
       },
       {
@@ -702,6 +710,7 @@ export const supervisorDashboardMock = {
         rule_version_used: "sl-rule-pack-2026-05-25",
         publication_reference: "ETA-40-COUNTRY-SCHEME-2026-05-25",
         decision_due_at: "2026-06-01T09:00:00Z",
+        urgency_level: "OVERDUE",
         updated_at: "2026-05-26T07:25:00Z",
       },
       {
@@ -719,6 +728,7 @@ export const supervisorDashboardMock = {
         rule_version_used: "sl-rule-pack-2026-05-25",
         publication_reference: "ETA-40-COUNTRY-SCHEME-2026-05-25",
         decision_due_at: "2026-06-07T16:30:00Z",
+        urgency_level: "ON_TRACK",
         updated_at: "2026-05-26T07:18:00Z",
       },
     ],
