@@ -43,6 +43,7 @@ async function initialize() {
   elements.clearFiltersButton.addEventListener("click", clearFilters);
   elements.metrics.addEventListener("click", handleDrillDownClick);
   elements.stateCounts.addEventListener("click", handleDrillDownClick);
+  readInitialFilters();
   syncFilterControls();
   await loadSupervisorData();
 }
@@ -274,6 +275,7 @@ function handleDrillDownClick(event) {
 function applyFilters(nextFilters) {
   state.filters.state = String(nextFilters.state || "");
   state.filters.holder = String(nextFilters.holder || "");
+  syncFilterQueryParams();
   syncFilterControls();
   loadSupervisorData();
 }
@@ -285,6 +287,29 @@ function clearFilters() {
 function syncFilterControls() {
   elements.stateFilter.value = state.filters.state;
   elements.holderFilter.value = state.filters.holder;
+}
+
+function readInitialFilters() {
+  const params = new URLSearchParams(window.location.search);
+  state.filters.state = String(params.get("state") || "");
+  state.filters.holder = String(params.get("holder") || "");
+}
+
+function syncFilterQueryParams() {
+  const params = new URLSearchParams(window.location.search);
+  if (state.filters.state) {
+    params.set("state", state.filters.state);
+  } else {
+    params.delete("state");
+  }
+  if (state.filters.holder) {
+    params.set("holder", state.filters.holder);
+  } else {
+    params.delete("holder");
+  }
+  const nextQuery = params.toString();
+  const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
+  window.history.replaceState({}, "", nextUrl);
 }
 
 function renderActiveFilters() {
