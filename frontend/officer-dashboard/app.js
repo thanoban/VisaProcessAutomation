@@ -23,6 +23,7 @@ const elements = {
   briefDefinitionGrid: document.querySelector("#brief-definition-grid"),
   confidenceChip: document.querySelector("#confidence-chip"),
   recommendationPanelGrid: document.querySelector("#recommendation-panel-grid"),
+  routeHandlingPanel: document.querySelector("#route-handling-panel"),
   agentResultsList: document.querySelector("#agent-results-list"),
   evidenceList: document.querySelector("#evidence-list"),
   policyList: document.querySelector("#policy-list"),
@@ -157,6 +158,65 @@ function renderDashboard(casePacket, brief, useMock) {
       `
     )
     .join("");
+
+  const appointments = casePacket.workflow.appointments || [];
+  const routeHandlingCards = [
+    `
+      <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+        <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Current operating route</span>
+            <h3 class="mt-2 text-lg font-extrabold text-slate-900">${
+              casePacket.workflow.manual_referral_reason ? "Manual or exception route" : "Straight-through officer route"
+            }</h3>
+          </div>
+          ${
+            casePacket.workflow.manual_referral_reason
+              ? buildStatusChip("manual referral active", "warning")
+              : buildStatusChip("standard route", "success")
+          }
+        </div>
+        <p class="text-sm leading-7 text-slate-600">${
+          casePacket.workflow.manual_referral_reason ||
+          "No sponsor, nationality, or exception-driven manual referral is currently attached to this case."
+        }</p>
+      </article>
+    `,
+    `
+      <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+        <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Extension and travel handling</span>
+            <h3 class="mt-2 text-lg font-extrabold text-slate-900">${titleCase(casePacket.workflow.extension_state || "NOT_REQUESTED")}</h3>
+          </div>
+          ${buildStatusChip(casePacket.workflow.extension_state || "NOT_REQUESTED")}
+        </div>
+        <p class="text-sm leading-7 text-slate-600">
+          <strong class="text-slate-900">Port clearance:</strong> ${titleCase(casePacket.workflow.port_clearance_state || "NOT_STARTED")}<br />
+          <strong class="text-slate-900">Next action:</strong> ${titleCase(casePacket.workflow.next_action || "Not available")}
+        </p>
+      </article>
+    `,
+    ...appointments.map(
+      (appointment) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${appointment.appointment_id || "Service appointment"}</span>
+              <h3 class="mt-2 text-lg font-extrabold text-slate-900">${titleCase(appointment.appointment_type || "Appointment")}</h3>
+            </div>
+            ${buildStatusChip(appointment.status || "PENDING")}
+          </div>
+          <p class="text-sm leading-7 text-slate-600">
+            <strong class="text-slate-900">Location:</strong> ${appointment.location || "Not assigned yet"}<br />
+            <strong class="text-slate-900">Scheduled for:</strong> ${formatDateTime(appointment.scheduled_for)}<br />
+            ${appointment.instructions || "No additional instructions are attached to this appointment yet."}
+          </p>
+        </article>
+      `
+    ),
+  ];
+  elements.routeHandlingPanel.innerHTML = routeHandlingCards.join("");
 
   elements.agentResultsList.innerHTML = listMarkup(
     (brief.agent_results || []).map(
