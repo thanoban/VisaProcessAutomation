@@ -1,6 +1,8 @@
 import {
+  appendWorkspacePreviewParam,
   buildStatusChip,
   createApiClient,
+  decisionUrgencyForDate,
   formatDate,
   formatDateTime,
   getStoredApiBaseUrl,
@@ -9,14 +11,22 @@ import {
   listMarkup,
   officerDashboardMock,
   rememberRecentCase,
+  renderInternalSurfaceGate,
+  renderSurfaceNavigation,
   setButtonBusy,
   setRegionBusy,
+  toneForDecisionUrgency,
   titleCase,
+  workspacePreviewModeEnabled,
 } from "../shared/app.js";
 
 const elements = {
   apiPill: document.querySelector("#dashboard-api-pill"),
   heroCopy: document.querySelector("#dashboard-hero-copy"),
+  surfaceNav: document.querySelector("#surface-nav"),
+  surfaceAccessNote: document.querySelector("#surface-access-note"),
+  internalSurfaceGate: document.querySelector("#internal-surface-gate"),
+  protectedSurfaceShell: document.querySelector("#protected-surface-shell"),
   lookupForm: document.querySelector("#dashboard-lookup-form"),
   sampleButton: document.querySelector("#dashboard-sample-button"),
   feedback: document.querySelector("#dashboard-feedback"),
@@ -58,6 +68,33 @@ const api = createApiClient(state.apiBaseUrl);
 
 async function initialize() {
   elements.caseIdInput.value = state.currentCaseId;
+  renderSurfaceNavigation({
+    navElement: elements.surfaceNav,
+    noticeElement: elements.surfaceAccessNote,
+    currentSurface: "officer",
+    homeHref: "../",
+    navLinks: [
+      { label: "Frontend Home", href: "../", surface: "home" },
+      { label: "Applicant Portal", href: "../applicant-portal/", surface: "applicant" },
+      { label: "Officer Dashboard", href: "./", surface: "officer" },
+      { label: "Supervisor Dashboard", href: "../supervisor-dashboard/", surface: "supervisor" },
+      { label: "Governance Center", href: "../governance-center/", surface: "governance" },
+    ],
+  });
+  const canAccessSurface = renderInternalSurfaceGate({
+    gateElement: elements.internalSurfaceGate,
+    protectedElement: elements.protectedSurfaceShell,
+    surfaceTitle: "The officer dashboard",
+    detail:
+      "Role-scoped mode intentionally hides officer review tooling, evidence panels, and decision actions outside internal workspace preview.",
+    homeHref: "../",
+  });
+  if (!canAccessSurface) {
+    elements.heroCopy.textContent =
+      "Internal workspace preview is required before officer review tooling is shown on this surface.";
+    elements.apiPill.textContent = "Role-scoped mode";
+    return;
+  }
   wireEvents();
   await loadDashboardChrome();
   renderDashboard(officerDashboardMock.casePacket, officerDashboardMock.officerBrief, true);
@@ -166,6 +203,13 @@ function renderDashboard(casePacket, brief, useMock) {
     ["Visa class", brief.visa_class],
     ["Arrival date", formatDate(casePacket.visa_application.arrival_date)],
     ["Departure date", formatDate(casePacket.visa_application.departure_date)],
+    [
+      "Decision urgency",
+      buildStatusChip(
+        decisionUrgencyForDate(casePacket.decision_due_at),
+        toneForDecisionUrgency(decisionUrgencyForDate(casePacket.decision_due_at))
+      ),
+    ],
     ["ETA status", buildStatusChip(casePacket.workflow.eta_status)],
     ["Port clearance", buildStatusChip(casePacket.workflow.port_clearance_state)],
     ["Policy version", casePacket.policy_context.policy_version],
@@ -603,6 +647,13 @@ function syncCaseQueryParam(caseId) {
 }
 
 function buildWorkspaceLinks(caseId, currentSurface, queueContext = {}) {
+  if (!workspacePreviewModeEnabled()) {
+    return `
+      <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-white/45 p-4 text-sm leading-7 text-slate-600">
+        Cross-surface case switching is available only in internal workspace preview mode.
+      </div>
+    `;
+  }
   const links = [
     ["Applicant Portal", "../applicant-portal/", "applicant"],
     ["Officer Dashboard", "../officer-dashboard/", "officer"],
@@ -623,7 +674,7 @@ function buildWorkspaceLinks(caseId, currentSurface, queueContext = {}) {
 
 function buildSurfaceHref(surface, href, caseId, queueContext = {}) {
   if (surface === "governance") {
-    return href;
+    return appendWorkspacePreviewParam(href);
   }
 
   const params = new URLSearchParams();
@@ -636,7 +687,7 @@ function buildSurfaceHref(surface, href, caseId, queueContext = {}) {
       params.set("holder", queueContext.holder);
     }
   }
-  return `${href}?${params.toString()}`;
+  return appendWorkspacePreviewParam(`${href}?${params.toString()}`);
 }
 
 initialize();

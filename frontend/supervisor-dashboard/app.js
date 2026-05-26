@@ -1,17 +1,25 @@
 import {
+  appendWorkspacePreviewParam,
   buildStatusChip,
   createApiClient,
   getStoredApiBaseUrl,
   listMarkup,
+  renderInternalSurfaceGate,
+  renderSurfaceNavigation,
   setButtonBusy,
   setRegionBusy,
   supervisorDashboardMock,
   titleCase,
+  workspacePreviewModeEnabled,
 } from "../shared/app.js";
 
 const elements = {
   apiPill: document.querySelector("#supervisor-api-pill"),
   heroCopy: document.querySelector("#supervisor-hero-copy"),
+  surfaceNav: document.querySelector("#surface-nav"),
+  surfaceAccessNote: document.querySelector("#surface-access-note"),
+  internalSurfaceGate: document.querySelector("#internal-surface-gate"),
+  protectedSurfaceShell: document.querySelector("#protected-surface-shell"),
   refreshButton: document.querySelector("#refresh-queues-button"),
   filterForm: document.querySelector("#supervisor-filter-form"),
   clearFiltersButton: document.querySelector("#clear-filters-button"),
@@ -42,6 +50,33 @@ const state = {
 const api = createApiClient(state.apiBaseUrl);
 
 async function initialize() {
+  renderSurfaceNavigation({
+    navElement: elements.surfaceNav,
+    noticeElement: elements.surfaceAccessNote,
+    currentSurface: "supervisor",
+    homeHref: "../",
+    navLinks: [
+      { label: "Frontend Home", href: "../", surface: "home" },
+      { label: "Applicant Portal", href: "../applicant-portal/", surface: "applicant" },
+      { label: "Officer Dashboard", href: "../officer-dashboard/", surface: "officer" },
+      { label: "Supervisor Dashboard", href: "./", surface: "supervisor" },
+      { label: "Governance Center", href: "../governance-center/", surface: "governance" },
+    ],
+  });
+  const canAccessSurface = renderInternalSurfaceGate({
+    gateElement: elements.internalSurfaceGate,
+    protectedElement: elements.protectedSurfaceShell,
+    surfaceTitle: "The supervisor dashboard",
+    detail:
+      "Role-scoped mode intentionally hides queue pressure signals, backlog drill-downs, and cross-role drill-down links outside internal workspace preview.",
+    homeHref: "../",
+  });
+  if (!canAccessSurface) {
+    elements.heroCopy.textContent =
+      "Internal workspace preview is required before supervisor queue tooling is shown on this surface.";
+    elements.apiPill.textContent = "Role-scoped mode";
+    return;
+  }
   elements.refreshButton.addEventListener("click", loadSupervisorData);
   elements.filterForm.addEventListener("change", handleFilterChange);
   elements.clearFiltersButton.addEventListener("click", clearFilters);
@@ -223,18 +258,7 @@ function renderSupervisorDashboard(queues, notices, casesResponse) {
                 ? `<span class="rounded-full border border-teal-200 bg-white px-4 py-2 text-sm font-semibold text-teal-800">Focused case from cross-surface link</span>`
                 : ""
             }
-            <a
-              class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5"
-              href="../officer-dashboard/?case=${encodeURIComponent(item.case_id)}"
-            >
-              Open officer view
-            </a>
-            <a
-              class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5"
-              href="../applicant-portal/?case=${encodeURIComponent(item.case_id)}"
-            >
-              Open applicant view
-            </a>
+            ${buildCrossSurfaceActions(item)}
           </div>
           ${
             item.manual_referral_reason
@@ -555,6 +579,29 @@ function toneForUrgency(value) {
     default:
       return "info";
   }
+}
+
+function buildCrossSurfaceActions(item) {
+  if (!workspacePreviewModeEnabled()) {
+    return `<div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-white/45 px-4 py-3 text-sm leading-6 text-slate-600">
+      Cross-role drill-down links are hidden outside internal workspace preview mode.
+    </div>`;
+  }
+
+  return `
+    <a
+      class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5"
+      href="${appendWorkspacePreviewParam(`../officer-dashboard/?case=${encodeURIComponent(item.case_id)}`)}"
+    >
+      Open officer view
+    </a>
+    <a
+      class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5"
+      href="${appendWorkspacePreviewParam(`../applicant-portal/?case=${encodeURIComponent(item.case_id)}`)}"
+    >
+      Open applicant view
+    </a>
+  `;
 }
 
 initialize();

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from backend.models.schemas import (
     CasePacket,
@@ -12,6 +12,7 @@ from backend.models.schemas import (
     SupervisorQueueSummary,
 )
 from backend.services.policy_service import load_reference_json
+from backend.services.utils import decision_urgency, parse_utcish_datetime
 
 
 class SriLankaReferenceService:
@@ -49,7 +50,6 @@ class SriLankaReferenceService:
         due_within_48h = 0
         due_dates: list[datetime] = []
         now = datetime.now(timezone.utc)
-        due_soon_cutoff = now + timedelta(hours=48)
         for case in cases:
             state = case.workflow.current_state
             counts_by_state[state] = counts_by_state.get(state, 0) + 1
@@ -62,9 +62,10 @@ class SriLankaReferenceService:
             due_at = self._parse_iso_datetime(case.decision_due_at)
             if due_at:
                 due_dates.append(due_at)
-                if due_at < now:
+                urgency = decision_urgency(case.decision_due_at, now=now)
+                if urgency == "OVERDUE":
                     overdue_cases += 1
-                elif due_at <= due_soon_cutoff:
+                elif urgency == "DUE_WITHIN_48H":
                     due_within_48h += 1
         return SupervisorQueueSummary(
             workflow_pack=self.workflow_pack,
@@ -149,24 +150,7 @@ class SriLankaReferenceService:
         )
 
     def _case_urgency(self, case: CasePacket) -> str:
-        due_at = self._parse_iso_datetime(case.decision_due_at)
-        if not due_at:
-            return "UNSCHEDULED"
-        now = datetime.now(timezone.utc)
-        if due_at < now:
-            return "OVERDUE"
-        if due_at <= now + timedelta(hours=48):
-            return "DUE_WITHIN_48H"
-        return "ON_TRACK"
+        return decision_urgency(case.decision_due_at)
 
     def _parse_iso_datetime(self, value: str | None) -> datetime | None:
-        if not value:
-            return None
-        normalized = value.replace("Z", "+00:00")
-        try:
-            parsed = datetime.fromisoformat(normalized)
-        except ValueError:
-            return None
-        if parsed.tzinfo is None:
-            return parsed.replace(tzinfo=timezone.utc)
-        return parsed.astimezone(timezone.utc)
+        return parse_utcish_datetime(value)

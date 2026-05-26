@@ -50,23 +50,8 @@
         </div>
       </header>
 
-      <nav aria-label="Surface navigation" class="mb-6 flex flex-wrap gap-3">
-        <a class="rounded-full bg-visa-navy px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-slate-900/10" href="./">
-          Frontend Home
-        </a>
-        <a class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="./applicant-portal/">
-          Applicant Portal
-        </a>
-        <a class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="./officer-dashboard/">
-          Officer Dashboard
-        </a>
-        <a class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="./supervisor-dashboard/">
-          Supervisor Dashboard
-        </a>
-        <a class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="./governance-center/">
-          Governance Center
-        </a>
-      </nav>
+      <nav aria-label="Surface navigation" class="mb-4 flex flex-wrap gap-3" id="surface-nav"></nav>
+      <div class="mb-6" id="surface-access-note"></div>
 
       <section class="rounded-[2.25rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-8">
         <span class="block text-[0.72rem] uppercase tracking-[0.22em] text-slate-500">Surface directory</span>
@@ -77,27 +62,28 @@
           The frontend now exposes dedicated surfaces for applicants, officers, supervisors, and governance review while
           staying connected to the existing FastAPI workflow APIs.
         </p>
+        <div class="mt-4" id="surface-directory-note"></div>
 
         <div class="mt-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
-          <a class="rounded-[1.75rem] border border-slate-200/80 bg-white/85 p-5 transition hover:-translate-y-1 hover:shadow-soft" href="./applicant-portal/">
+          <a class="rounded-[1.75rem] border border-slate-200/80 bg-white/85 p-5 transition hover:-translate-y-1 hover:shadow-soft" data-surface-card="applicant" data-base-href="./applicant-portal/" href="./applicant-portal/">
             <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Applicant</span>
             <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Portal</h2>
             <p class="mt-3 text-sm leading-7 text-slate-600">Create cases, check status, review notices, and understand the next action clearly.</p>
           </a>
 
-          <a class="rounded-[1.75rem] border border-slate-200/80 bg-white/85 p-5 transition hover:-translate-y-1 hover:shadow-soft" href="./officer-dashboard/">
+          <a class="rounded-[1.75rem] border border-slate-200/80 bg-white/85 p-5 transition hover:-translate-y-1 hover:shadow-soft" data-surface-card="officer" data-base-href="./officer-dashboard/" href="./officer-dashboard/">
             <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Officer</span>
             <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Dashboard</h2>
             <p class="mt-3 text-sm leading-7 text-slate-600">Review evidence, policy references, audit history, and submit a human decision.</p>
           </a>
 
-          <a class="rounded-[1.75rem] border border-slate-200/80 bg-white/85 p-5 transition hover:-translate-y-1 hover:shadow-soft" href="./supervisor-dashboard/">
+          <a class="rounded-[1.75rem] border border-slate-200/80 bg-white/85 p-5 transition hover:-translate-y-1 hover:shadow-soft" data-surface-card="supervisor" data-base-href="./supervisor-dashboard/" href="./supervisor-dashboard/">
             <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Supervisor</span>
             <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Operations</h2>
             <p class="mt-3 text-sm leading-7 text-slate-600">See bottlenecks, manual referrals, and queue pressure across the workflow.</p>
           </a>
 
-          <a class="rounded-[1.75rem] border border-slate-200/80 bg-white/85 p-5 transition hover:-translate-y-1 hover:shadow-soft" href="./governance-center/">
+          <a class="rounded-[1.75rem] border border-slate-200/80 bg-white/85 p-5 transition hover:-translate-y-1 hover:shadow-soft" data-surface-card="governance" data-base-href="./governance-center/" href="./governance-center/">
             <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Governance</span>
             <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Reference Center</h2>
             <p class="mt-3 text-sm leading-7 text-slate-600">Review the active rule pack, circulars, official sources, and nationality exception handling.</p>
@@ -105,7 +91,7 @@
         </div>
       </section>
 
-      <section class="mt-6 rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7">
+      <section class="mt-6 rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7" id="operational-snapshot-section">
         <div class="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Operational snapshot</span>
@@ -144,7 +130,7 @@
         </p>
       </section>
 
-      <section class="mt-6 rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7">
+      <section class="mt-6 rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7" id="recent-work-section">
         <div class="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">API target control</span>

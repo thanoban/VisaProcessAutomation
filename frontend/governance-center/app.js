@@ -7,6 +7,8 @@ import {
   linkListMarkup,
   linkMarkup,
   listMarkup,
+  renderInternalSurfaceGate,
+  renderSurfaceNavigation,
   setRegionBusy,
   titleCase,
 } from "../shared/app.js";
@@ -14,6 +16,10 @@ import {
 const elements = {
   apiPill: document.querySelector("#governance-api-pill"),
   heroCopy: document.querySelector("#governance-hero-copy"),
+  surfaceNav: document.querySelector("#surface-nav"),
+  surfaceAccessNote: document.querySelector("#surface-access-note"),
+  internalSurfaceGate: document.querySelector("#internal-surface-gate"),
+  protectedSurfaceShell: document.querySelector("#protected-surface-shell"),
   activePolicyGrid: document.querySelector("#active-policy-grid"),
   publicationSignalGrid: document.querySelector("#publication-signal-grid"),
   requirementsList: document.querySelector("#requirements-list"),
@@ -31,6 +37,33 @@ const state = {
 const api = createApiClient(state.apiBaseUrl);
 
 async function initialize() {
+  renderSurfaceNavigation({
+    navElement: elements.surfaceNav,
+    noticeElement: elements.surfaceAccessNote,
+    currentSurface: "governance",
+    homeHref: "../",
+    navLinks: [
+      { label: "Frontend Home", href: "../", surface: "home" },
+      { label: "Applicant Portal", href: "../applicant-portal/", surface: "applicant" },
+      { label: "Officer Dashboard", href: "../officer-dashboard/", surface: "officer" },
+      { label: "Supervisor Dashboard", href: "../supervisor-dashboard/", surface: "supervisor" },
+      { label: "Governance Center", href: "./", surface: "governance" },
+    ],
+  });
+  const canAccessSurface = renderInternalSurfaceGate({
+    gateElement: elements.internalSurfaceGate,
+    protectedElement: elements.protectedSurfaceShell,
+    surfaceTitle: "The governance center",
+    detail:
+      "Role-scoped mode intentionally hides internal rule-pack traceability, publication drift checks, and source-lineage tooling outside workspace preview.",
+    homeHref: "../",
+  });
+  if (!canAccessSurface) {
+    elements.heroCopy.textContent =
+      "Internal workspace preview is required before governance reference tooling is shown on this surface.";
+    elements.apiPill.textContent = "Role-scoped mode";
+    return;
+  }
   setRegionBusy(elements.activePolicyGrid, true);
   setRegionBusy(elements.publicationSignalGrid, true);
   setRegionBusy(elements.traceabilityList, true);

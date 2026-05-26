@@ -68,6 +68,7 @@ def test_case_status_and_brief_contract(client):
     assert "evidence_viewer" in body
     assert body["human_decision_required"] is True
     assert status_body["current_holder"] == "OFFICER"
+    assert status_body["deadlines"]["decision_urgency"] in {"UNSCHEDULED", "OVERDUE", "DUE_WITHIN_48H", "ON_TRACK"}
     assert status_body["authorization_status"]["rule_version_used"] == "sl-rule-pack-2026-05-25"
     assert auth_body["workflow_pack"] == "SRI_LANKA_TOURIST_VISIT"
     assert auth_body["policy_version"] == "sl-tourist-policy-v1"
