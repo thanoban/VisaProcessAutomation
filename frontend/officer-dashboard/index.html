@@ -231,6 +231,93 @@
             <div class="grid gap-4" id="decision-outcome-panel"></div>
           </section>
 
+          <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7">
+            <div class="mb-5">
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Extension operations</span>
+              <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Handle extension appointments and outcomes</h2>
+              <p class="mt-2 text-sm leading-7 text-slate-600">
+                Use the same loaded case to record extension appointments, move the request back into review, and capture the human extension outcome.
+              </p>
+            </div>
+
+            <div class="grid gap-4" id="extension-summary-panel"></div>
+            <div class="mt-4 grid gap-4" id="extension-request-list"></div>
+
+            <div class="mt-5 grid gap-5">
+              <form id="extension-appointment-form" class="grid gap-4 rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+                <div>
+                  <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Mission or head-office action</span>
+                  <h3 class="mt-2 text-lg font-extrabold text-slate-900">Record extension appointment status</h3>
+                </div>
+                <div class="grid gap-4 md:grid-cols-2">
+                  <div class="grid gap-2">
+                    <label class="text-sm font-semibold text-slate-700" for="extension-appointment-status">Appointment status</label>
+                    <select class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="extension-appointment-status" name="status" required>
+                      <option value="PENDING">Pending</option>
+                      <option value="SCHEDULED">Scheduled</option>
+                      <option value="COMPLETED">Completed</option>
+                      <option value="ATTENDED">Attended</option>
+                      <option value="MISSED">Missed</option>
+                    </select>
+                  </div>
+                  <div class="grid gap-2">
+                    <label class="text-sm font-semibold text-slate-700" for="extension-appointment-id">Appointment ID</label>
+                    <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="extension-appointment-id" name="appointmentId" placeholder="EXT-APT-0001" />
+                  </div>
+                  <div class="grid gap-2">
+                    <label class="text-sm font-semibold text-slate-700" for="extension-appointment-location">Location</label>
+                    <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="extension-appointment-location" name="location" placeholder="Battaramulla head office" />
+                  </div>
+                  <div class="grid gap-2">
+                    <label class="text-sm font-semibold text-slate-700" for="extension-appointment-scheduled-for">Scheduled for</label>
+                    <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="extension-appointment-scheduled-for" name="scheduledFor" type="datetime-local" />
+                  </div>
+                </div>
+                <div class="grid gap-2">
+                  <label class="text-sm font-semibold text-slate-700" for="extension-appointment-instructions">Instructions</label>
+                  <textarea class="min-h-24 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="extension-appointment-instructions" name="instructions"></textarea>
+                </div>
+                <button class="rounded-full bg-visa-navy px-5 py-3 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5" type="submit">
+                  Record appointment update
+                </button>
+              </form>
+              <p class="text-sm text-slate-500" id="extension-appointment-feedback" role="status" aria-live="polite">
+                Load a case with extension activity to record appointment handling.
+              </p>
+
+              <form id="extension-decision-form" class="grid gap-4 rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+                <div>
+                  <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Officer extension outcome</span>
+                  <h3 class="mt-2 text-lg font-extrabold text-slate-900">Record extension decision</h3>
+                </div>
+                <div class="grid gap-4 md:grid-cols-2">
+                  <div class="grid gap-2">
+                    <label class="text-sm font-semibold text-slate-700" for="extension-decision-officer-id">Officer ID</label>
+                    <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="extension-decision-officer-id" name="officerId" placeholder="EXT-OFF-001" required />
+                  </div>
+                  <div class="grid gap-2">
+                    <label class="text-sm font-semibold text-slate-700" for="extension-decision-choice">Decision</label>
+                    <select class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="extension-decision-choice" name="decision" required>
+                      <option value="APPROVE">Approve</option>
+                      <option value="REFUSE">Refuse</option>
+                      <option value="REQUEST_MORE_INFO">Request more info</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="grid gap-2">
+                  <label class="text-sm font-semibold text-slate-700" for="extension-decision-reason">Reason</label>
+                  <textarea class="min-h-24 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="extension-decision-reason" name="reason" required></textarea>
+                </div>
+                <button class="rounded-full bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5" type="submit">
+                  Record extension decision
+                </button>
+              </form>
+              <p class="text-sm text-slate-500" id="extension-decision-feedback" role="status" aria-live="polite">
+                Extension decisions become live when the API is reachable and the case has an extension request.
+              </p>
+            </div>
+          </section>
+
           <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7" id="decision-panel">
             <div class="mb-5">
               <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Final human action</span>
