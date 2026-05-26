@@ -1,6 +1,7 @@
 import {
   buildStatusChip,
   createApiClient,
+  decisionUrgencyForDate,
   formatDate,
   formatDateTime,
   getStoredApiBaseUrl,
@@ -11,6 +12,7 @@ import {
   rememberRecentCase,
   setButtonBusy,
   setRegionBusy,
+  toneForDecisionUrgency,
   titleCase,
 } from "../shared/app.js";
 
@@ -166,6 +168,13 @@ function renderDashboard(casePacket, brief, useMock) {
     ["Visa class", brief.visa_class],
     ["Arrival date", formatDate(casePacket.visa_application.arrival_date)],
     ["Departure date", formatDate(casePacket.visa_application.departure_date)],
+    [
+      "Decision urgency",
+      buildStatusChip(
+        decisionUrgencyForDate(casePacket.decision_due_at),
+        toneForDecisionUrgency(decisionUrgencyForDate(casePacket.decision_due_at))
+      ),
+    ],
     ["ETA status", buildStatusChip(casePacket.workflow.eta_status)],
     ["Port clearance", buildStatusChip(casePacket.workflow.port_clearance_state)],
     ["Policy version", casePacket.policy_context.policy_version],

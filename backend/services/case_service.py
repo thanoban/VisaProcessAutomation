@@ -17,6 +17,7 @@ from backend.models.schemas import (
     WorkflowState,
 )
 from backend.services.utils import utc_now
+from backend.services.utils import decision_urgency
 
 
 class CaseService:
@@ -259,7 +260,10 @@ class CaseService:
             required_actions=required_actions,
             additional_evidence_requests=[request.model_dump() for request in case.workflow.additional_evidence_requests],
             uploaded_documents=[doc.model_dump() for doc in case.documents],
-            deadlines={"decision_due_at": case.decision_due_at},
+            deadlines={
+                "decision_due_at": case.decision_due_at,
+                "decision_urgency": decision_urgency(case.decision_due_at),
+            },
             service_notices=service_notices,
             timeline=[event.model_dump() for event in case.status_timeline],
             current_holder=case.workflow.current_holder,

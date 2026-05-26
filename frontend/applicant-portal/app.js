@@ -2,6 +2,7 @@ import {
   applicantPortalMock,
   buildStatusChip,
   createApiClient,
+  decisionUrgencyForDate,
   formatDate,
   formatDateTime,
   getStoredApiBaseUrl,
@@ -13,6 +14,7 @@ import {
   setButtonBusy,
   setRegionBusy,
   startCaseId,
+  toneForDecisionUrgency,
   titleCase,
   workflowGlossary,
 } from "../shared/app.js";
@@ -394,6 +396,13 @@ function renderCaseStatus(casePacket, options) {
     ["Applicant", casePacket.applicant.full_name],
     ["Travel window", `${formatDate(casePacket.visa_application.arrival_date)} to ${formatDate(casePacket.visa_application.departure_date)}`],
     ["Decision due", formatDateTime(casePacket.decision_due_at)],
+    [
+      "Decision urgency",
+      buildStatusChip(
+        status.deadlines?.decision_urgency || decisionUrgencyForDate(casePacket.decision_due_at),
+        toneForDecisionUrgency(status.deadlines?.decision_urgency || decisionUrgencyForDate(casePacket.decision_due_at))
+      ),
+    ],
     ["ETA status", buildStatusChip(status.authorization_status?.eta_status || casePacket.workflow.eta_status)],
     ["Port clearance", buildStatusChip(status.port_clearance_state || casePacket.workflow.port_clearance_state)],
     ["Extension status", buildStatusChip(status.extension_state || casePacket.workflow.extension_state || "NOT_REQUESTED")],

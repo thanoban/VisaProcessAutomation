@@ -212,6 +212,36 @@ export function formatDateTime(value) {
   }).format(parsed);
 }
 
+export function decisionUrgencyForDate(value, now = new Date()) {
+  if (!value) {
+    return "UNSCHEDULED";
+  }
+  const dueDate = new Date(value);
+  if (Number.isNaN(dueDate.getTime())) {
+    return "UNSCHEDULED";
+  }
+  if (dueDate.getTime() < now.getTime()) {
+    return "OVERDUE";
+  }
+  if (dueDate.getTime() <= now.getTime() + 48 * 60 * 60 * 1000) {
+    return "DUE_WITHIN_48H";
+  }
+  return "ON_TRACK";
+}
+
+export function toneForDecisionUrgency(value) {
+  switch (String(value || "").toUpperCase()) {
+    case "OVERDUE":
+      return "danger";
+    case "DUE_WITHIN_48H":
+      return "warning";
+    case "ON_TRACK":
+      return "success";
+    default:
+      return "info";
+  }
+}
+
 export function startCaseId(prefix = "VISA") {
   const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const randomSuffix = Math.random().toString(36).slice(2, 6).toUpperCase();
