@@ -14,6 +14,7 @@ import {
   setStoredApiBaseUrl,
   supervisorDashboardMock,
   titleCase,
+  workspacePreviewModeEnabled,
   workflowGlossary,
 } from "./shared/app.js";
 
@@ -22,6 +23,10 @@ const elements = {
   snapshotFeedback: document.querySelector("#snapshot-feedback"),
   surfaceNav: document.querySelector("#surface-nav"),
   surfaceAccessNote: document.querySelector("#surface-access-note"),
+  surfaceDirectoryNote: document.querySelector("#surface-directory-note"),
+  operationalSnapshotSection: document.querySelector("#operational-snapshot-section"),
+  recentWorkSection: document.querySelector("#recent-work-section"),
+  surfaceCards: Array.from(document.querySelectorAll("[data-surface-card]")),
   homeOpsMetrics: document.querySelector("#home-ops-metrics"),
   homeNoticesList: document.querySelector("#home-notices-list"),
   homeGovernanceSummary: document.querySelector("#home-governance-summary"),
@@ -51,6 +56,7 @@ async function initialize() {
       { label: "Governance Center", href: "./governance-center/", surface: "governance" },
     ],
   });
+  renderHomeAccessMode();
   elements.apiInput.value = getStoredApiBaseUrl();
   elements.apiForm.addEventListener("submit", handleSaveTarget);
   elements.resetButton.addEventListener("click", handleResetTarget);
@@ -61,6 +67,33 @@ async function initialize() {
   setRegionBusy(elements.homeNoticesList, true);
   setRegionBusy(elements.homeGovernanceSummary, true);
   await refreshHealthState("Saved API target loaded.");
+}
+
+function renderHomeAccessMode() {
+  if (workspacePreviewModeEnabled()) {
+    elements.surfaceDirectoryNote.innerHTML = `
+      <div class="rounded-[1.5rem] border border-teal-200 bg-teal-50 p-4 text-sm leading-7 text-teal-900">
+        <strong class="text-teal-950">Internal workspace preview:</strong> all role surfaces and recent live-case shortcuts are visible for demo, QA, and operator walkthroughs.
+      </div>
+    `;
+    elements.operationalSnapshotSection.hidden = false;
+    elements.recentWorkSection.hidden = false;
+    elements.surfaceCards.forEach((card) => {
+      card.hidden = false;
+    });
+    return;
+  }
+
+  elements.surfaceDirectoryNote.innerHTML = `
+    <div class="rounded-[1.5rem] border border-slate-200/80 bg-white/75 p-4 text-sm leading-7 text-slate-600">
+      <strong class="text-slate-900">Role-scoped mode:</strong> the applicant portal stays visible publicly, while officer, supervisor, and governance surfaces remain restricted to internal workspace preview.
+    </div>
+  `;
+  elements.operationalSnapshotSection.hidden = true;
+  elements.recentWorkSection.hidden = true;
+  elements.surfaceCards.forEach((card) => {
+    card.hidden = card.dataset.surfaceCard !== "applicant";
+  });
 }
 
 async function handleSaveTarget(event) {
