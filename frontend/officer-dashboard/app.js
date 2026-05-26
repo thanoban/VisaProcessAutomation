@@ -3,6 +3,7 @@ import {
   createApiClient,
   formatDate,
   formatDateTime,
+  getStoredApiBaseUrl,
   listMarkup,
   officerDashboardMock,
   setButtonBusy,
@@ -43,7 +44,7 @@ const elements = {
 };
 
 const state = {
-  apiBaseUrl: localStorage.getItem("visaFlowApiBaseUrl") || "http://127.0.0.1:8000",
+  apiBaseUrl: getStoredApiBaseUrl(),
   apiAvailable: false,
   currentCaseId: new URLSearchParams(window.location.search).get("case")?.trim() || officerDashboardMock.casePacket.case_id,
   currentRecommendation: officerDashboardMock.officerBrief.recommendation,

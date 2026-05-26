@@ -1,7 +1,26 @@
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
 
+export function normalizeApiBaseUrl(value) {
+  return (value || DEFAULT_API_BASE_URL).trim().replace(/\/+$/, "") || DEFAULT_API_BASE_URL;
+}
+
+export function getStoredApiBaseUrl() {
+  return normalizeApiBaseUrl(localStorage.getItem("visaFlowApiBaseUrl") || DEFAULT_API_BASE_URL);
+}
+
+export function setStoredApiBaseUrl(value) {
+  const normalized = normalizeApiBaseUrl(value);
+  localStorage.setItem("visaFlowApiBaseUrl", normalized);
+  return normalized;
+}
+
+export function clearStoredApiBaseUrl() {
+  localStorage.removeItem("visaFlowApiBaseUrl");
+  return DEFAULT_API_BASE_URL;
+}
+
 export function createApiClient(baseUrl) {
-  const normalizedBaseUrl = (baseUrl || DEFAULT_API_BASE_URL).replace(/\/+$/, "");
+  const normalizedBaseUrl = normalizeApiBaseUrl(baseUrl);
 
   async function request(path, options = {}) {
     const headers = {

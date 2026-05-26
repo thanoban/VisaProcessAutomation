@@ -1,6 +1,7 @@
 import {
   buildStatusChip,
   createApiClient,
+  getStoredApiBaseUrl,
   listMarkup,
   setButtonBusy,
   setRegionBusy,
@@ -26,7 +27,7 @@ const elements = {
 };
 
 const state = {
-  apiBaseUrl: localStorage.getItem("visaFlowApiBaseUrl") || "http://127.0.0.1:8000",
+  apiBaseUrl: getStoredApiBaseUrl(),
   apiAvailable: false,
   filters: {
     state: "",
