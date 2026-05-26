@@ -463,3 +463,91 @@ def test_approved_case_status_exposes_decision_notice_and_port_follow_up(client)
     assert body["port_clearance_events"]
     assert body["port_clearance_events"][0]["status"] == "PENDING_PORT_CLEARANCE"
     assert any(notice["code"] == "PORT_CLEARANCE_PENDING" for notice in body["service_notices"])
+
+
+def test_extension_endpoints_cover_request_appointment_and_decision(client):
+    payload = {
+        "case_id": "VISA-2026-API-EXT-001",
+        "applicant": {
+            "full_name": "Nadeesha Silva",
+            "date_of_birth": "1994-02-18",
+            "nationality": "Indian",
+            "passport_number": "P5551234",
+            "contact_email": "nadeesha@example.com",
+        },
+        "visa_application": {
+            "visa_class": "TOURIST",
+            "purpose_of_travel": "Tourism and extended family visit in Sri Lanka",
+            "arrival_date": "2026-08-10",
+            "departure_date": "2026-08-20",
+            "destination_address": "Colombo",
+            "country_of_application": "India",
+            "payment_status": "PAID",
+        },
+        "documents": [
+            {"document_id": "DOC-001", "document_type": "PASSPORT", "file_uri": "gs://x/passport.pdf"},
+            {"document_id": "DOC-002", "document_type": "BANK_STATEMENT", "file_uri": "gs://x/bank.pdf"},
+            {"document_id": "DOC-003", "document_type": "FLIGHT_ITINERARY", "file_uri": "gs://x/flight.pdf"},
+        ],
+        "policy_context": {
+            "country": "Sri Lanka",
+            "policy_version": "sl-tourist-policy-v1",
+            "effective_date": "2026-05-25",
+        },
+        "mock_profile": {
+            "extension_requires_appointment": True,
+        },
+    }
+    assert client.post("/applications", json=payload).status_code == 201
+
+    request_response = client.post(
+        f"/cases/{payload['case_id']}/extension-request",
+        json={
+            "reason": "Need additional time to complete family visit commitments.",
+            "requested_new_departure_date": "2026-09-25",
+            "supporting_note": "Applicant can attend an extension appointment if required.",
+        },
+    )
+    assert request_response.status_code == 200
+    request_body = request_response.json()
+    assert request_body["requires_appointment"] is True
+    assert request_body["extension_state"] == "EXTENSION_APPOINTMENT_REQUIRED"
+
+    extension_status = client.get(f"/cases/{payload['case_id']}/extension-status")
+    assert extension_status.status_code == 200
+    extension_status_body = extension_status.json()
+    assert extension_status_body["extension_state"] == "EXTENSION_APPOINTMENT_REQUIRED"
+    assert extension_status_body["latest_extension_request"]["reason"].startswith("Need additional time")
+
+    appointment_response = client.post(
+        f"/cases/{payload['case_id']}/extension-appointment",
+        json={
+            "status": "COMPLETED",
+            "location": "Battaramulla head office",
+            "scheduled_for": "2026-08-28T09:30:00Z",
+            "instructions": "Bring passport and proof of onward arrangements.",
+        },
+    )
+    assert appointment_response.status_code == 200
+    appointment_body = appointment_response.json()
+    assert appointment_body["extension_state"] == "UNDER_EXTENSION_REVIEW"
+    assert appointment_body["appointment"]["appointment_type"] == "EXTENSION_APPOINTMENT"
+
+    decision_response = client.post(
+        f"/cases/{payload['case_id']}/extension-decision",
+        json={
+            "decision": "APPROVE",
+            "officer_id": "EXT-OFF-001",
+            "reason": "Extension approved after appointment review.",
+        },
+    )
+    assert decision_response.status_code == 200
+    decision_body = decision_response.json()
+    assert decision_body["extension_state"] == "EXTENSION_DECISION_RECORDED"
+
+    case_status = client.get(f"/cases/{payload['case_id']}/status")
+    assert case_status.status_code == 200
+    case_status_body = case_status.json()
+    assert case_status_body["extension_state"] == "EXTENSION_DECISION_RECORDED"
+    assert case_status_body["extension_requests"]
+    assert case_status_body["appointments"]

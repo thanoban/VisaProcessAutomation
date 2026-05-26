@@ -8,6 +8,10 @@ from backend.models.schemas import (
     CaseStatusResponse,
     ChecklistResponse,
     DocumentUploadRequest,
+    ExtensionAppointmentRequest,
+    ExtensionDecisionRequest,
+    ExtensionRequestCreateRequest,
+    ExtensionStatusResponse,
     GovernanceRulesResponse,
     OfficerBrief,
     OfficerDecisionRequest,
@@ -19,11 +23,13 @@ from backend.models.schemas import (
 from backend.services.case_service import CaseService
 from backend.services.sri_lanka_reference_service import SriLankaReferenceService
 from backend.services.storage_service import LocalDocumentStorageService
+from backend.workflows.extension_workflow import ExtensionWorkflow
 from backend.workflows.tourist_visa_workflow import TouristVisaWorkflow
 
 router = APIRouter()
 case_service = CaseService()
 workflow = TouristVisaWorkflow()
+extension_workflow = ExtensionWorkflow()
 sri_lanka_reference = SriLankaReferenceService()
 storage_service = LocalDocumentStorageService()
 
@@ -108,6 +114,44 @@ def get_case_status(case_id: str) -> CaseStatusResponse:
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
     return case_service.get_case_status(case)
+
+
+@router.post("/cases/{case_id}/extension-request")
+def create_extension_request(case_id: str, payload: ExtensionRequestCreateRequest) -> dict:
+    result = extension_workflow.create_extension_request(case_id, payload)
+    if not result:
+        raise HTTPException(status_code=404, detail="Case not found")
+    if result.get("status") == "CONFLICT":
+        raise HTTPException(status_code=409, detail=result["detail"])
+    return result
+
+
+@router.get("/cases/{case_id}/extension-status", response_model=ExtensionStatusResponse)
+def get_extension_status(case_id: str) -> ExtensionStatusResponse:
+    case = case_service.get_case(case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    return case_service.get_extension_status(case)
+
+
+@router.post("/cases/{case_id}/extension-appointment")
+def record_extension_appointment(case_id: str, payload: ExtensionAppointmentRequest) -> dict:
+    result = extension_workflow.record_extension_appointment(case_id, payload)
+    if not result:
+        raise HTTPException(status_code=404, detail="Case not found")
+    if result.get("status") == "CONFLICT":
+        raise HTTPException(status_code=409, detail=result["detail"])
+    return result
+
+
+@router.post("/cases/{case_id}/extension-decision")
+def record_extension_decision(case_id: str, payload: ExtensionDecisionRequest) -> dict:
+    result = extension_workflow.record_extension_decision(case_id, payload)
+    if not result:
+        raise HTTPException(status_code=404, detail="Case not found")
+    if result.get("status") == "CONFLICT":
+        raise HTTPException(status_code=409, detail=result["detail"])
+    return result
 
 
 @router.get("/cases/{case_id}/timeline")

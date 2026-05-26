@@ -28,11 +28,14 @@ const elements = {
   applicationForm: document.querySelector("#application-form"),
   statusForm: document.querySelector("#status-form"),
   documentResponseForm: document.querySelector("#document-response-form"),
+  extensionRequestForm: document.querySelector("#extension-request-form"),
   formFeedback: document.querySelector("#form-feedback"),
   documentResponseFeedback: document.querySelector("#document-response-feedback"),
+  extensionRequestFeedback: document.querySelector("#extension-request-feedback"),
   caseIdInput: document.querySelector("#case-id"),
   lookupCaseIdInput: document.querySelector("#lookup-case-id"),
   documentResponseCaseIdInput: document.querySelector("#document-response-case-id"),
+  extensionCaseIdInput: document.querySelector("#extension-case-id"),
   loadSampleButton: document.querySelector("#load-sample-button"),
   useSampleStatusButton: document.querySelector("#use-sample-status-button"),
   checklistList: document.querySelector("#checklist-list"),
@@ -58,6 +61,7 @@ const elements = {
   applicationSubmitButton: document.querySelector("#application-form button[type='submit']"),
   statusSubmitButton: document.querySelector("#status-form button[type='submit']"),
   documentResponseSubmitButton: document.querySelector("#document-response-form button[type='submit']"),
+  extensionRequestSubmitButton: document.querySelector("#extension-request-form button[type='submit']"),
 };
 
 const state = {
@@ -95,10 +99,12 @@ function wireEvents() {
   elements.applicationForm.addEventListener("submit", handleApplicationSubmit);
   elements.statusForm.addEventListener("submit", handleStatusLookup);
   elements.documentResponseForm.addEventListener("submit", handleDocumentResponseSubmit);
+  elements.extensionRequestForm.addEventListener("submit", handleExtensionRequestSubmit);
   elements.loadSampleButton.addEventListener("click", loadSampleIntoForm);
   elements.useSampleStatusButton.addEventListener("click", () => {
     renderCaseStatus(applicantPortalMock.casePacket, {
       latestStatus: buildMockStatus(applicantPortalMock.casePacket),
+      extensionStatus: buildMockExtensionStatus(applicantPortalMock.casePacket),
       useMock: true,
     });
   });
@@ -240,6 +246,7 @@ async function handleApplicationSubmit(event) {
     if (!state.apiAvailable) {
       renderCaseStatus(applicantPortalMock.casePacket, {
         latestStatus: buildMockStatus(applicantPortalMock.casePacket),
+        extensionStatus: buildMockExtensionStatus(applicantPortalMock.casePacket),
         useMock: true,
       });
       elements.formFeedback.textContent =
@@ -257,11 +264,13 @@ async function handleApplicationSubmit(event) {
       api.getCase(createdCase.case_id),
       api.getCaseStatus(createdCase.case_id),
     ]);
+    const extensionStatus = await api.getExtensionStatus(createdCase.case_id);
 
     state.linkedCaseId = createdCase.case_id;
     elements.lookupCaseIdInput.value = createdCase.case_id;
     renderCaseStatus(processedCase, {
       latestStatus: caseStatus,
+      extensionStatus,
       useMock: false,
     });
     elements.formFeedback.textContent = fileUploadWarnings.length
@@ -295,6 +304,7 @@ async function loadCaseStatus(caseId) {
     if (!state.apiAvailable) {
       renderCaseStatus(applicantPortalMock.casePacket, {
         latestStatus: buildMockStatus(applicantPortalMock.casePacket),
+        extensionStatus: buildMockExtensionStatus(applicantPortalMock.casePacket),
         useMock: true,
       });
       elements.statusEmpty.textContent =
@@ -302,9 +312,14 @@ async function loadCaseStatus(caseId) {
       return;
     }
 
-    const [casePacket, caseStatus] = await Promise.all([api.getCase(caseId), api.getCaseStatus(caseId)]);
+    const [casePacket, caseStatus, extensionStatus] = await Promise.all([
+      api.getCase(caseId),
+      api.getCaseStatus(caseId),
+      api.getExtensionStatus(caseId),
+    ]);
     renderCaseStatus(casePacket, {
       latestStatus: caseStatus,
+      extensionStatus,
       useMock: false,
     });
   } catch (error) {
@@ -352,8 +367,10 @@ async function handleDocumentResponseSubmit(event) {
     });
     await api.processCase(caseId);
     const [casePacket, caseStatus] = await Promise.all([api.getCase(caseId), api.getCaseStatus(caseId)]);
+    const extensionStatus = await api.getExtensionStatus(caseId);
     renderCaseStatus(casePacket, {
       latestStatus: caseStatus,
+      extensionStatus,
       useMock: false,
     });
     state.linkedCaseId = caseId;
@@ -372,18 +389,75 @@ async function handleDocumentResponseSubmit(event) {
 async function renderSampleCasePreview() {
   renderCaseStatus(applicantPortalMock.casePacket, {
     latestStatus: buildMockStatus(applicantPortalMock.casePacket),
+    extensionStatus: buildMockExtensionStatus(applicantPortalMock.casePacket),
     useMock: true,
   });
 }
 
+async function handleExtensionRequestSubmit(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.extensionRequestForm);
+  const caseId = String(formData.get("extensionCaseId") || "").trim();
+
+  if (!caseId) {
+    elements.extensionRequestFeedback.textContent = "Enter a case ID before submitting an extension request.";
+    return;
+  }
+
+  if (!state.apiAvailable) {
+    elements.extensionRequestFeedback.textContent =
+      "Mock mode is active. Start the backend to submit a real extension request.";
+    return;
+  }
+
+  const payload = {
+    requested_new_departure_date: String(formData.get("requestedNewDepartureDate") || "").trim(),
+    reason: String(formData.get("extensionReason") || "").trim(),
+    supporting_note: String(formData.get("extensionSupportingNote") || "").trim(),
+  };
+
+  try {
+    elements.extensionRequestFeedback.textContent = "Submitting extension request and refreshing case status...";
+    setButtonBusy(elements.extensionRequestSubmitButton, true, "Submitting request...");
+    setRegionBusy(elements.statusResults, true);
+    await api.createExtensionRequest(caseId, payload);
+    const [casePacket, caseStatus, extensionStatus] = await Promise.all([
+      api.getCase(caseId),
+      api.getCaseStatus(caseId),
+      api.getExtensionStatus(caseId),
+    ]);
+    renderCaseStatus(casePacket, {
+      latestStatus: caseStatus,
+      extensionStatus,
+      useMock: false,
+    });
+    state.linkedCaseId = caseId;
+    elements.lookupCaseIdInput.value = caseId;
+    elements.extensionRequestFeedback.textContent =
+      "Extension request submitted. Check the updated status and follow any appointment or evidence instructions shown below.";
+  } catch (error) {
+    elements.extensionRequestFeedback.textContent = `Extension request failed: ${error.message}`;
+  } finally {
+    setButtonBusy(elements.extensionRequestSubmitButton, false, "Submitting request...");
+    setRegionBusy(elements.statusResults, false);
+  }
+}
+
 function renderCaseStatus(casePacket, options) {
   const status = options.latestStatus || buildMockStatus(casePacket);
+  const extensionStatus = options.extensionStatus || buildMockExtensionStatus(casePacket);
   const manualReferralReason =
     status.manual_referral_reason ||
     status.authorization_status?.manual_referral_reason ||
     casePacket.workflow.manual_referral_reason ||
     "";
   const appointments = status.appointments?.length ? status.appointments : casePacket.workflow.appointments || [];
+  const extensionAppointments = extensionStatus.appointments?.length
+    ? extensionStatus.appointments
+    : appointments.filter((appointment) => appointment.appointment_type === "EXTENSION_APPOINTMENT");
+  const extensionRequests = extensionStatus.extension_requests?.length
+    ? extensionStatus.extension_requests
+    : casePacket.workflow.extension_requests || [];
   const decisionNotice = status.decision_notice || casePacket.workflow.decision_notice || null;
   const portClearanceEvents =
     status.port_clearance_events?.length ? status.port_clearance_events : casePacket.workflow.port_clearance_events || [];
@@ -423,7 +497,7 @@ function renderCaseStatus(casePacket, options) {
     ],
     ["ETA status", buildStatusChip(status.authorization_status?.eta_status || casePacket.workflow.eta_status)],
     ["Port clearance", buildStatusChip(status.port_clearance_state || casePacket.workflow.port_clearance_state)],
-    ["Extension status", buildStatusChip(status.extension_state || casePacket.workflow.extension_state || "NOT_REQUESTED")],
+    ["Extension status", buildStatusChip(extensionStatus.extension_state || status.extension_state || casePacket.workflow.extension_state || "NOT_REQUESTED")],
     ["Action required from", titleCase(status.action_required_from)],
     ["Policy version", status.authorization_status?.policy_version || casePacket.policy_context.policy_version],
     ["Rule version", status.authorization_status?.rule_version_used || casePacket.policy_context.effective_rule_version],
@@ -503,14 +577,34 @@ function renderCaseStatus(casePacket, options) {
     `
       <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
         <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Extension handling</span>
-        <div class="mt-3">${buildStatusChip(status.extension_state || casePacket.workflow.extension_state || "NOT_REQUESTED")}</div>
+        <div class="mt-3">${buildStatusChip(extensionStatus.extension_state || status.extension_state || casePacket.workflow.extension_state || "NOT_REQUESTED")}</div>
         <p class="mt-4 text-sm leading-7 text-slate-600">${
-          status.extension_state && status.extension_state !== "NOT_REQUESTED"
+          (extensionStatus.extension_state || status.extension_state) &&
+          (extensionStatus.extension_state || status.extension_state) !== "NOT_REQUESTED"
             ? "An extension-related workflow is active. Follow the latest service instructions before assuming travel or stay dates can change."
             : "No extension workflow is active for this case right now."
         }</p>
       </article>
     `,
+    ...extensionRequests.map(
+      (request) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${request.request_id || "Extension request"}</span>
+              <h3 class="mt-2 text-lg font-extrabold text-slate-900">${formatDate(request.requested_new_departure_date)}</h3>
+            </div>
+            ${buildStatusChip(request.status || request.decision || "OPEN")}
+          </div>
+          <p class="text-sm leading-7 text-slate-600">${request.reason || "No extension reason has been recorded yet."}</p>
+          ${
+            request.requires_appointment
+              ? `<div class="mt-4 rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900"><strong>Appointment required:</strong> ${request.appointment_required_reason || "Manual handling is required before review can continue."}</div>`
+              : ""
+          }
+        </article>
+      `
+    ),
     ...appointments.map(
       (appointment) => `
         <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
@@ -590,6 +684,30 @@ function renderCaseStatus(casePacket, options) {
           `,
         ]
       : []),
+    ...(extensionAppointments.length
+      ? [
+          `
+            <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Extension appointment follow-up</span>
+              <div class="mt-4 grid gap-3">
+                ${extensionAppointments
+                  .map(
+                    (appointment) => `
+                      <div class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-6 text-slate-700">
+                        <strong class="text-slate-900">${titleCase(appointment.appointment_type || "Appointment")}</strong><br />
+                        Status: ${titleCase(appointment.status || "PENDING")}<br />
+                        Location: ${appointment.location || "Not assigned yet"}<br />
+                        Scheduled for: ${formatDateTime(appointment.scheduled_for)}<br />
+                        ${appointment.instructions || "Detailed extension appointment instructions will appear here once available."}
+                      </div>
+                    `
+                  )
+                  .join("")}
+              </div>
+            </article>
+          `,
+        ]
+      : []),
     ...(portClearanceEvents.length
       ? [
           `
@@ -621,6 +739,7 @@ function renderCaseStatus(casePacket, options) {
 
   const uploadedDocuments = status.uploaded_documents?.length ? status.uploaded_documents : casePacket.documents;
   hydrateDocumentResponseForm(casePacket, uploadedDocuments);
+  hydrateExtensionRequestForm(casePacket, extensionStatus);
   elements.documentSummaryList.innerHTML = listMarkup(
     (uploadedDocuments || []).map(
       (document) => `
@@ -675,6 +794,16 @@ function hydrateDocumentResponseForm(casePacket, documents) {
   setDocumentInputValue("documentResponseAccommodationUri", documents, "HOTEL_BOOKING_OR_INVITATION");
 }
 
+function hydrateExtensionRequestForm(casePacket, extensionStatus) {
+  elements.extensionCaseIdInput.value = casePacket.case_id;
+  const nextDeparture =
+    extensionStatus.latest_extension_request?.requested_new_departure_date || casePacket.visa_application.departure_date || "";
+  const departureInput = elements.extensionRequestForm?.elements?.namedItem("requestedNewDepartureDate");
+  if (departureInput && !departureInput.value) {
+    departureInput.value = String(nextDeparture).slice(0, 10);
+  }
+}
+
 function setDocumentInputValue(fieldName, documents, documentType) {
   const input = elements.documentResponseForm?.elements?.namedItem(fieldName);
   if (!input) {
@@ -726,10 +855,33 @@ function buildMockStatus(casePacket) {
     },
     port_clearance_state: casePacket.workflow.port_clearance_state,
     extension_state: casePacket.workflow.extension_state || "NOT_REQUESTED",
+    extension_requests: casePacket.workflow.extension_requests || [],
     manual_referral_reason: casePacket.workflow.manual_referral_reason || null,
     appointments: casePacket.workflow.appointments || [],
     decision_notice: casePacket.workflow.decision_notice || null,
     port_clearance_events: casePacket.workflow.port_clearance_events || [],
+  };
+}
+
+function buildMockExtensionStatus(casePacket) {
+  const latestMessage = casePacket.applicant_message_history.at(-1) || null;
+  const extensionRequests = casePacket.workflow.extension_requests || [];
+  return {
+    case_id: casePacket.case_id,
+    extension_state: casePacket.workflow.extension_state || "NOT_REQUESTED",
+    status: casePacket.workflow.current_state,
+    current_holder: casePacket.workflow.current_holder,
+    next_action: casePacket.workflow.next_action,
+    action_required_from: casePacket.workflow.action_required_from,
+    latest_message: latestMessage,
+    latest_extension_request: extensionRequests.at(-1) || null,
+    extension_requests: extensionRequests,
+    appointments: (casePacket.workflow.appointments || []).filter(
+      (appointment) => appointment.appointment_type === "EXTENSION_APPOINTMENT"
+    ),
+    timeline: (casePacket.status_timeline || []).filter(
+      (event) => String(event.state || "").includes("EXTENSION") || String(event.description || "").toLowerCase().includes("extension")
+    ),
   };
 }
 

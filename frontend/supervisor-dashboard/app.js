@@ -163,6 +163,33 @@ function renderSupervisorDashboard(queues, notices, casesResponse) {
       "",
       "Open officer-ready cases",
     ],
+    [
+      "Extension requests",
+      queues.extension_requested || 0,
+      (queues.extension_requested || 0) > 0 ? "warning" : "success",
+      "EXTENSION_REQUESTED",
+      "OFFICER",
+      "",
+      "Open extension review cases",
+    ],
+    [
+      "Extension appointments",
+      queues.extension_appointment_required || 0,
+      (queues.extension_appointment_required || 0) > 0 ? "warning" : "success",
+      "EXTENSION_APPOINTMENT_REQUIRED",
+      "APPLICANT",
+      "",
+      "Open extension appointment backlog",
+    ],
+    [
+      "Extension review backlog",
+      queues.under_extension_review || 0,
+      (queues.under_extension_review || 0) > 0 ? "info" : "success",
+      "UNDER_EXTENSION_REVIEW",
+      "OFFICER",
+      "",
+      "Open extension cases in review",
+    ],
   ];
 
   elements.metrics.innerHTML = metrics
@@ -243,7 +270,8 @@ function renderSupervisorDashboard(queues, notices, casesResponse) {
             <div class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-7 text-slate-600">
               <strong class="text-slate-900">Next action:</strong> ${titleCase(item.next_action)}<br />
               <strong class="text-slate-900">Action required from:</strong> ${titleCase(item.action_required_from)}<br />
-              <strong class="text-slate-900">ETA status:</strong> ${titleCase(item.eta_status)}
+              <strong class="text-slate-900">ETA status:</strong> ${titleCase(item.eta_status)}<br />
+              <strong class="text-slate-900">Extension state:</strong> ${titleCase(item.extension_state || "NOT_REQUESTED")}
             </div>
             <div class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-7 text-slate-600">
               <strong class="text-slate-900">Rule version:</strong> ${item.rule_version_used || "Not available"}<br />
@@ -340,7 +368,7 @@ function applyFilters(nextFilters) {
 }
 
 function clearFilters() {
-  applyFilters({ state: "", holder: "" });
+  applyFilters({ state: "", holder: "", urgency: "" });
 }
 
 function syncFilterControls() {
@@ -551,6 +579,28 @@ function buildHotspots(queues) {
       tone: "info",
       message:
         "Cases are ready for human review. Use this signal to balance reviewer load before delays turn into avoidable backlog.",
+    });
+  }
+
+  if ((queues.extension_appointment_required || 0) > 0) {
+    hotspots.push({
+      code: "EXTENSION_APPOINTMENTS",
+      title: "Extension appointments need active coordination",
+      level: "warning",
+      tone: "warning",
+      message:
+        "Extension cases are waiting on appointment or manual-handling steps. Check scheduling and applicant instruction quality before they drift into silent backlog.",
+    });
+  }
+
+  if ((queues.under_extension_review || 0) > 0) {
+    hotspots.push({
+      code: "EXTENSION_REVIEW",
+      title: "Extension review backlog is active",
+      level: "info",
+      tone: "info",
+      message:
+        "Post-arrival extension work is active in the queue. Keep it visible separately from first-pass tourist intake so extension cases do not disappear inside the main backlog.",
     });
   }
 
