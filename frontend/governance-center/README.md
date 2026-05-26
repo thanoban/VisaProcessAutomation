@@ -9,6 +9,8 @@ Current scope:
 - circular and publication visibility
 - nationality exception rule visibility
 - Arize Phoenix observability status visibility
+- Phoenix readiness checklist visibility
+- observability redaction guardrail visibility
 
 Frontend priorities:
 

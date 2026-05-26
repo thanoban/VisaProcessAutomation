@@ -27,6 +27,8 @@ const elements = {
   sourcesList: document.querySelector("#sources-list"),
   traceabilityList: document.querySelector("#traceability-list"),
   observabilityStatusList: document.querySelector("#observability-status-list"),
+  observabilityReadinessList: document.querySelector("#observability-readiness-list"),
+  observabilityGuardrailsList: document.querySelector("#observability-guardrails-list"),
   exceptionRulesList: document.querySelector("#exception-rules-list"),
 };
 
@@ -69,6 +71,8 @@ async function initialize() {
   setRegionBusy(elements.publicationSignalGrid, true);
   setRegionBusy(elements.traceabilityList, true);
   setRegionBusy(elements.observabilityStatusList, true);
+  setRegionBusy(elements.observabilityReadinessList, true);
+  setRegionBusy(elements.observabilityGuardrailsList, true);
   try {
     await api.getHealth();
     state.apiAvailable = true;
@@ -96,6 +100,8 @@ async function initialize() {
     setRegionBusy(elements.publicationSignalGrid, false);
     setRegionBusy(elements.traceabilityList, false);
     setRegionBusy(elements.observabilityStatusList, false);
+    setRegionBusy(elements.observabilityReadinessList, false);
+    setRegionBusy(elements.observabilityGuardrailsList, false);
   }
 }
 
@@ -367,6 +373,8 @@ function renderGovernanceCenter(requirements, rules, observability) {
     ),
     "Observability status is not available yet."
   );
+  renderObservabilityReadiness(observability);
+  renderObservabilityGuardrails(observability);
 
   elements.exceptionRulesList.innerHTML = listMarkup(
     (rules.nationality_exception_rules || []).map(
@@ -392,6 +400,188 @@ function renderGovernanceCenter(requirements, rules, observability) {
     elements.heroCopy.textContent =
       "The governance data currently includes non-active circular records alongside the active rule pack, so publication drift is being surfaced instead of hidden.";
   }
+}
+
+function renderObservabilityReadiness(observability) {
+  const status = String(observability.status || "DISABLED").toUpperCase();
+  const readiness = observabilityReadinessState(status, observability);
+  const checklist = observabilityReadinessChecklist(status, observability);
+
+  elements.observabilityReadinessList.innerHTML = listMarkup(
+    [
+      `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Runtime readiness</span>
+              <h3 class="mt-2 text-lg font-extrabold text-slate-900">${readiness.title}</h3>
+            </div>
+            ${buildStatusChip(readiness.badge, readiness.tone)}
+          </div>
+          <p class="text-sm leading-7 text-slate-600">${readiness.message}</p>
+        </article>
+      `,
+      `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Deployment checklist</span>
+              <h3 class="mt-2 text-lg font-extrabold text-slate-900">What the current status implies</h3>
+            </div>
+            ${buildStatusChip(`${checklist.length} checks`, checklist.length ? "info" : "success")}
+          </div>
+          <div class="grid gap-3">
+            ${checklist
+              .map(
+                (item) => `
+                  <div class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-6 text-slate-700">
+                    <strong class="text-slate-900">${item.title}</strong><br />
+                    ${item.body}
+                  </div>
+                `
+              )
+              .join("")}
+          </div>
+        </article>
+      `,
+    ],
+    "Observability readiness guidance is not available yet."
+  );
+}
+
+function renderObservabilityGuardrails(observability) {
+  const instrumentationState = observability.google_genai_instrumentation_enabled ? "enabled" : "disabled";
+  const mcpState = observability.phoenix_mcp_expected ? "expected" : "optional";
+  const guardrails = [
+    {
+      title: "Redaction policy",
+      tone: "warning",
+      body:
+        "Phoenix is the redacted observability plane. Full name, date of birth, passport number, contact email, phone, file URI, and destination address should stay out of exported traces.",
+    },
+    {
+      title: "Instrumentation posture",
+      tone: observability.google_genai_instrumentation_enabled ? "success" : "info",
+      body: `Google GenAI instrumentation is currently ${instrumentationState}. Enable it only when the deployment target is ready to export redacted traces safely.`,
+    },
+    {
+      title: "MCP review path",
+      tone: observability.phoenix_mcp_expected ? "info" : "success",
+      body: `Phoenix MCP is ${mcpState} for this setup. The intended operator flow is to inspect weak traces, compare runs, and review missing policy citations before changing prompts or routing.`,
+    },
+  ];
+
+  elements.observabilityGuardrailsList.innerHTML = listMarkup(
+    guardrails.map(
+      (item) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Governance guardrail</span>
+              <h3 class="mt-2 text-lg font-extrabold text-slate-900">${item.title}</h3>
+            </div>
+            ${buildStatusChip(item.title, item.tone)}
+          </div>
+          <p class="text-sm leading-7 text-slate-600">${item.body}</p>
+        </article>
+      `
+    ),
+    "Observability guardrails are not available yet."
+  );
+}
+
+function observabilityReadinessState(status, observability) {
+  switch (status) {
+    case "READY":
+      return {
+        title: "Phoenix export path is ready",
+        badge: "ready",
+        tone: "success",
+        message: `Observability is enabled for the ${observability.target || "configured"} target and the runtime is reporting ready status for project ${
+          observability.project_name || "visaflow-mas"
+        }.`,
+      };
+    case "DEGRADED":
+      return {
+        title: "Export is enabled but runtime is degraded",
+        badge: "degraded",
+        tone: "warning",
+        message:
+          "The deployment intends to export traces, but the runtime is not fully healthy. Operators should treat audit storage as the source of truth while fixing the Phoenix runtime path.",
+      };
+    case "PENDING":
+      return {
+        title: "Export path is enabled and still warming up",
+        badge: "pending",
+        tone: "info",
+        message:
+          "The backend is configured for observability, but the runtime has not yet confirmed readiness. This usually means the process has not completed runtime initialization or a first export cycle yet.",
+      };
+    default:
+      return {
+        title: "Observability is intentionally disabled",
+        badge: "disabled",
+        tone: "warning",
+        message:
+          "This deployment is still running local-audit-only mode. That is acceptable for early local work, but Phoenix setup is still required for the observability and evaluation track.",
+      };
+  }
+}
+
+function observabilityReadinessChecklist(status, observability) {
+  if (status === "READY") {
+    return [
+      {
+        title: "Keep audit as source of truth",
+        body: "Continue treating local audit records as the legal reconstruction layer even when Phoenix is exporting successfully.",
+      },
+      {
+        title: "Validate redaction continuously",
+        body: "Spot-check traces for the expected redaction policy before using Phoenix data for prompt or routing analysis.",
+      },
+      {
+        title: "Use MCP for comparisons",
+        body: `Phoenix MCP is ${observability.phoenix_mcp_expected ? "expected" : "optional"} here, so trace comparison and weak-run review should happen through that path rather than ad hoc screenshots.`,
+      },
+    ];
+  }
+
+  if (status === "DEGRADED" || status === "PENDING") {
+    return [
+      {
+        title: "Confirm deployment flags",
+        body:
+          "Check `VISAFLOW_OBSERVABILITY_ENABLED`, `VISAFLOW_OBSERVABILITY_TARGET`, and `PHOENIX_PROJECT_NAME` before assuming the export path is healthy.",
+      },
+      {
+        title: "Verify Phoenix runtime packages",
+        body:
+          "The runtime needs the Phoenix and OpenInference packages present before traces can export cleanly.",
+      },
+      {
+        title: "Preserve fallback behavior",
+        body:
+          "Case processing should keep running even while observability is degraded. Treat audit and case status APIs as the operational fallback until runtime health is restored.",
+      },
+    ];
+  }
+
+  return [
+    {
+      title: "Enable the backend flag",
+      body: "Set `VISAFLOW_OBSERVABILITY_ENABLED=1` when you want the deployment to move beyond local-audit-only mode.",
+    },
+    {
+      title: "Set Phoenix target details",
+      body:
+        "Configure `VISAFLOW_OBSERVABILITY_TARGET`, `PHOENIX_PROJECT_NAME`, `PHOENIX_COLLECTOR_ENDPOINT`, and `PHOENIX_API_KEY` for the real export destination.",
+    },
+    {
+      title: "Choose instrumentation deliberately",
+      body:
+        "Enable Google GenAI instrumentation only when the deployment is ready to export redacted traces and evaluation metadata safely.",
+    },
+  ];
 }
 
 initialize();

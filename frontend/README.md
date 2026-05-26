@@ -47,6 +47,7 @@ For the hackathon demo, the frontend should visibly prove:
 - officer recommendation and human decision flow
 - supervisor queue visibility
 - governance and Arize observability posture visibility
+- Phoenix readiness and redaction guardrail visibility
 
 ## Verification steps
 
