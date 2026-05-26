@@ -40,6 +40,7 @@ const elements = {
   specialHandlingPanel: document.querySelector("#special-handling-panel"),
   caseServiceNoticesPanel: document.querySelector("#case-service-notices-panel"),
   travelFollowUpPanel: document.querySelector("#travel-follow-up-panel"),
+  workspaceLinksPanel: document.querySelector("#workspace-links-panel"),
   documentSummaryList: document.querySelector("#document-summary-list"),
   timelineList: document.querySelector("#timeline-list"),
   applicationSubmitButton: document.querySelector("#application-form button[type='submit']"),
@@ -349,6 +350,7 @@ function renderCaseStatus(casePacket, options) {
   elements.stateValue.innerHTML = buildStatusChip(status.status);
   elements.holderValue.textContent = titleCase(status.current_holder);
   elements.nextActionValue.textContent = titleCase(status.next_action);
+  elements.workspaceLinksPanel.innerHTML = buildWorkspaceLinks(casePacket.case_id, "applicant");
 
   const detailItems = [
     ["Case ID", casePacket.case_id],
@@ -733,6 +735,26 @@ function buildDocumentsPayload(formData, prefix = "") {
       file_uri: String(fileUri).trim(),
       status: "UPLOADED",
     }));
+}
+
+function buildWorkspaceLinks(caseId, currentSurface) {
+  const links = [
+    ["Applicant Portal", "../applicant-portal/", "applicant"],
+    ["Officer Dashboard", "../officer-dashboard/", "officer"],
+    ["Supervisor Dashboard", "../supervisor-dashboard/", "supervisor"],
+    ["Governance Center", "../governance-center/", "governance"],
+  ];
+  return links
+    .map(([label, href, surface]) => {
+      const activeClasses =
+        surface === currentSurface
+          ? "bg-visa-navy text-white shadow-lg shadow-slate-900/10"
+          : "border border-slate-200 bg-white text-slate-700";
+      const target =
+        surface === "governance" ? href : `${href}?case=${encodeURIComponent(caseId)}`;
+      return `<a class="rounded-full px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5 ${activeClasses}" href="${target}">${label}</a>`;
+    })
+    .join("");
 }
 
 initialize();
