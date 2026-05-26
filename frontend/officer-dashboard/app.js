@@ -5,6 +5,8 @@ import {
   formatDateTime,
   listMarkup,
   officerDashboardMock,
+  setButtonBusy,
+  setRegionBusy,
   titleCase,
 } from "../shared/app.js";
 
@@ -36,6 +38,8 @@ const elements = {
   overrideReason: document.querySelector("#decision-override"),
   decisionFeedback: document.querySelector("#decision-feedback"),
   caseIdInput: document.querySelector("#dashboard-case-id"),
+  lookupSubmitButton: document.querySelector("#dashboard-lookup-form button[type='submit']"),
+  decisionSubmitButton: document.querySelector("#decision-form button[type='submit']"),
 };
 
 const state = {
@@ -89,6 +93,10 @@ async function handleLookup(event) {
 
   state.currentCaseId = caseId;
   elements.feedback.textContent = "Loading case packet and officer brief...";
+  elements.empty.hidden = false;
+  elements.empty.textContent = `Loading officer review data for ${caseId}...`;
+  setButtonBusy(elements.lookupSubmitButton, true, "Loading brief...");
+  setRegionBusy(elements.results, true);
 
   try {
     if (!state.apiAvailable) {
@@ -105,6 +113,9 @@ async function handleLookup(event) {
     elements.results.hidden = true;
     elements.empty.textContent = `Unable to load officer review data for ${caseId}: ${error.message}`;
     elements.feedback.textContent = "Officer brief load failed.";
+  } finally {
+    setButtonBusy(elements.lookupSubmitButton, false, "Loading brief...");
+    setRegionBusy(elements.results, false);
   }
 }
 
@@ -340,12 +351,17 @@ async function handleDecisionSubmit(event) {
 
   try {
     elements.decisionFeedback.textContent = "Submitting officer decision...";
+    setButtonBusy(elements.decisionSubmitButton, true, "Submitting decision...");
+    setRegionBusy(elements.results, true);
     const result = await api.submitOfficerDecision(state.currentCaseId, payload);
     const { casePacket, officerBrief } = await loadOfficerReviewCase(state.currentCaseId, false);
     renderDashboard(casePacket, officerBrief, false);
     elements.decisionFeedback.textContent = `Decision recorded with status: ${result.status}. The dashboard has been refreshed with the latest case state and audit trail.`;
   } catch (error) {
     elements.decisionFeedback.textContent = `Decision submission failed: ${error.message}`;
+  } finally {
+    setButtonBusy(elements.decisionSubmitButton, false, "Submitting decision...");
+    setRegionBusy(elements.results, false);
   }
 }
 

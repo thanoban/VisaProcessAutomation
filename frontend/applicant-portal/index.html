@@ -264,7 +264,7 @@
                   <button class="rounded-full bg-visa-navy px-5 py-3 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5" type="submit">Create application</button>
                   <button class="rounded-full border border-slate-200 bg-transparent px-5 py-3 text-sm font-bold text-slate-700 transition hover:-translate-y-0.5" type="button" id="load-sample-button">Load sample data</button>
                 </div>
-                <p class="text-sm text-slate-500" id="form-feedback">The portal will use the live FastAPI API when it is reachable.</p>
+                <p class="text-sm text-slate-500" id="form-feedback" role="status" aria-live="polite">The portal will use the live FastAPI API when it is reachable.</p>
               </div>
             </form>
           </section>
@@ -341,7 +341,7 @@
                     Submit document response
                   </button>
                 </div>
-                <p class="text-sm text-slate-500 md:col-span-2" id="document-response-feedback">
+                <p class="text-sm text-slate-500 md:col-span-2" id="document-response-feedback" role="status" aria-live="polite">
                   Load a case first so the response form can pick up the current case and existing document references.
                 </p>
               </form>
@@ -430,7 +430,7 @@
               </div>
             </div>
 
-            <div id="status-empty" class="mt-6 rounded-3xl border border-dashed border-slate-300 bg-white/45 p-6 text-sm leading-7 text-slate-600">
+            <div id="status-empty" class="mt-6 rounded-3xl border border-dashed border-slate-300 bg-white/45 p-6 text-sm leading-7 text-slate-600" role="status" aria-live="polite">
               Load a case to review its operational status, special-handling instructions, document summary, and timeline.
             </div>
           </section>

@@ -4,6 +4,20 @@ html {
   scroll-behavior: smooth;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 body {
   font-family: "Manrope", "Segoe UI", sans-serif;
   background:
@@ -15,4 +29,17 @@ body {
 
 .font-display {
   font-family: "Source Serif 4", Georgia, serif;
+}
+
+:focus-visible {
+  outline: 3px solid rgba(15, 118, 110, 0.45);
+  outline-offset: 3px;
+}
+
+button[disabled],
+input[disabled],
+select[disabled],
+textarea[disabled] {
+  cursor: wait;
+  opacity: 0.72;
 }

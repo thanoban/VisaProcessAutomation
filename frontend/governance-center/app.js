@@ -4,6 +4,7 @@ import {
   formatDate,
   governanceCenterMock,
   listMarkup,
+  setRegionBusy,
   titleCase,
 } from "../shared/app.js";
 
@@ -27,6 +28,9 @@ const state = {
 const api = createApiClient(state.apiBaseUrl);
 
 async function initialize() {
+  setRegionBusy(elements.activePolicyGrid, true);
+  setRegionBusy(elements.publicationSignalGrid, true);
+  setRegionBusy(elements.traceabilityList, true);
   try {
     await api.getHealth();
     state.apiAvailable = true;
@@ -44,6 +48,10 @@ async function initialize() {
     elements.heroCopy.textContent =
       "The backend is not currently reachable, so this screen is showing a contract-aligned governance reference preview.";
     renderGovernanceCenter(governanceCenterMock.requirements, governanceCenterMock.rules);
+  } finally {
+    setRegionBusy(elements.activePolicyGrid, false);
+    setRegionBusy(elements.publicationSignalGrid, false);
+    setRegionBusy(elements.traceabilityList, false);
   }
 }
 

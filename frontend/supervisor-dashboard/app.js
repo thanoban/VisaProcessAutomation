@@ -2,6 +2,8 @@ import {
   buildStatusChip,
   createApiClient,
   listMarkup,
+  setButtonBusy,
+  setRegionBusy,
   supervisorDashboardMock,
   titleCase,
 } from "../shared/app.js";
@@ -45,6 +47,11 @@ async function initialize() {
 }
 
 async function loadSupervisorData() {
+  setButtonBusy(elements.refreshButton, true, "Refreshing queues...");
+  setRegionBusy(elements.metrics, true);
+  setRegionBusy(elements.caseList, true);
+  elements.caseMeta.textContent = "Loading supervisor case drill-down.";
+
   try {
     await api.getHealth();
     state.apiAvailable = true;
@@ -67,6 +74,10 @@ async function loadSupervisorData() {
       supervisorDashboardMock.notices,
       applyMockFilters(supervisorDashboardMock.cases, state.filters)
     );
+  } finally {
+    setButtonBusy(elements.refreshButton, false, "Refreshing queues...");
+    setRegionBusy(elements.metrics, false);
+    setRegionBusy(elements.caseList, false);
   }
 }
 

@@ -205,6 +205,25 @@ export function listMarkup(items, emptyText) {
   return items.join("");
 }
 
+export function setRegionBusy(element, isBusy) {
+  if (!element) {
+    return;
+  }
+  element.setAttribute("aria-busy", String(Boolean(isBusy)));
+}
+
+export function setButtonBusy(button, isBusy, busyLabel) {
+  if (!button) {
+    return;
+  }
+  if (!button.dataset.idleLabel) {
+    button.dataset.idleLabel = button.textContent.trim();
+  }
+  button.disabled = Boolean(isBusy);
+  button.setAttribute("aria-busy", String(Boolean(isBusy)));
+  button.textContent = isBusy ? busyLabel : button.dataset.idleLabel;
+}
+
 export const applicantPortalMock = {
   checklist: {
     workflow_pack: "SRI_LANKA_TOURIST_VISIT",

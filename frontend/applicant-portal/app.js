@@ -5,6 +5,8 @@ import {
   formatDate,
   formatDateTime,
   listMarkup,
+  setButtonBusy,
+  setRegionBusy,
   startCaseId,
   titleCase,
 } from "../shared/app.js";
@@ -38,6 +40,9 @@ const elements = {
   travelFollowUpPanel: document.querySelector("#travel-follow-up-panel"),
   documentSummaryList: document.querySelector("#document-summary-list"),
   timelineList: document.querySelector("#timeline-list"),
+  applicationSubmitButton: document.querySelector("#application-form button[type='submit']"),
+  statusSubmitButton: document.querySelector("#status-form button[type='submit']"),
+  documentResponseSubmitButton: document.querySelector("#document-response-form button[type='submit']"),
 };
 
 const state = {
@@ -181,6 +186,8 @@ async function handleApplicationSubmit(event) {
 
   const payload = buildApplicationPayload(new FormData(elements.applicationForm));
   elements.formFeedback.textContent = "Submitting application payload...";
+  setButtonBusy(elements.applicationSubmitButton, true, "Creating application...");
+  setRegionBusy(elements.statusResults, true);
 
   try {
     if (!state.apiAvailable) {
@@ -210,6 +217,9 @@ async function handleApplicationSubmit(event) {
     elements.formFeedback.textContent = `Application ${createdCase.case_id} created and entered the Sri Lanka processing workflow.`;
   } catch (error) {
     elements.formFeedback.textContent = `Submission failed: ${error.message}`;
+  } finally {
+    setButtonBusy(elements.applicationSubmitButton, false, "Creating application...");
+    setRegionBusy(elements.statusResults, false);
   }
 }
 
@@ -219,6 +229,11 @@ async function handleStatusLookup(event) {
   if (!caseId) {
     return;
   }
+
+  elements.statusEmpty.hidden = false;
+  elements.statusEmpty.textContent = `Loading case ${caseId}...`;
+  setButtonBusy(elements.statusSubmitButton, true, "Loading status...");
+  setRegionBusy(elements.statusResults, true);
 
   try {
     if (!state.apiAvailable) {
@@ -238,6 +253,9 @@ async function handleStatusLookup(event) {
     elements.statusEmpty.hidden = false;
     elements.statusResults.hidden = true;
     elements.statusEmpty.textContent = `Unable to load case ${caseId}: ${error.message}`;
+  } finally {
+    setButtonBusy(elements.statusSubmitButton, false, "Loading status...");
+    setRegionBusy(elements.statusResults, false);
   }
 }
 
@@ -266,6 +284,8 @@ async function handleDocumentResponseSubmit(event) {
     }
 
     elements.documentResponseFeedback.textContent = "Submitting document response and triggering re-check...";
+    setButtonBusy(elements.documentResponseSubmitButton, true, "Submitting response...");
+    setRegionBusy(elements.statusResults, true);
     if (documents.length) {
       await api.uploadDocuments(caseId, { documents });
     }
@@ -281,6 +301,9 @@ async function handleDocumentResponseSubmit(event) {
       "Document response accepted. The case has been sent back through the Sri Lanka review workflow.";
   } catch (error) {
     elements.documentResponseFeedback.textContent = `Document response failed: ${error.message}`;
+  } finally {
+    setButtonBusy(elements.documentResponseSubmitButton, false, "Submitting response...");
+    setRegionBusy(elements.statusResults, false);
   }
 }
 
