@@ -8,6 +8,8 @@ Current scope:
 - counts by workflow state
 - manual referral visibility
 - document-loop and officer-review bottleneck framing
+- deadline urgency visibility
+- extension backlog visibility
 
 Frontend priorities:
 

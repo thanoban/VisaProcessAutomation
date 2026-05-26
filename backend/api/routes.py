@@ -13,6 +13,7 @@ from backend.models.schemas import (
     ExtensionRequestCreateRequest,
     ExtensionStatusResponse,
     GovernanceRulesResponse,
+    ObservabilityStatusResponse,
     OfficerBrief,
     OfficerDecisionRequest,
     PolicyRequirementsResponse,
@@ -21,6 +22,7 @@ from backend.models.schemas import (
     SystemNotice,
 )
 from backend.services.case_service import CaseService
+from backend.services.observability_service import ObservabilityService
 from backend.services.sri_lanka_reference_service import SriLankaReferenceService
 from backend.services.storage_service import LocalDocumentStorageService
 from backend.workflows.extension_workflow import ExtensionWorkflow
@@ -32,6 +34,7 @@ workflow = TouristVisaWorkflow()
 extension_workflow = ExtensionWorkflow()
 sri_lanka_reference = SriLankaReferenceService()
 storage_service = LocalDocumentStorageService()
+observability_service = ObservabilityService()
 
 
 @router.get("/health")
@@ -233,6 +236,11 @@ def get_tourist_visit_checklist() -> ChecklistResponse:
 @router.get("/governance/rules/active", response_model=GovernanceRulesResponse)
 def get_active_governance_rules() -> GovernanceRulesResponse:
     return sri_lanka_reference.get_active_rules()
+
+
+@router.get("/governance/observability/status", response_model=ObservabilityStatusResponse)
+def get_observability_status() -> ObservabilityStatusResponse:
+    return observability_service.status()
 
 
 @router.get("/supervisor/queues", response_model=SupervisorQueueSummary)

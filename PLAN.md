@@ -1,121 +1,244 @@
 # VisaFlow MAS Delivery Plan
 
-## 1. Mission
+## 1. Competition alignment
 
-Build a Sri Lanka-centered short-visit visa decision support PoC that automates repetitive manual processing work, reduces queue pressure, improves applicant guidance, strengthens auditability, and gives officers a cleaner operational case record before they make the legal decision.
+### Project name
 
-The system is not a legal decision engine. It is an automation, orchestration, and recommendation layer that supports the human immigration officer.
+VisaFlow MAS — Multi-Agent Visa Decision Support System
 
-## 2. Base jurisdiction and benchmark model
+### Selected partner track
+
+Arize
+
+### Required product story
+
+Build a Sri Lanka-centered, Gemini-powered, multi-agent visa decision-support web application that helps immigration officers process tourist visa applications faster while preserving a strict human legal decision boundary.
+
+The project must meaningfully use:
+
+- Google ADK
+- Gemini through Google Cloud compatible tooling
+- FastAPI
+- Arize Phoenix
+- OpenInference instrumentation
+- Phoenix MCP server
+- evaluation and self-improvement workflows
+
+## 2. Mission
+
+Automate the repetitive and error-prone parts of the Sri Lanka tourist visa review lifecycle while keeping the final legal decision with a human officer.
+
+The system is not a legal decision engine. It is an orchestration, validation, recommendation, audit, and observability layer.
+
+## 3. Base jurisdiction and benchmark model
 
 ### Base jurisdiction
 
-Phase 1 is centered on **Sri Lanka inbound Tourist Visit processing**.
+Phase 1 centers on **Sri Lanka inbound Tourist Visit processing**.
 
 ### Future Sri Lanka expansion
 
-The architecture must also be prepared for Sri Lanka:
+The architecture is prepared for:
 
 - Business short visits
-- Transit handling
-- visit visa extensions
-- nationality exception and sponsor handling
+- Transit short visits
+- extension handling
+- sponsor and nationality exception routing
 
 ### Foreign benchmark role
 
-Canada, UK, Australia, and U.S. official systems are benchmark references for stronger workflow design:
+Canada, UK, Australia, and U.S. systems are benchmark references for:
 
-- better checklisting
-- better status tracking
-- better document guidance
-- better appointment and exception handling
-- better post-decision communication
+- document checklist quality
+- applicant status tracking
+- appointment and exception handling
+- post-submit evidence loops
+- decision communication
 
-They are not the legal rules source for Sri Lanka.
+They are not the legal rule source for Sri Lanka.
 
-## 3. What must be true when this PoC is successful
+## 4. What success means
 
-### Applicant experience
+The project is successful only if it proves:
 
-- applicant can see whether they are at ETA stage, document stage, manual-review stage, extension stage, or officer-review stage
-- applicant sees next action, deadline, and who currently holds the case
-- applicant is protected from confusing status gaps and unclear re-upload loops
+1. a Gemini-powered multi-agent workflow can help officers review tourist visa cases
+2. the AI never makes the final legal decision
+3. every meaningful agent step is traceable in Arize Phoenix
+4. evaluations can detect unsafe or weak behavior
+5. Phoenix MCP supports trace and evaluation introspection
+6. a self-improvement loop can suggest safer changes without automatically changing production rules
+7. applicant, officer, supervisor, and governance surfaces remain usable
 
-### Officer experience
+## 5. Scope of the executable PoC
 
-- officer sees one case timeline that joins ETA, document handling, policy checks, manual referral reasons, and decision preparation
-- officer sees structured evidence summaries and policy references
-- officer can record the final action and any override reason clearly
+### Applicant-facing
 
-### Supervisor and operations experience
+- checklist generation
+- case creation
+- document upload
+- status tracking
+- evidence-request responses
+- extension request flow
 
-- supervisors can see queue bottlenecks, exception categories, and rule-change fallout
-- staff can identify unreadable uploads, sponsor-required referrals, and extension delays quickly
-- audit bodies can reconstruct every meaningful system and officer action
+### Officer-facing
 
-## 4. Exact operational issues to solve
+- officer brief
+- evidence summary
+- policy references
+- risk flags
+- final human decision capture
+- override reason capture
 
-1. Stop incomplete or unreadable cases from progressing silently.
-2. Normalize ETA, manual referral, and officer review into one case record.
-3. Surface nationality/sponsor/manual exception handling early.
-4. Track port-of-entry clearance as part of the case lifecycle where relevant.
-5. Make extension workflows and appointment dependencies visible.
-6. Handle policy or circular publication mismatches explicitly.
-7. Reduce applicant confusion around ETA status, approval proof, and next steps.
-8. Improve auditability of rule version, recommendation, and override history.
-9. Provide supervisor visibility over backlog and operational friction points.
-10. Keep the architecture expandable to Business and Transit flows.
+### Supervisor and governance
 
-## 5. Operating assumptions
+- queue visibility
+- urgency signals
+- manual referral visibility
+- extension workload visibility
+- rule-governance visibility
+- observability status visibility
 
-- Sri Lanka Tourist Visit is the first executable workflow pack.
-- Business and Transit are architecture-defined but not phase-1 runtime flows.
-- public forum pain points are treated as discovery hypotheses, not policy truth
-- official Sri Lanka government sources remain the source of current-process truth
-- foreign benchmark sources guide product quality and workflow design only
-- local development continues to use SQLite while production direction remains PostgreSQL
+## 6. Agent design
 
-## 6. Delivery steps
+The system includes these agents:
 
-### Step 1 - Sri Lanka-centered documentation and architecture correction
+1. Supervisor Agent
+2. Intake Agent
+3. Document Validator Agent
+4. Financial & Employment Evaluator Agent
+5. Policy & Compliance Agent
+6. Security & Background Auditor Agent
+7. Risk & Fraud Agent
+8. Officer Brief Agent
+9. Applicant Communication Agent
+10. Audit & Observability Agent
+11. Self-Improvement Agent
 
-- rewrite repo docs around the Sri Lanka process
-- add current-method comparison and rule-governance docs
-- document ETA, extension, appointment, and port-clearance states
-- define discovery track and pilot pain hypotheses
+Every agent must return valid JSON only.
 
-### Step 2 - Sri Lanka workflow pack implementation
+## 7. Routing and legal safety
 
-- model Sri Lanka lifecycle states
-- add timeline and exception entities
-- extend APIs for status, extension, and manual referral
-- support rule circular and effective-policy version handling
+Allowed AI recommendation states:
 
-### Step 3 - Validation and hardening
+- `APPROVE_READY`
+- `REQUEST_MORE_INFO`
+- `ENHANCED_REVIEW`
+- `REFUSAL_DRAFT_READY`
 
-- test Sri Lanka workflow scenarios
-- test circular/version conflict handling
-- test applicant status clarity and audit completeness
-- publish stable steps to GitHub
+Always true:
 
-## 7. Architecture direction
+- `human_decision_required = true`
 
-The codebase remains a modular monolith with future split points:
+Never allowed:
 
-- case management API
-- orchestration service
-- ETA and intake service
-- document processing service
-- policy and circular governance service
-- extension and appointment service
-- audit service
-- notification service
+- final approval or refusal by AI
+- hidden rule invention
+- raw security disclosure
+- prompt-controlled privileged tool execution from applicant content
 
-## 8. Non-negotiables
+## 8. Core operational issues to solve
+
+1. Stop incomplete or unreadable cases before they waste officer time.
+2. Join ETA, document review, policy matching, and officer review into one case record.
+3. Surface manual referral triggers early.
+4. Keep extension handling visible and auditable.
+5. Handle rule-publication mismatches explicitly.
+6. Reduce applicant confusion about next action and current case owner.
+7. Make recommendation reasoning traceable to evidence and policy.
+8. Detect unsafe behavior through evaluations before rollout.
+9. Give supervisors backlog and override visibility.
+10. Keep the system expandable for later Sri Lanka visa classes.
+
+## 9. Observability and evaluation plan
+
+Arize Phoenix is the first-class observability and evaluation plane.
+
+Each meaningful workflow step should carry:
+
+- trace ID
+- case ID
+- agent name
+- prompt version
+- model version
+- workflow state
+- tool calls
+- retrieved policy IDs
+- evidence IDs
+- recommendation
+- confidence
+- human decision required flag
+- final human action when available
+
+Evaluation coverage must include:
+
+- low-risk valid case
+- missing document case
+- expired passport
+- low funds
+- suspicious deposits
+- name mismatch
+- security unavailable
+- missing policy citation
+- attempted final-decision language
+- extension workflow edge cases
+
+## 10. Self-improvement loop
+
+The Self-Improvement Agent must:
+
+1. inspect failed traces or weak evaluations
+2. summarize the failure
+3. propose safer prompt or routing improvements
+4. require human approval before changes are adopted
+5. support rerun comparison
+
+It must not auto-edit production rules.
+
+## 11. Architecture direction
+
+The repo remains a modular monolith with future split points:
+
+- FastAPI delivery layer
+- Google ADK agent runtime layer
+- deterministic workflow layer
+- case and audit persistence layer
+- observability and evaluation adapter layer
+- frontend surfaces for applicant, officer, supervisor, and governance roles
+
+## 12. Delivery sequence
+
+### Step 1
+
+Align the repo to the Sri Lanka-first domain model and hackathon rules.
+
+### Step 2
+
+Implement and verify the tourism workflow, extension path, and supervisor visibility.
+
+### Step 3
+
+Add Arize tracing, evaluation metadata, governance visibility, and MCP configuration.
+
+### Step 4
+
+Add Google ADK and Gemini runtime scaffolding plus self-improvement support.
+
+### Step 5
+
+Finish submission hardening:
+
+- README
+- license
+- `.env.example`
+- hosted deployment plan
+- demo readiness
+
+## 13. Non-negotiables
 
 - no automatic legal approval or refusal
 - active policy version must be explicit
-- publication mismatches must not silently leak into officer decisions
-- security outputs must remain minimal
-- protected attributes must not drive risk assessment
+- publication mismatches must not silently affect officer decisions
+- security outputs must stay minimal
+- protected attributes must not drive risk scoring unfairly
 - every meaningful automated or human action must be auditable
+- no real personal visa data may be used

@@ -32,6 +32,18 @@ class AuditService:
                 return value
         return ""
 
+    @staticmethod
+    def _observability_value(payload: dict, key: str, default: str = "") -> str:
+        value = payload.get(key, default)
+        return value if isinstance(value, str) else default
+
+    @staticmethod
+    def _observability_list(payload: dict, key: str) -> list[str]:
+        value = payload.get(key, [])
+        if isinstance(value, list):
+            return [str(item) for item in value]
+        return []
+
     def write_event(
         self,
         *,
@@ -51,11 +63,29 @@ class AuditService:
         recommendation: str = "",
         human_action: str = "",
         override_reason: str = "",
+        trace_id: str = "",
+        observation_id: str = "",
+        observability_export_status: str = "",
+        observability_target: str = "",
+        evaluation_labels: list[str] | None = None,
     ) -> dict:
         resolved_policy_version = policy_version or self._policy_value(payload, "policy_version")
         resolved_rule_version = rule_version_used or self._policy_value(payload, "rule_version_used")
         resolved_publication_reference = publication_reference or self._policy_value(payload, "publication_reference")
         resolved_policy_source_uri = policy_source_uri or self._policy_value(payload, "policy_source_uri", "source_uri")
+        resolved_trace_id = trace_id or self._observability_value(payload, "trace_id")
+        resolved_observation_id = observation_id or self._observability_value(payload, "observation_id")
+        resolved_export_status = observability_export_status or self._observability_value(
+            payload,
+            "observability_export_status",
+            "DISABLED",
+        )
+        resolved_target = observability_target or self._observability_value(
+            payload,
+            "observability_target",
+            "LOCAL_ONLY",
+        )
+        resolved_evaluation_labels = evaluation_labels or self._observability_list(payload, "evaluation_labels")
         event = AuditEvent(
             audit_id=f"AUD-{uuid.uuid4()}",
             case_id=case_id,
@@ -78,6 +108,11 @@ class AuditService:
             recommendation=recommendation,
             human_action=human_action,
             override_reason=override_reason,
+            trace_id=resolved_trace_id,
+            observation_id=resolved_observation_id,
+            observability_export_status=resolved_export_status,
+            observability_target=resolved_target,
+            evaluation_labels=resolved_evaluation_labels,
             payload=payload,
         )
         with SessionLocal() as session:
@@ -106,6 +141,11 @@ class AuditService:
                     override_reason=event.override_reason,
                     ip_address=event.ip_address,
                     session_id=event.session_id,
+                    trace_id=event.trace_id,
+                    observation_id=event.observation_id,
+                    observability_export_status=event.observability_export_status,
+                    observability_target=event.observability_target,
+                    evaluation_labels=event.evaluation_labels,
                     payload=event.model_dump(),
                 )
             )
@@ -136,6 +176,15 @@ class AuditService:
                     rule_version_used=self._policy_value(output, "rule_version_used"),
                     publication_reference=self._policy_value(output, "publication_reference"),
                     policy_source_uri=self._policy_value(output, "policy_source_uri", "source_uri"),
+                    trace_id=self._observability_value(output, "trace_id"),
+                    observation_id=self._observability_value(output, "observation_id"),
+                    observability_export_status=self._observability_value(
+                        output,
+                        "observability_export_status",
+                        "DISABLED",
+                    ),
+                    observability_target=self._observability_value(output, "observability_target", "LOCAL_ONLY"),
+                    evaluation_labels=self._observability_list(output, "evaluation_labels"),
                     output_json=output,
                 )
             )

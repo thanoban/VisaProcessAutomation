@@ -1,76 +1,246 @@
-# VisaFlow MAS
+# VisaFlow MAS — Multi-Agent Visa Decision Support System
 
-VisaFlow MAS is a Sri Lanka-centered, government-grade visa decision support PoC. It is designed around the **current Sri Lanka inbound short-visit process** and benchmarked against stronger operational patterns seen in Canada, the UK, Australia, and the United States.
+VisaFlow MAS is a Sri Lanka-centered, Gemini-powered, multi-agent visa decision-support web application built for the Google Cloud Partner hackathon.
 
-The goal is not to replace immigration officers. The goal is to automate repetitive manual work, reduce applicant confusion, improve consistency, and produce structured recommendations and operational case tracking while preserving a strict human legal decision boundary.
+Selected partner track: **Arize**
 
-## Core mission
+The system helps immigration officers review tourist visa applications faster by automating repetitive intake, document validation, policy comparison, risk screening, officer-brief generation, and audit/trace capture. It does **not** make the final legal decision. A human officer must always approve, reject, request more information, or escalate.
 
-VisaFlow MAS should help Sri Lanka Immigration process short-visit cases more cleanly across:
+## What the project proves
 
-- ETA intake and pre-check
-- document and file quality review
-- nationality and sponsor exceptions
-- officer-facing case preparation
-- port-of-entry clearance tracking
-- extension handling
-- rule and circular version control
-- audit, supervision, and backlog visibility
+VisaFlow MAS is designed to prove that a Google Cloud and Gemini stack can support a government-grade review workflow with:
 
-## Why this repo is Sri Lanka-first
+- Gemini-powered agents
+- Google ADK as the code-owned agent runtime
+- FastAPI as the web backend
+- Arize Phoenix tracing and evaluation
+- OpenInference instrumentation
+- Phoenix MCP server support for self-introspection
+- deterministic routing and human-in-the-loop safety
 
-The current official Sri Lanka process already exposes a mixed operating model:
+## Why the project is Sri Lanka-first
 
-- ETA is an electronic authorization for short visits, but port-of-entry immigration still performs the final entry clearance.
-- Short visits are split across Tourist, Business, and Transit categories.
-- Extension handling is split between online services, appointments, and head-office/manual handling.
-- Public official channels can show rule-publication mismatches, so policy version governance matters operationally, not just legally.
+The first workflow pack models the real current Sri Lanka short-visit process:
 
-This repo therefore treats **Sri Lanka Tourist Visit** as the first real workflow pack, while using foreign systems as benchmarks for product quality, not as the legal rules source.
+- ETA is an electronic pre-travel authorization, but final clearance still happens with a human immigration officer at the port of entry.
+- Tourist, Business, and Transit short visits have distinct handling paths.
+- Extension handling can involve online requests, appointment-based steps, and manual or head-office intervention.
+- Official public channels can show publication timing mismatches, so active policy-pack and circular governance must be explicit.
 
-## Foreign benchmark patterns being borrowed
+Foreign systems from Canada, the UK, Australia, and the U.S. are used as product benchmarks for better checklisting, status tracking, evidence loops, appointments, and post-decision communication. They are not the legal rule source.
 
-- **Canada IRCC**: personalized checklist, post-submit document loops, biometrics instruction flow, clearer status tracking
-- **UK GOV.UK**: document guidance, appointment-centered processing, translation expectations, clearer timing expectations
-- **Australia Home Affairs**: appointment and exception handling, biometrics logistics, closure and delay contingencies
-- **U.S. State**: strong intake discipline, structured mandatory fields, interview-driven post-specific handling, passport return awareness
+## Core workflow
 
-## Scope in the repository
+The current PoC centers on **Sri Lanka Tourist Visit** processing and includes:
 
-- Sri Lanka-centered architecture and runbooks
-- FastAPI starter backend
-- typed models and JSON schemas
-- deterministic case workflow starter
-- audit and officer-brief contracts
-- local policy and checklist seed materials
-- deployment direction for Google Cloud
+- applicant checklist generation
+- applicant submission and document upload
+- intake completeness review
+- document validation
+- policy comparison against versioned rule packs
+- evidence-based risk and fraud analysis
+- officer-ready case brief generation
+- extension workflow handling
+- supervisor backlog visibility
+- audit plus observability capture
 
-## Documentation map
+Allowed AI recommendation states are:
+
+- `APPROVE_READY`
+- `REQUEST_MORE_INFO`
+- `ENHANCED_REVIEW`
+- `REFUSAL_DRAFT_READY`
+
+Forbidden outputs include final legal decision language such as:
+
+- `FINAL_APPROVED`
+- `FINAL_REJECTED`
+- `VISA_GRANTED`
+- `VISA_DENIED`
+
+## Agent set
+
+VisaFlow MAS is structured around these agents:
+
+1. Supervisor Agent
+2. Intake Agent
+3. Document Validator Agent
+4. Financial & Employment Evaluator Agent
+5. Policy & Compliance Agent
+6. Security & Background Auditor Agent
+7. Risk & Fraud Agent
+8. Officer Brief Agent
+9. Applicant Communication Agent
+10. Audit & Observability Agent
+11. Self-Improvement Agent
+
+The Supervisor Agent uses deterministic routing and never makes the final legal decision.
+
+## Google Cloud and Gemini usage
+
+The project is aligned to a Google Cloud deployment path:
+
+- **Google ADK** is the intended code-owned agent runtime.
+- **Gemini** is the only planned LLM family for agent execution and evaluation.
+- **FastAPI** provides the web API and serves the lightweight frontend surfaces.
+- **Cloud Run** is the preferred deployment target.
+- **Cloud SQL PostgreSQL** is the production storage direction, while SQLite is used locally for the MVP.
+- **Cloud Storage**, **Cloud Tasks / Pub/Sub**, **Secret Manager**, and **Cloud KMS** are the preferred production adapters.
+
+## How Arize Phoenix is used
+
+Arize Phoenix is the selected observability and evaluation layer.
+
+The current codebase is being shaped so that every agent run can carry:
+
+- `trace_id`
+- `case_id`
+- `agent_name`
+- `prompt_version`
+- `model_version`
+- `workflow_state`
+- `tool_calls`
+- `retrieved_policy_ids`
+- `evidence_ids`
+- `recommendation`
+- `confidence`
+- `human_decision_required`
+- `final_human_action`
+- `officer_override`
+
+Local audit storage remains the source of truth. Phoenix is the redacted observability and evaluation plane.
+
+## How Phoenix MCP is used
+
+Phoenix MCP is part of the self-improvement story. The intended loop is:
+
+1. run a visa case
+2. send trace metadata to Phoenix
+3. run evaluations
+4. identify a failed or weak run
+5. inspect the failure through Phoenix MCP
+6. have the Self-Improvement Agent suggest a safer prompt or routing change
+7. require human approval before any production rule or prompt change
+8. rerun and compare outcomes
+
+The MCP configuration sample is documented in [deployment/mcp/phoenix-mcp.sample.json](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/deployment/mcp/phoenix-mcp.sample.json) and explained in [deployment/arize_phoenix_setup.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/deployment/arize_phoenix_setup.md).
+
+## How evaluations work
+
+The repository uses scenario-based evaluation expectations for:
+
+- complete low-risk tourist case
+- missing passport
+- expired passport
+- missing bank statement
+- low funds
+- suspicious sudden deposit
+- name mismatch
+- security unavailable
+- missing policy citation
+- attempts to make a final legal decision
+
+Evaluation checks focus on:
+
+- correct routing recommendation
+- evidence and policy citations
+- no hallucinated policy
+- no raw security leakage
+- `human_decision_required: true`
+- officer-brief clarity
+- evidence-based risk reasoning
+
+## Human-in-the-loop safety
+
+These are non-negotiable:
+
+- the system never automatically grants or denies a visa
+- every recommendation includes `human_decision_required: true`
+- a human officer always records the final legal action
+- override reasons are captured when the officer diverges from the system recommendation
+- sensitive data is redacted before observability export
+- raw security or watchlist detail is never exposed to applicants
+
+## Repository guide
 
 - [PLAN.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/PLAN.md)
-- [docs/architecture/sri-lanka-current-process.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/docs/architecture/sri-lanka-current-process.md)
-- [docs/architecture/government-process-benchmark.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/docs/architecture/government-process-benchmark.md)
-- [docs/architecture/current-method-comparison.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/docs/architecture/current-method-comparison.md)
-- [docs/architecture/policy-publication-governance.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/docs/architecture/policy-publication-governance.md)
 - [docs/architecture/production-architecture.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/docs/architecture/production-architecture.md)
-- [docs/runbooks/pilot-discovery-plan.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/docs/runbooks/pilot-discovery-plan.md)
-- [docs/runbooks/security-checklist.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/docs/runbooks/security-checklist.md)
-- [docs/runbooks/testing-checklist.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/docs/runbooks/testing-checklist.md)
+- [docs/architecture/google-cloud-deployment.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/docs/architecture/google-cloud-deployment.md)
+- [docs/architecture/agent-catalog.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/docs/architecture/agent-catalog.md)
+- [docs/architecture/api-contracts.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/docs/architecture/api-contracts.md)
+- [frontend/README.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/frontend/README.md)
+- [deployment/README.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/deployment/README.md)
 
-## Local run
+## Environment variables
+
+Use `.env.example` as the template. The required values are:
+
+```env
+GOOGLE_API_KEY=
+GOOGLE_CLOUD_PROJECT=
+GOOGLE_CLOUD_LOCATION=
+GEMINI_MODEL=
+PHOENIX_API_KEY=
+PHOENIX_COLLECTOR_ENDPOINT=
+PHOENIX_PROJECT_NAME=
+DATABASE_URL=
+```
+
+Never commit a real `.env` file, API key, service-account key, token, or password.
+
+## Run locally
 
 ```bash
 pip install -r requirements.txt
 uvicorn backend.main:app --reload --app-dir .
-pytest
 ```
 
-The app still defaults to SQLite for local development. The target production direction remains Cloud SQL PostgreSQL and Google Cloud-hosted services behind clearly isolated adapters.
+Open the web surfaces through FastAPI:
 
-## Safety boundary
+- [http://127.0.0.1:8000/frontend/](http://127.0.0.1:8000/frontend/)
+- [http://127.0.0.1:8000/frontend/applicant-portal/](http://127.0.0.1:8000/frontend/applicant-portal/)
+- [http://127.0.0.1:8000/frontend/officer-dashboard/](http://127.0.0.1:8000/frontend/officer-dashboard/)
+- [http://127.0.0.1:8000/frontend/supervisor-dashboard/](http://127.0.0.1:8000/frontend/supervisor-dashboard/)
+- [http://127.0.0.1:8000/frontend/governance-center/](http://127.0.0.1:8000/frontend/governance-center/)
 
-- the system never auto-approves or auto-rejects a visa
-- every recommendation requires human review
-- policy and circular governance must be versioned and auditable
-- security outputs stay minimal and compartmentalized
-- applicant-facing messages must stay procedural and non-legal until human action is recorded
+## Run tests and evaluations
+
+```bash
+pytest -q
+```
+
+Recommended focused checks:
+
+```bash
+pytest tests/agent_tests/test_observability_service.py -q
+pytest tests/workflow_tests/test_workflow_cases.py -q
+pytest tests/workflow_tests/test_end_to_end_case_journey.py -q
+```
+
+## Screenshots and demo media
+
+This README is prepared for screenshots or a short demo GIF, but media is not yet embedded in the repository. The final submission should show:
+
+- applicant submission flow
+- officer dashboard recommendation flow
+- supervisor backlog view
+- governance or observability view
+- Phoenix traces and evaluations
+- Phoenix MCP self-introspection flow
+
+## Data sources used
+
+- mock tourist visa cases in the repository
+- Sri Lanka official visa and immigration references represented through local rule packs and reference documents
+- benchmark process notes derived from official public government sources for Canada, the UK, Australia, and the U.S.
+
+## Limitations
+
+- current data is mock only and must remain mock only
+- the local MVP uses deterministic and mock-backed document and security flows
+- Phoenix MCP usage is configured and documented, but a live Phoenix environment is still required for full runtime introspection
+- Cloud Run hosting, public repo URL, hosted URL, and demo video still need to be finalized at submission time
+
+## License
+
+See [LICENSE](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/LICENSE).

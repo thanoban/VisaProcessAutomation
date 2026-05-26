@@ -42,11 +42,23 @@ Returns the Sri Lanka Tourist Visit checklist starter.
 
 ### `GET /cases/{case_id}/authorization-status`
 
-Planned endpoint for ETA or authorization state and manual-referral status.
+Returns ETA or authorization state and manual-referral status.
 
-### `POST /cases/{case_id}/additional-evidence-request`
+### `POST /cases/{case_id}/extension-request`
 
-Planned endpoint for creating and tracking additional-document loops.
+Creates an extension request for an existing case.
+
+### `GET /cases/{case_id}/extension-status`
+
+Returns extension workflow state, latest message, and appointment information.
+
+### `POST /cases/{case_id}/extension-appointment`
+
+Records appointment details for the extension workflow.
+
+### `POST /cases/{case_id}/extension-decision`
+
+Records the extension outcome from a human officer or extension desk user.
 
 ## Officer and supervisor APIs
 
@@ -70,9 +82,21 @@ Stores the final human action and optional override reason.
 
 Returns audit events for the case.
 
+Audit events now also carry observability metadata such as:
+
+- trace ID
+- observation ID
+- observability export status
+- observability target
+- evaluation labels
+
 ### `GET /supervisor/queues`
 
-Planned endpoint for queue visibility such as pending ETA cases, manual referrals, and extension bottlenecks.
+Returns queue visibility such as pending ETA cases, manual referrals, deadline urgency, and extension bottlenecks.
+
+### `GET /supervisor/cases`
+
+Returns supervisor case summaries with state, holder, urgency, and policy metadata.
 
 ## Governance APIs
 
@@ -86,4 +110,17 @@ Returns system-wide public service notices and operational banners.
 
 ### `GET /governance/rules/active`
 
-Planned endpoint for the active circular and effective policy version.
+Returns the active circular and effective policy version.
+
+### `GET /governance/observability/status`
+
+Returns the current Phoenix observability status for the deployment target.
+
+The observability status payload is intended to expose:
+
+- enabled or disabled state
+- provider name
+- target name
+- project name
+- ADK or Gemini instrumentation posture
+- Phoenix MCP expectation

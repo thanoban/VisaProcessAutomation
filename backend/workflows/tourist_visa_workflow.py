@@ -18,6 +18,7 @@ from backend.models.schemas import (
 from backend.services.audit_service import AuditService
 from backend.services.case_service import CaseService
 from backend.services.notification_service import NotificationService
+from backend.services.observability_service import ObservabilityService
 from backend.services.policy_service import load_policy_manifest
 from backend.services.sri_lanka_reference_service import SriLankaReferenceService
 from backend.services.utils import stable_hash
@@ -36,6 +37,7 @@ class TouristVisaWorkflow:
         self.case_service = CaseService()
         self.audit_service = AuditService()
         self.notification_service = NotificationService()
+        self.observability_service = ObservabilityService()
         self.reference_service = SriLankaReferenceService()
 
     def process_case(self, case_id: str) -> dict | None:
@@ -238,6 +240,15 @@ class TouristVisaWorkflow:
             recommendation=recommendation,
             human_action=payload.decision,
             override_reason=payload.override_reason,
+            **self._observability_event_kwargs(
+                self.observability_service.record_human_decision(
+                    case,
+                    payload.model_dump(),
+                    recommendation=recommendation,
+                    prompt_version=self.audit_service.prompt_version,
+                    model_version=self.audit_service.model_version,
+                )
+            ),
         )
 
         final_message = case.workflow.decision_notice
@@ -601,17 +612,6 @@ class TouristVisaWorkflow:
         applicant_message = create_evidence_request(case.case_id, missing_items)
         self.notification_service.store_message(case.case_id, applicant_message)
         notify_applicant(case.case_id, applicant_message)
-        self.audit_service.write_event(
-            case_id=case.case_id,
-            event_type="CASE_WAITING_FOR_DOCUMENTS",
-            actor_type="SYSTEM",
-            actor_id="workflow",
-            payload=applicant_message.model_dump(),
-            policy_version=case.policy_context.policy_version,
-            rule_version_used=case.policy_context.effective_rule_version,
-            publication_reference=case.policy_context.publication_reference,
-            policy_source_uri=case.policy_context.source_uri,
-        )
         supervisor_output = self._supervisor_output(
             case,
             [intake],
@@ -619,6 +619,18 @@ class TouristVisaWorkflow:
             missing_items or ["Missing required evidence."],
         )
         self._store_agent_output(case, supervisor_output)
+        self.audit_service.write_event(
+            case_id=case.case_id,
+            event_type="CASE_WAITING_FOR_DOCUMENTS",
+            actor_type="SYSTEM",
+            actor_id="workflow",
+            payload=supervisor_output,
+            policy_version=case.policy_context.policy_version,
+            rule_version_used=case.policy_context.effective_rule_version,
+            publication_reference=case.policy_context.publication_reference,
+            policy_source_uri=case.policy_context.source_uri,
+            recommendation="REQUEST_MORE_INFO",
+        )
         return supervisor_output
 
     def _handle_manual_referral(self, case: CasePacket, intake: dict, rule: NationalityExceptionRule) -> dict:
@@ -804,11 +816,42 @@ class TouristVisaWorkflow:
         }
 
     def _store_agent_output(self, case: CasePacket, output: dict) -> None:
+        output = self._enrich_agent_output(case, output)
         refreshed_case = self.case_service.get_case(case.case_id)
         refreshed_case.agent_outputs[output["agent_name"]] = output
         self.case_service.save_case(refreshed_case)
         self.audit_service.write_agent_output(case.case_id, output)
         write_audit_log(case.case_id, output["agent_name"], stable_hash({"case_id": case.case_id}), output)
+
+    def _enrich_agent_output(self, case: CasePacket, output: dict) -> dict:
+        if output.get("trace_id"):
+            return output
+        if output.get("agent_name") == "supervisor_agent":
+            metadata = self.observability_service.record_workflow_outcome(
+                case,
+                output,
+                prompt_version=self.audit_service.prompt_version,
+                model_version=self.audit_service.model_version,
+            )
+        else:
+            metadata = self.observability_service.record_agent_run(
+                case,
+                output,
+                prompt_version=self.audit_service.prompt_version,
+                model_version=self.audit_service.model_version,
+            )
+        output.update(metadata)
+        return output
+
+    @staticmethod
+    def _observability_event_kwargs(metadata: dict) -> dict:
+        return {
+            "trace_id": metadata.get("trace_id", ""),
+            "observation_id": metadata.get("observation_id", ""),
+            "observability_export_status": metadata.get("observability_export_status", ""),
+            "observability_target": metadata.get("observability_target", ""),
+            "evaluation_labels": metadata.get("evaluation_labels", []),
+        }
 
     def _apply_governance_context(self, case: CasePacket) -> CasePacket:
         active_rules = self.reference_service.get_active_rules()

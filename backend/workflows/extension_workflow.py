@@ -17,6 +17,7 @@ from backend.models.schemas import (
 from backend.services.audit_service import AuditService
 from backend.services.case_service import CaseService
 from backend.services.notification_service import NotificationService
+from backend.services.observability_service import ObservabilityService
 from backend.services.utils import parse_utcish_datetime, utc_now
 
 
@@ -25,6 +26,7 @@ class ExtensionWorkflow:
         self.case_service = CaseService()
         self.audit_service = AuditService()
         self.notification_service = NotificationService()
+        self.observability_service = ObservabilityService()
 
     def create_extension_request(self, case_id: str, payload: ExtensionRequestCreateRequest) -> dict | None:
         case = self.case_service.get_case(case_id)
@@ -104,6 +106,14 @@ class ExtensionWorkflow:
             rule_version_used=case.policy_context.effective_rule_version,
             publication_reference=case.policy_context.publication_reference,
             policy_source_uri=case.policy_context.source_uri,
+            **self._observability_event_kwargs(
+                self.observability_service.record_workflow_outcome(
+                    case,
+                    request.model_dump(),
+                    prompt_version=self.audit_service.prompt_version,
+                    model_version=self.audit_service.model_version,
+                )
+            ),
         )
         return {
             "status": "RECORDED",
@@ -176,6 +186,14 @@ class ExtensionWorkflow:
             rule_version_used=case.policy_context.effective_rule_version,
             publication_reference=case.policy_context.publication_reference,
             policy_source_uri=case.policy_context.source_uri,
+            **self._observability_event_kwargs(
+                self.observability_service.record_workflow_outcome(
+                    case,
+                    appointment.model_dump(),
+                    prompt_version=self.audit_service.prompt_version,
+                    model_version=self.audit_service.model_version,
+                )
+            ),
         )
         return {
             "status": "RECORDED",
@@ -288,6 +306,15 @@ class ExtensionWorkflow:
             publication_reference=case.policy_context.publication_reference,
             policy_source_uri=case.policy_context.source_uri,
             human_action=payload.decision,
+            **self._observability_event_kwargs(
+                self.observability_service.record_human_decision(
+                    case,
+                    payload.model_dump(),
+                    recommendation="EXTENSION_DECISION_RECORDED",
+                    prompt_version=self.audit_service.prompt_version,
+                    model_version=self.audit_service.model_version,
+                )
+            ),
         )
         return {
             "status": "RECORDED",
@@ -332,3 +359,13 @@ class ExtensionWorkflow:
         )
         case.workflow.appointments.append(appointment)
         return appointment
+
+    @staticmethod
+    def _observability_event_kwargs(metadata: dict) -> dict:
+        return {
+            "trace_id": metadata.get("trace_id", ""),
+            "observation_id": metadata.get("observation_id", ""),
+            "observability_export_status": metadata.get("observability_export_status", ""),
+            "observability_target": metadata.get("observability_target", ""),
+            "evaluation_labels": metadata.get("evaluation_labels", []),
+        }

@@ -1,18 +1,27 @@
 # Frontend Preview Guide
 
-This frontend is served directly by FastAPI from `frontend/` and is designed for local workflow testing against the Sri Lanka tourist-visit PoC backend.
+The frontend is a simple web shell served directly by FastAPI. It exists to demonstrate the applicant, officer, supervisor, and governance flows required by the hackathon submission.
 
 ## Surfaces
 
-- `/frontend/` : frontend home and API target control
-- `/frontend/applicant-portal/` : applicant intake, status, and document-response view
-- `/frontend/officer-dashboard/` : officer review and decision workspace
-- `/frontend/supervisor-dashboard/` : queue oversight and drill-down view
-- `/frontend/governance-center/` : policy, circular, and source-traceability view
+- `/frontend/` : internal launchpad and API target control
+- `/frontend/applicant-portal/` : applicant intake, upload, status, and extension flow
+- `/frontend/officer-dashboard/` : officer review and final human decision workspace
+- `/frontend/supervisor-dashboard/` : queue oversight, urgency, and extension backlog view
+- `/frontend/governance-center/` : policy, circular, and observability posture view
 
-## Local Preview
+## Navigation model
 
-1. Install backend dependencies if needed:
+The frontend now distinguishes between:
+
+- role-scoped navigation for production-style usage
+- workspace preview mode for internal development and demo switching
+
+Cross-surface navigation should only appear in workspace preview mode.
+
+## Local preview
+
+1. Install dependencies:
 
 ```bash
 pip install -r requirements.txt
@@ -24,25 +33,24 @@ pip install -r requirements.txt
 uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
 
-3. Open the frontend home:
+3. Open the served frontend:
 
-- [frontend home](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/frontend/index.html)
-- served route: [http://127.0.0.1:8000/frontend/](http://127.0.0.1:8000/frontend/)
+- [http://127.0.0.1:8000/frontend/](http://127.0.0.1:8000/frontend/)
 
-4. Use the API target control on the frontend home if you want the surfaces to point at a different backend port or host. The selected target is saved in browser local storage under `visaFlowApiBaseUrl`.
+4. Use the API target control if you want the frontend to point at another backend port or host. The chosen value is stored under `visaFlowApiBaseUrl`.
 
-## Case Navigation
+## Demo relevance
 
-- Applicant and officer views accept `?case=<CASE_ID>` for direct case loading when the live API is reachable.
-- Supervisor drill-down cards link directly into applicant and officer case views.
-- Extension-aware supervisor and recent-case links can jump straight into the officer dashboard extension module via `#extension-operations-panel` when a case has active extension handling.
-- Recent live applicant and officer cases are remembered locally on the frontend home.
+For the hackathon demo, the frontend should visibly prove:
 
-## Verification Steps
+- applicant submission and status flow
+- officer recommendation and human decision flow
+- supervisor queue visibility
+- governance and Arize observability posture visibility
+
+## Verification steps
 
 ### Frontend syntax
-
-Run targeted syntax checks after frontend edits:
 
 ```bash
 node --check frontend/index.js
@@ -53,18 +61,15 @@ node --check frontend/supervisor-dashboard/app.js
 node --check frontend/governance-center/app.js
 ```
 
-### Contract and workflow coverage
-
-Run the backend-backed tests that currently cover the frontend-facing flows:
+### Backend contract checks
 
 ```bash
 pytest tests/agent_tests/test_api_contracts.py -q
+pytest tests/agent_tests/test_observability_service.py -q
 pytest tests/workflow_tests/test_workflow_cases.py -q
 ```
 
 ### Route smoke checks
-
-After starting FastAPI, confirm the served surfaces return `200`:
 
 ```bash
 curl http://127.0.0.1:8000/frontend/
@@ -73,9 +78,3 @@ curl http://127.0.0.1:8000/frontend/officer-dashboard/
 curl http://127.0.0.1:8000/frontend/supervisor-dashboard/
 curl http://127.0.0.1:8000/frontend/governance-center/
 ```
-
-### Current known local-worktree caveats
-
-- Direct file upload support depends on the backend `/cases/{case_id}/document-files` route being available on the selected API target.
-- If that route is missing, the applicant portal falls back cleanly to URI-backed document submission when URIs are provided.
-- The current repo may contain unrelated local backend or test worktree changes during active development. Keep frontend slices scoped and stage files intentionally.

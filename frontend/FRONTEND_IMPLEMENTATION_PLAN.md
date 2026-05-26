@@ -2,13 +2,14 @@
 
 ## 1. Purpose
 
-This frontend plan turns the backend-first PoC into a professional two-surface product experience that aligns with [PLAN.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/PLAN.md).
+This frontend plan turns the backend-first PoC into a professional government-workflow web experience that aligns with [PLAN.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/PLAN.md).
 
 The frontend must make the Sri Lanka tourist-visit workflow understandable for:
 
 - applicants who need clarity, next actions, deadlines, and document guidance
 - officers who need structured evidence, policy context, audit visibility, and a safe decision workflow
 - supervisors who need queue signals and operational friction visibility
+- governance users who need policy and observability visibility
 
 ## 2. Product Surfaces
 
@@ -69,6 +70,7 @@ Primary goals:
 - expose the active rule pack and policy version clearly
 - make publication mismatches visible instead of implicit
 - give officers and supervisors quick access to official source references
+- show Arize Phoenix observability posture for hackathon demos and governance review
 
 Initial modules:
 
@@ -76,6 +78,7 @@ Initial modules:
 - circular and publication panels
 - nationality exception rules
 - tourist policy requirement list
+- observability status panel
 
 ## 3. Experience Principles
 
@@ -83,6 +86,7 @@ Initial modules:
 - strong information hierarchy with calm, high-trust styling
 - responsive layouts for laptop-first use with tablet-safe fallbacks
 - explicit human-review boundary on all recommendation surfaces
+- role-scoped navigation by default, with workspace preview mode only for internal demo switching
 - plain-language messaging for applicant-facing states
 - accessibility-first semantics, keyboard support, and color contrast
 

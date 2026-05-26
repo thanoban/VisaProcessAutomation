@@ -2,81 +2,93 @@
 
 ## Design intent
 
-This repository should evolve as a modular monolith first, then split cleanly into dedicated services if the Sri Lanka deployment matures. The architecture now needs to support not just analysis agents but the actual operational lifecycle of a Sri Lanka short-visit case.
+VisaFlow MAS should evolve as a modular monolith first, then split cleanly if needed. The architecture must satisfy two things at once:
+
+1. the real operational lifecycle of a Sri Lanka tourist visa case
+2. the hackathon requirement for a code-owned Gemini and Arize observability stack
 
 ## Layered structure
 
 ### Delivery layer
 
 - `backend/api`
-- owns REST endpoints, transport validation, external contract stability, and role-sensitive response shaping
+- owns REST endpoints, request validation, role-sensitive response shaping, and integration-safe external contracts
+
+### Agent runtime layer
+
+- Google ADK runtime and agent definitions
+- owns Gemini agent composition, structured outputs, tool registration, and runtime-level tracing hooks
 
 ### Application layer
 
 - `backend/services`
-- owns case lifecycle logic, policy/circular governance, notifications, audit writing, and operational adapters
+- owns case lifecycle logic, policy governance, audit persistence, notifications, observability export, and evaluation helpers
 
 ### Workflow layer
 
 - `backend/workflows`
-- owns deterministic lifecycle transitions, routing precedence, manual referral branching, and extension handling
+- owns deterministic routing, lifecycle transitions, extension handling, and officer-decision orchestration
 
 ### Contract and persistence layer
 
 - `backend/models`
-- owns typed schemas, case entities, timeline events, rule entities, and storage records
-
-### Agent and tool layer
-
-- `agents`
-- `tools`
-- owns explicit agent responsibilities and callable functions under controlled boundaries
+- owns typed schemas, workflow entities, audit contracts, and database records
 
 ### Knowledge and governance layer
 
 - `rag`
-- owns policy chunks, circular references, document checklists, refusal templates, and officer SOP content
+- owns policy chunks, circular references, checklists, refusal templates, and officer SOP content
 
 ### Verification layer
 
 - `tests`
-- owns workflow, security, status-tracker, and rule-governance validation
+- owns workflow, security, observability, and API validation
 
-## Operational modules the architecture now needs
+## Required operational modules
 
-- intake and checklist service
-- ETA and authorization state service
-- document QA and replacement-request service
-- manual referral and exception service
-- rule publication and circular governance service
-- officer brief and recommendation service
+- checklist and intake service
+- document QA and validation service
+- policy comparison service
+- risk and fraud signal service
+- officer brief service
+- audit service
+- observability service
+- evaluation runner
+- self-improvement analysis service
 - extension and appointment service
-- audit and timeline service
-- supervisor queue analytics service
+
+## Required hackathon modules
+
+- Google ADK root supervisor agent
+- Gemini-backed sub-agents or task agents
+- OpenInference instrumentation for ADK and Gemini
+- Arize Phoenix tracing export
+- Phoenix MCP configuration for self-introspection
+- evaluation path for weak and failed runs
 
 ## Scalability path
 
 The cleanest future service boundaries are:
 
-- case management API
-- ETA/intake service
+- public intake API
+- officer and supervisor API
+- ADK agent runtime service
 - document processing service
 - policy and circular governance service
 - extension and appointment service
-- audit service
-- notification service
-- analytics and supervisor reporting service
+- audit and observability service
+- analytics and reporting service
 
 ## Google Cloud target
 
-- Cloud Run for API and orchestration slices
+- Cloud Run for the web and API runtime
 - Cloud SQL PostgreSQL for transactional records
 - Cloud Storage for documents and artifacts
 - Pub/Sub or Cloud Tasks for asynchronous orchestration
-- Vertex AI Agent Builder or Gemini Enterprise Agent Platform for future managed agent runtime
-- Document AI for production extraction
-- BigQuery for audit and queue analytics
+- Gemini through Google Cloud compatible configuration
+- Document AI for future production OCR
+- BigQuery for audit and evaluation analytics
 
 ## Portability rule
 
-Sri Lanka-first business logic, policy governance, and workflow transitions should remain platform-neutral. Cloud products are adapters, not the core of the domain model.
+Sri Lanka-first business logic, policy governance, and workflow transitions remain platform-neutral. Cloud products, Phoenix exporters, and ADK runtime adapters should remain replaceable around the core domain model.
