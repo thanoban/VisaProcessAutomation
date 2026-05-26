@@ -2,47 +2,74 @@
 
 ## Objective
 
-Keep the PoC runnable locally while shaping it for a Google Cloud production path that can support a Sri Lanka Immigration-scale service model, strong audit requirements, and controlled AI integration.
+Keep the PoC runnable locally while shaping it for a Google Cloud deployment that satisfies the hackathon rules:
+
+- Gemini-powered agents
+- Google ADK code-owned runtime
+- FastAPI web app
+- Cloud Run deployment path
+- Arize Phoenix observability and evaluation
 
 ## Sri Lanka-first deployment concerns
 
-- public service reliability for ETA and status traffic
-- operational visibility for manual referrals and extension queues
-- separation of public applicant traffic from internal officer tooling
-- strong rule and circular version control
-- auditability suitable for ministry, parliamentary, and integrity review
+- public ETA and status traffic reliability
+- manual-referral and extension visibility
+- role separation between applicant, officer, supervisor, and governance users
+- rule and circular version traceability
+- safe AI adoption for a legal-sensitive domain
 
 ## Target component map
 
 ### Cloud Run
 
-Hosts API and orchestration services. Over time, these may split into:
+Hosts:
+
+- FastAPI backend
+- served frontend surfaces
+- Google ADK runtime integration
+
+Possible future split:
 
 - public intake API
 - officer and supervisor API
-- workflow orchestration service
-- governance and rule service
+- governance API
+- dedicated agent runtime service
 
 ### Cloud SQL PostgreSQL
 
-Stores transactional case, timeline, brief, and audit metadata.
+Stores transactional case, timeline, brief, observability metadata, and audit records.
 
 ### Cloud Storage
 
-Stores uploaded documents, transformed artifacts, and generated evidence bundles.
+Stores uploaded documents and generated case artifacts.
 
-### Pub/Sub or Cloud Tasks
+### Cloud Tasks or Pub/Sub
 
-Supports asynchronous orchestration for:
+Supports asynchronous workflows for:
 
 - document processing
-- notifications
+- notification delivery
 - queue recovery
-- extension and appointment workflows
+- extension and appointment handling
+- evaluation jobs
 
-### Vertex AI Agent Builder / Gemini Enterprise Agent Platform
+### Gemini and Google ADK
 
-Future managed runtime for agent execution once the PoC stabilizes.
+The intended runtime path is:
+
+- Google ADK as the primary agent framework
+- Gemini model access through Google Cloud compatible configuration
+- structured JSON outputs for all agents
+
+### Arize Phoenix
+
+Provides:
+
+- trace collection
+- evaluation support
+- run comparison
+- weak-run inspection
+- self-improvement visibility via Phoenix MCP
 
 ### Document AI
 
@@ -50,15 +77,16 @@ Future production OCR and document extraction service.
 
 ### BigQuery
 
-Stores audit analytics, queue metrics, and operational reporting aggregates.
+Future sink for audit analytics, evaluation summaries, and queue metrics.
 
 ### Secret Manager and Cloud KMS
 
-Protect system credentials, encryption keys, and service-to-service trust material.
+Protect credentials, collector keys, and service-to-service trust materials.
 
 ## Deployment principles
 
 - keep the Sri Lanka domain model platform-neutral
-- isolate cloud integrations behind adapters
-- separate public, officer, and governance responsibilities clearly
-- preserve portability for sovereign or private-cloud variants if required later
+- isolate Google Cloud and Phoenix integrations behind adapters
+- keep human-in-the-loop safety non-bypassable
+- never leak raw security data into observability or applicant-facing channels
+- preserve portability for sovereign or private-cloud variants later

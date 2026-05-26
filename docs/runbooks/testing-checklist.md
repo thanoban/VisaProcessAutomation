@@ -6,13 +6,17 @@
 - process straightforward ETA-style case
 - detect missing document case
 - detect unreadable upload replacement case
-- detect restricted-nationality sponsor/manual referral case
+- detect restricted-nationality sponsor or manual referral case
 - detect expired passport case
 - detect low-balance case
+- detect suspicious sudden deposit case
 - detect rule or circular conflict case
 - detect additional-document loop after submission
 - create officer brief
 - record officer override
-- record port-clearance or post-decision event
+- record extension request, appointment, and decision events
 - verify audit events were created
+- verify observability metadata is attached without breaking case processing
+- verify `human_decision_required` stays true in final recommendation payloads
 - verify applicant status payload contains latest required actions, action owner, and timeline state
+- verify governance observability status endpoint responds

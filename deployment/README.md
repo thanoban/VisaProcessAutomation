@@ -1,18 +1,47 @@
 # Deployment Plan
 
-## Target Google Cloud topology
+## Goal
 
-- Cloud Run for API and orchestration
-- Cloud SQL PostgreSQL for transactional data
-- Cloud Storage for document storage
-- Pub/Sub or Cloud Tasks for async processing
-- Secret Manager for secrets
-- Cloud KMS for keys
-- Cloud Logging and Monitoring
-- BigQuery for audit analytics
-- Cloud Armor and VPC Service Controls for perimeter protection
-- Security Command Center for monitoring
+Deploy VisaFlow MAS as a web application that satisfies the Google Cloud Partner hackathon architecture expectations while preserving a clean path to a more secure production topology.
+
+## Current target stack
+
+- FastAPI backend
+- lightweight web frontend served by FastAPI
+- Google ADK runtime path for Gemini-powered agents
+- Arize Phoenix for observability and evaluation
+- SQLite locally
+- PostgreSQL direction for production
+
+## Preferred Google Cloud topology
+
+- **Cloud Run** for the public API and web runtime
+- **Cloud SQL PostgreSQL** for transactional case and audit storage
+- **Cloud Storage** for uploaded documents and generated artifacts
+- **Cloud Tasks** or **Pub/Sub** for async orchestration
+- **Secret Manager** for secrets
+- **Cloud KMS** for encryption key management
+- **Cloud Logging** and **Cloud Monitoring**
+- **BigQuery** for audit analytics and queue reporting
+- **Cloud Armor** and **VPC Service Controls**
+- **Security Command Center**
+
+## Gemini and ADK alignment
+
+The intended agent stack is:
+
+- Google ADK as the code-owned runtime
+- Gemini model access through Google Cloud compatible configuration
+- OpenInference instrumentation for ADK and Gemini calls
+- Arize Phoenix as the trace and evaluation sink
+
+## Arize track notes
+
+See:
+
+- [deployment/arize_phoenix_setup.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/deployment/arize_phoenix_setup.md)
+- [deployment/mcp/phoenix-mcp.sample.json](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/deployment/mcp/phoenix-mcp.sample.json)
 
 ## Portability
 
-All external integrations are behind Python service adapters so the PoC can move to sovereign cloud or private infrastructure later.
+All external integrations are isolated behind Python service adapters so the PoC can later move to sovereign cloud or private infrastructure without rewriting the Sri Lanka workflow model.

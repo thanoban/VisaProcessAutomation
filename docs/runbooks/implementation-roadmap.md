@@ -1,34 +1,45 @@
 # Implementation Roadmap
 
-## Phase 1 - Sri Lanka documentation and operating-model correction
+## Phase 1 - Domain correction and product alignment
 
-- rewrite repo docs around Sri Lanka short-visit processing
-- add ETA, extension, and rule-governance architecture docs
-- define benchmark advantages over existing methods
-- add pilot discovery plan and pain hypotheses
+- anchor the repo on the Sri Lanka tourist-visit process
+- document rule-governance, ETA, extension, and referral realities
+- align docs to the Google Cloud Partner hackathon rules
 
-## Phase 2 - Sri Lanka workflow pack implementation
+## Phase 2 - Core visa workflow
 
 - case persistence upgrades
-- Sri Lanka lifecycle states
-- ETA and manual-referral handling
-- richer applicant timeline and status payloads
-- policy and circular governance starter
-- officer brief updates
+- deterministic routing
+- intake, validation, policy, and risk flows
+- officer brief generation
+- applicant status and evidence loops
 
-## Phase 3 - Validation
+## Phase 3 - Operational lifecycle
 
-- Sri Lanka workflow tests
-- rule-conflict tests
-- applicant status clarity checks
-- audit behavior checks
-- security and governance boundary checks
+- extension workflow
+- supervisor queue visibility
+- urgency signals
+- governance visibility
+- rule-publication and circular traceability
 
-## Phase 4 - Hardening and expansion
+## Phase 4 - Observability and evaluation
 
-- stronger auth and role enforcement
-- async processing
-- supervisor queue surfaces
-- extension workflow expansion
-- Business and Transit packs
-- richer foreign-benchmark-inspired UX and orchestration
+- Arize Phoenix export path
+- OpenInference instrumentation
+- evaluation labels and weak-run visibility
+- governance observability status surface
+
+## Phase 5 - Hackathon compliance hardening
+
+- Google ADK runtime scaffolding
+- Gemini-only model direction
+- Phoenix MCP configuration
+- self-improvement workflow
+- README, license, and environment template completion
+
+## Phase 6 - Submission readiness
+
+- hosted deployment
+- screenshots or demo GIFs
+- short demo video
+- final repo and documentation polish

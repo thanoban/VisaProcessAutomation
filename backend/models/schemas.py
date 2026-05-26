@@ -196,6 +196,11 @@ class AgentEnvelope(BaseModel):
     requires_human_review: bool = True
     created_at: str = Field(default_factory=utc_now)
     details: dict[str, Any] = Field(default_factory=dict)
+    trace_id: str = ""
+    observation_id: str = ""
+    observability_export_status: str = "DISABLED"
+    observability_target: str = "LOCAL_ONLY"
+    evaluation_labels: list[str] = Field(default_factory=list)
 
 
 class OfficerBriefAgentResult(BaseModel):
@@ -250,6 +255,11 @@ class AuditEvent(BaseModel):
     override_reason: str = ""
     ip_address: str = ""
     session_id: str = ""
+    trace_id: str = ""
+    observation_id: str = ""
+    observability_export_status: str = "DISABLED"
+    observability_target: str = "LOCAL_ONLY"
+    evaluation_labels: list[str] = Field(default_factory=list)
     payload: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -412,6 +422,16 @@ class GovernanceRulesResponse(BaseModel):
     active_policy_version: EffectivePolicyVersion
     active_circulars: list[RuleCircular]
     nationality_exception_rules: list[NationalityExceptionRule]
+
+
+class ObservabilityStatusResponse(BaseModel):
+    enabled: bool = False
+    target: str = "LOCAL_ONLY"
+    project_name: str = ""
+    provider: str = ""
+    google_genai_instrumentation_enabled: bool = False
+    phoenix_mcp_expected: bool = True
+    status: str = "DISABLED"
 
 
 class SupervisorQueueSummary(BaseModel):

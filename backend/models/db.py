@@ -54,6 +54,11 @@ class AgentRunRecord(Base):
     rule_version_used = Column(String, nullable=False, default="")
     publication_reference = Column(String, nullable=False, default="")
     policy_source_uri = Column(String, nullable=False, default="")
+    trace_id = Column(String, nullable=False, default="")
+    observation_id = Column(String, nullable=False, default="")
+    observability_export_status = Column(String, nullable=False, default="DISABLED")
+    observability_target = Column(String, nullable=False, default="LOCAL_ONLY")
+    evaluation_labels = Column(JSON, nullable=False, default=list)
     output_json = Column(JSON, nullable=False)
     created_at = Column(DateTime(timezone=True), default=utc_now_datetime, nullable=False)
 
@@ -103,6 +108,11 @@ class AuditEventRecord(Base):
     override_reason = Column(Text, nullable=False, default="")
     ip_address = Column(String, nullable=False, default="")
     session_id = Column(String, nullable=False, default="")
+    trace_id = Column(String, nullable=False, default="")
+    observation_id = Column(String, nullable=False, default="")
+    observability_export_status = Column(String, nullable=False, default="DISABLED")
+    observability_target = Column(String, nullable=False, default="LOCAL_ONLY")
+    evaluation_labels = Column(JSON, nullable=False, default=list)
     payload = Column(JSON, nullable=False, default=dict)
 
 

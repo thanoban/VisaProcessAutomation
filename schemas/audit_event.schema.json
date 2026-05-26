@@ -23,6 +23,11 @@
     "override_reason": { "type": "string" },
     "ip_address": { "type": "string" },
     "session_id": { "type": "string" },
+    "trace_id": { "type": "string" },
+    "observation_id": { "type": "string" },
+    "observability_export_status": { "type": "string" },
+    "observability_target": { "type": "string" },
+    "evaluation_labels": { "type": "array" },
     "payload": { "type": "object" }
   }
 }

@@ -1,17 +1,21 @@
 # Agent Catalog
 
+## Runtime model
+
+VisaFlow MAS is being shaped around Google ADK as the code-owned runtime. Each agent is expected to emit JSON-only output and to preserve the human-in-the-loop legal boundary.
+
 ## Supervisor Agent
 
 ### Purpose
 
-Own workflow coordination, lifecycle transitions, and recommendation routing for the Sri Lanka workflow pack.
+Own workflow coordination, lifecycle transitions, and recommendation routing for the Sri Lanka tourist workflow pack.
 
 ### Must do
 
 - call the right agents in the right order
 - enforce deterministic routing rules
 - preserve operational states separately from legal recommendation categories
-- always require human decision for legal outcome
+- always require human decision for the legal outcome
 
 ### Must not do
 
@@ -22,7 +26,7 @@ Own workflow coordination, lifecycle transitions, and recommendation routing for
 
 ### Purpose
 
-Stop incomplete, unreadable, or obviously misrouted cases before they reach deeper analysis or officer review.
+Stop incomplete, unreadable, or misrouted cases before deeper analysis or officer review.
 
 ### Checks
 
@@ -30,14 +34,14 @@ Stop incomplete, unreadable, or obviously misrouted cases before they reach deep
 - required uploads
 - payment state
 - duplicate uploads
-- unreadable or invalid files
-- obvious nationality or sponsor exception triggers
+- unreadable files
+- obvious exception triggers
 
 ## Document Validator Agent
 
 ### Purpose
 
-Normalize identity and travel-document evidence into a consistent structure.
+Normalize identity and travel-document evidence into a structured format.
 
 ### Checks
 
@@ -52,24 +56,24 @@ Normalize identity and travel-document evidence into a consistent structure.
 
 ### Purpose
 
-Convert financial evidence into a fast officer-readable summary and detect obvious concern patterns.
+Convert financial evidence into a fast officer-readable summary and detect concern patterns.
 
 ### Checks
 
 - average balance
 - suspicious deposits
-- employment and sponsor consistency
-- home-country ties where relevant
+- employment or sponsor consistency
+- home-country tie signals where relevant
 
 ## Policy & Compliance Agent
 
 ### Purpose
 
-Map case facts against the active official policy version for the Sri Lanka workflow pack.
+Map case facts against the active official rule pack and policy references.
 
-### Output style
+### Key rule
 
-Requirement-by-requirement matrix with status, evidence IDs, reasons, and rule version context.
+Must cite policy IDs and must not hallucinate policy.
 
 ## Security & Background Auditor Agent
 
@@ -79,19 +83,24 @@ Represent restricted system checks without leaking raw sensitive data.
 
 ### Output style
 
-Minimal codes only, suitable for routing and officer awareness.
+Minimal result codes only:
+
+- `CLEAR`
+- `POSSIBLE_MATCH`
+- `CONFIRMED_HIT`
+- `SYSTEM_UNAVAILABLE`
 
 ## Risk & Fraud Assessment Agent
 
 ### Purpose
 
-Detect non-protected, evidence-based fraud or anomaly signals.
+Detect evidence-based anomaly signals without unfair use of protected attributes.
 
 ### Key rule
 
-High risk triggers enhanced human review, not hidden auto-refusal.
+High risk triggers enhanced human review, not hidden refusal.
 
-## Officer Liaison Agent
+## Officer Brief Agent
 
 ### Purpose
 
@@ -103,24 +112,42 @@ Package the case for fast officer review.
 - recommendation
 - policy references
 - risk flags
-- manual-referral context
+- evidence list
+- unresolved questions
 - operational timeline summary
-- questions for officer
 
 ## Applicant Communication Agent
 
 ### Purpose
 
-Turn workflow state into respectful, simple next-step messages for ETA, re-upload, referral, extension, and decision-notice stages.
+Turn workflow state into respectful, simple next-step messages.
 
 ### Restrictions
 
 - no legal conclusion before human action
 - no security disclosure
-- no ambiguous wording about ETA versus final clearance
+- no confusing wording about ETA versus final clearance
 
-## Audit & Compliance Agent
+## Audit & Observability Agent
 
 ### Purpose
 
-Create the history needed for governance, appeal review, operational oversight, and circular/version traceability.
+Write local audit records and coordinate Arize Phoenix trace metadata.
+
+### Responsibilities
+
+- preserve local audit as source of truth
+- attach prompt, model, and policy versions
+- attach trace and observation IDs
+- support evaluation labels
+- avoid exporting unnecessary PII
+
+## Self-Improvement Agent
+
+### Purpose
+
+Inspect failed traces and weak evaluations through Phoenix MCP, then propose safer prompt or routing improvements.
+
+### Hard boundary
+
+The Self-Improvement Agent may recommend a change, but a human must approve it before production behavior changes.

@@ -26,6 +26,7 @@ const elements = {
   circularsList: document.querySelector("#circulars-list"),
   sourcesList: document.querySelector("#sources-list"),
   traceabilityList: document.querySelector("#traceability-list"),
+  observabilityStatusList: document.querySelector("#observability-status-list"),
   exceptionRulesList: document.querySelector("#exception-rules-list"),
 };
 
@@ -67,31 +68,38 @@ async function initialize() {
   setRegionBusy(elements.activePolicyGrid, true);
   setRegionBusy(elements.publicationSignalGrid, true);
   setRegionBusy(elements.traceabilityList, true);
+  setRegionBusy(elements.observabilityStatusList, true);
   try {
     await api.getHealth();
     state.apiAvailable = true;
     elements.apiPill.textContent = `Live API: ${api.baseUrl}`;
-    const [requirements, rules] = await Promise.all([
+    const [requirements, rules, observability] = await Promise.all([
       api.getPolicyRequirements("TOURIST"),
       api.getActiveGovernanceRules(),
+      api.getObservabilityStatus(),
     ]);
     elements.heroCopy.textContent =
       "Live API connected. The rule pack, policy source, and publication state below reflect the current backend governance references.";
-    renderGovernanceCenter(requirements, rules);
+    renderGovernanceCenter(requirements, rules, observability);
   } catch {
     state.apiAvailable = false;
     elements.apiPill.textContent = "Mock preview mode";
     elements.heroCopy.textContent =
       "The backend is not currently reachable, so this screen is showing a contract-aligned governance reference preview.";
-    renderGovernanceCenter(governanceCenterMock.requirements, governanceCenterMock.rules);
+    renderGovernanceCenter(
+      governanceCenterMock.requirements,
+      governanceCenterMock.rules,
+      governanceCenterMock.observability
+    );
   } finally {
     setRegionBusy(elements.activePolicyGrid, false);
     setRegionBusy(elements.publicationSignalGrid, false);
     setRegionBusy(elements.traceabilityList, false);
+    setRegionBusy(elements.observabilityStatusList, false);
   }
 }
 
-function renderGovernanceCenter(requirements, rules) {
+function renderGovernanceCenter(requirements, rules, observability) {
   const activeVersion = rules.active_policy_version || {};
   const circulars = rules.active_circulars || [];
   const publications = circulars.flatMap((circular) => circular.publications || []);
@@ -329,6 +337,35 @@ function renderGovernanceCenter(requirements, rules) {
       `,
     ],
     "No governance traceability entries are available yet."
+  );
+
+  const observabilityCards = [
+    ["Provider", observability.provider || "Phoenix", "info"],
+    ["Status", observability.status || "DISABLED", observability.enabled ? "success" : "warning"],
+    ["Target", observability.target || "LOCAL_ONLY", observability.enabled ? "info" : "warning"],
+    ["Project", observability.project_name || "visaflow-mas", "info"],
+    [
+      "Google GenAI instrumentation",
+      observability.google_genai_instrumentation_enabled ? "Enabled" : "Disabled",
+      observability.google_genai_instrumentation_enabled ? "success" : "info",
+    ],
+    ["Phoenix MCP expected", observability.phoenix_mcp_expected ? "Yes" : "No", "info"],
+  ];
+  elements.observabilityStatusList.innerHTML = listMarkup(
+    observabilityCards.map(
+      ([label, value, tone]) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${label}</span>
+              <strong class="mt-2 block text-base font-extrabold text-slate-900">${value}</strong>
+            </div>
+            ${buildStatusChip(value, tone)}
+          </div>
+        </article>
+      `
+    ),
+    "Observability status is not available yet."
   );
 
   elements.exceptionRulesList.innerHTML = listMarkup(

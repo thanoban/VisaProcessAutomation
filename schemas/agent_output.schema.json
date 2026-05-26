@@ -14,6 +14,11 @@
     "confidence": { "type": "number" },
     "requires_human_review": { "type": "boolean" },
     "created_at": { "type": "string" },
-    "details": { "type": "object" }
+    "details": { "type": "object" },
+    "trace_id": { "type": "string" },
+    "observation_id": { "type": "string" },
+    "observability_export_status": { "type": "string" },
+    "observability_target": { "type": "string" },
+    "evaluation_labels": { "type": "array" }
   }
 }
