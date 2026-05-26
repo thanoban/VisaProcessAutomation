@@ -4,6 +4,8 @@ import {
   formatDate,
   formatDateTime,
   getStoredApiBaseUrl,
+  linkListMarkup,
+  linkMarkup,
   listMarkup,
   officerDashboardMock,
   rememberRecentCase,
@@ -69,6 +71,7 @@ function wireEvents() {
   elements.sampleButton.addEventListener("click", () => {
     state.currentCaseId = officerDashboardMock.casePacket.case_id;
     elements.caseIdInput.value = state.currentCaseId;
+    syncCaseQueryParam(state.currentCaseId);
     renderDashboard(officerDashboardMock.casePacket, officerDashboardMock.officerBrief, true);
   });
   elements.decisionForm.addEventListener("submit", handleDecisionSubmit);
@@ -138,9 +141,14 @@ function renderDashboard(casePacket, brief, useMock) {
   elements.actionValue.textContent = titleCase(
     brief.recommendation_panel.action_required_from || casePacket.workflow.action_required_from
   );
-  elements.workspaceLinks.innerHTML = buildWorkspaceLinks(casePacket.case_id, "officer");
+  elements.workspaceLinks.innerHTML = buildWorkspaceLinks(casePacket.case_id, "officer", {
+    state: casePacket.workflow.current_state,
+    holder: casePacket.workflow.current_holder,
+  });
 
   if (!useMock) {
+    state.currentCaseId = casePacket.case_id;
+    syncCaseQueryParam(casePacket.case_id);
     rememberRecentCase({
       case_id: casePacket.case_id,
       surface: "officer",
@@ -274,10 +282,11 @@ function renderDashboard(casePacket, brief, useMock) {
     ["Passport fields", objectPairsMarkup(evidence.passport_fields)],
     ["Bank statement metrics", objectPairsMarkup(evidence.bank_statement_metrics)],
     ["Itinerary evidence", arrayMarkup(evidence.itinerary_evidence)],
+    ["Uploaded documents", documentLinksMarkup(casePacket.documents || [])],
     ["Rule version used", evidence.rule_version_used || "Not available"],
     ["Publication reference", evidence.publication_reference || "Not available"],
-    ["Policy source", evidence.policy_source_uri || "Not available"],
-    ["Official sources", arrayMarkup(evidence.official_sources)],
+    ["Policy source", linkMarkup(evidence.policy_source_uri || "Not available", state.apiBaseUrl)],
+    ["Official sources", linkListMarkup(evidence.official_sources)],
     ["Verified at", formatDateTime(evidence.verified_at)],
   ];
 
@@ -556,7 +565,44 @@ function arrayMarkup(items) {
   return items.map((item) => `<span class="mr-2 inline-block rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">${item}</span>`).join("");
 }
 
-function buildWorkspaceLinks(caseId, currentSurface) {
+function documentLinksMarkup(documents) {
+  if (!documents || !documents.length) {
+    return "No uploaded documents are attached to this case yet.";
+  }
+
+  return documents
+    .map(
+      (document) => `
+        <div class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4">
+          <div class="mb-2 flex flex-wrap items-center gap-2">
+            <span class="font-semibold text-slate-900">${titleCase(document.document_type || "Document")}</span>
+            ${buildStatusChip(document.status || "UPLOADED")}
+          </div>
+          <div class="text-xs uppercase tracking-[0.18em] text-slate-500">${document.document_id || "No document id"}</div>
+          <div class="mt-3 text-sm leading-7 text-slate-600">${
+            document.file_uri
+              ? linkMarkup(document.file_uri, state.apiBaseUrl)
+              : "No file reference available."
+          }</div>
+        </div>
+      `
+    )
+    .join("");
+}
+
+function syncCaseQueryParam(caseId) {
+  const params = new URLSearchParams(window.location.search);
+  if (caseId) {
+    params.set("case", caseId);
+  } else {
+    params.delete("case");
+  }
+  const nextQuery = params.toString();
+  const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
+  window.history.replaceState({}, "", nextUrl);
+}
+
+function buildWorkspaceLinks(caseId, currentSurface, queueContext = {}) {
   const links = [
     ["Applicant Portal", "../applicant-portal/", "applicant"],
     ["Officer Dashboard", "../officer-dashboard/", "officer"],
@@ -569,11 +615,28 @@ function buildWorkspaceLinks(caseId, currentSurface) {
         surface === currentSurface
           ? "bg-visa-navy text-white shadow-lg shadow-slate-900/10"
           : "border border-slate-200 bg-white text-slate-700";
-      const target =
-        surface === "governance" ? href : `${href}?case=${encodeURIComponent(caseId)}`;
+      const target = buildSurfaceHref(surface, href, caseId, queueContext);
       return `<a class="rounded-full px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5 ${activeClasses}" href="${target}">${label}</a>`;
     })
     .join("");
+}
+
+function buildSurfaceHref(surface, href, caseId, queueContext = {}) {
+  if (surface === "governance") {
+    return href;
+  }
+
+  const params = new URLSearchParams();
+  params.set("case", caseId);
+  if (surface === "supervisor") {
+    if (queueContext.state) {
+      params.set("state", queueContext.state);
+    }
+    if (queueContext.holder) {
+      params.set("holder", queueContext.holder);
+    }
+  }
+  return `${href}?${params.toString()}`;
 }
 
 initialize();

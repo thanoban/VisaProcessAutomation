@@ -17,8 +17,10 @@ const elements = {
   clearFiltersButton: document.querySelector("#clear-filters-button"),
   stateFilter: document.querySelector("#supervisor-state-filter"),
   holderFilter: document.querySelector("#supervisor-holder-filter"),
+  urgencyFilter: document.querySelector("#supervisor-urgency-filter"),
   metrics: document.querySelector("#supervisor-metrics"),
   stateCounts: document.querySelector("#state-counts-list"),
+  caseFocus: document.querySelector("#supervisor-case-focus"),
   caseMeta: document.querySelector("#supervisor-case-meta"),
   activeFilters: document.querySelector("#supervisor-active-filters"),
   caseList: document.querySelector("#supervisor-case-list"),
@@ -29,9 +31,11 @@ const elements = {
 const state = {
   apiBaseUrl: getStoredApiBaseUrl(),
   apiAvailable: false,
+  targetCaseId: "",
   filters: {
     state: "",
     holder: "",
+    urgency: "",
   },
 };
 
@@ -43,6 +47,7 @@ async function initialize() {
   elements.clearFiltersButton.addEventListener("click", clearFilters);
   elements.metrics.addEventListener("click", handleDrillDownClick);
   elements.stateCounts.addEventListener("click", handleDrillDownClick);
+  readInitialFilters();
   syncFilterControls();
   await loadSupervisorData();
 }
@@ -86,12 +91,23 @@ function renderSupervisorDashboard(queues, notices, casesResponse) {
   const totalCases = Object.values(queues.counts_by_state || {}).reduce((sum, value) => sum + value, 0);
   const metrics = [
     ["Total active cases", totalCases, "info", "", "", "Show all cases"],
+    ["Overdue decisions", queues.overdue_cases || 0, (queues.overdue_cases || 0) > 0 ? "danger" : "success", "", "", "OVERDUE", "Review overdue cases"],
+    [
+      "Due within 48 hours",
+      queues.due_within_48h || 0,
+      (queues.due_within_48h || 0) > 0 ? "warning" : "success",
+      "",
+      "",
+      "DUE_WITHIN_48H",
+      "Review due-soon cases",
+    ],
     [
       "Manual referrals",
       queues.manual_referrals,
       queues.manual_referrals > 0 ? "warning" : "success",
       "REFERRED_TO_MANUAL_REVIEW",
       "MISSION_OR_HEAD_OFFICE",
+      "",
       "Open manual referral cases",
     ],
     [
@@ -100,6 +116,7 @@ function renderSupervisorDashboard(queues, notices, casesResponse) {
       queues.waiting_for_documents > 0 ? "warning" : "success",
       "WAITING_FOR_DOCUMENTS",
       "APPLICANT",
+      "",
       "Open waiting cases",
     ],
     [
@@ -108,13 +125,14 @@ function renderSupervisorDashboard(queues, notices, casesResponse) {
       queues.ready_for_officer_review > 0 ? "info" : "warning",
       "READY_FOR_OFFICER_REVIEW",
       "OFFICER",
+      "",
       "Open officer-ready cases",
     ],
   ];
 
   elements.metrics.innerHTML = metrics
     .map(
-      ([label, value, tone, filterState, filterHolder, buttonLabel]) => `
+      ([label, value, tone, filterState, filterHolder, filterUrgency, buttonLabel]) => `
         <article class="rounded-3xl border border-slate-200/80 bg-white/85 p-5">
           <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div>
@@ -128,6 +146,7 @@ function renderSupervisorDashboard(queues, notices, casesResponse) {
             type="button"
             data-filter-state="${filterState}"
             data-filter-holder="${filterHolder}"
+            data-filter-urgency="${filterUrgency}"
           >
             ${buttonLabel}
           </button>
@@ -137,6 +156,7 @@ function renderSupervisorDashboard(queues, notices, casesResponse) {
     .join("");
 
   renderActiveFilters();
+  renderCaseFocus(casesResponse.cases || []);
   elements.stateCounts.innerHTML = listMarkup(
     Object.entries(queues.counts_by_state || {}).map(
       ([stateName, count]) => `
@@ -165,8 +185,13 @@ function renderSupervisorDashboard(queues, notices, casesResponse) {
   elements.caseMeta.textContent = `Showing ${casesResponse.filtered_count} of ${casesResponse.total_cases} supervisor-visible cases.${buildFilterSummaryText()}`;
   elements.caseList.innerHTML = listMarkup(
     (casesResponse.cases || []).map(
-      (item) => `
-        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+      (item) => {
+        const isTargetCase = item.case_id === state.targetCaseId;
+        const cardClasses = isTargetCase
+          ? "rounded-[1.5rem] border border-teal-300 bg-teal-50/60 p-5 ring-1 ring-teal-200"
+          : "rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5";
+        return `
+        <article class="${cardClasses}">
           <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${item.case_id}</span>
@@ -174,6 +199,7 @@ function renderSupervisorDashboard(queues, notices, casesResponse) {
               <p class="mt-2 text-sm leading-7 text-slate-600">${titleCase(item.nationality)} | ${titleCase(item.visa_class)} | Updated ${formatCaseTimestamp(item.updated_at)}</p>
             </div>
             <div class="flex flex-wrap gap-2">
+              ${buildStatusChip(item.urgency_level || "UNSCHEDULED", toneForUrgency(item.urgency_level))}
               ${buildStatusChip(item.current_state)}
               ${buildStatusChip(item.current_holder)}
             </div>
@@ -187,10 +213,16 @@ function renderSupervisorDashboard(queues, notices, casesResponse) {
             <div class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-7 text-slate-600">
               <strong class="text-slate-900">Rule version:</strong> ${item.rule_version_used || "Not available"}<br />
               <strong class="text-slate-900">Publication reference:</strong> ${item.publication_reference || "Not available"}<br />
+              <strong class="text-slate-900">Urgency:</strong> ${titleCase(item.urgency_level || "UNSCHEDULED")}<br />
               <strong class="text-slate-900">Decision due:</strong> ${formatCaseTimestamp(item.decision_due_at)}
             </div>
           </div>
           <div class="mt-4 flex flex-wrap gap-3">
+            ${
+              isTargetCase
+                ? `<span class="rounded-full border border-teal-200 bg-white px-4 py-2 text-sm font-semibold text-teal-800">Focused case from cross-surface link</span>`
+                : ""
+            }
             <a
               class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5"
               href="../officer-dashboard/?case=${encodeURIComponent(item.case_id)}"
@@ -210,7 +242,8 @@ function renderSupervisorDashboard(queues, notices, casesResponse) {
               : ""
           }
         </article>
-      `
+      `;
+      }
     ),
     "No cases match the current supervisor filters."
   );
@@ -257,6 +290,7 @@ function handleFilterChange() {
   applyFilters({
     state: elements.stateFilter.value,
     holder: elements.holderFilter.value,
+    urgency: elements.urgencyFilter.value,
   });
 }
 
@@ -268,12 +302,15 @@ function handleDrillDownClick(event) {
   applyFilters({
     state: button.dataset.filterState ?? state.filters.state,
     holder: button.dataset.filterHolder ?? state.filters.holder,
+    urgency: button.dataset.filterUrgency ?? state.filters.urgency,
   });
 }
 
 function applyFilters(nextFilters) {
   state.filters.state = String(nextFilters.state || "");
   state.filters.holder = String(nextFilters.holder || "");
+  state.filters.urgency = String(nextFilters.urgency || "");
+  syncFilterQueryParams();
   syncFilterControls();
   loadSupervisorData();
 }
@@ -285,10 +322,48 @@ function clearFilters() {
 function syncFilterControls() {
   elements.stateFilter.value = state.filters.state;
   elements.holderFilter.value = state.filters.holder;
+  elements.urgencyFilter.value = state.filters.urgency;
+}
+
+function readInitialFilters() {
+  const params = new URLSearchParams(window.location.search);
+  state.targetCaseId = String(params.get("case") || "").trim();
+  state.filters.state = String(params.get("state") || "");
+  state.filters.holder = String(params.get("holder") || "");
+  state.filters.urgency = String(params.get("urgency") || "");
+}
+
+function syncFilterQueryParams() {
+  const params = new URLSearchParams(window.location.search);
+  if (state.filters.state) {
+    params.set("state", state.filters.state);
+  } else {
+    params.delete("state");
+  }
+  if (state.filters.holder) {
+    params.set("holder", state.filters.holder);
+  } else {
+    params.delete("holder");
+  }
+  if (state.filters.urgency) {
+    params.set("urgency", state.filters.urgency);
+  } else {
+    params.delete("urgency");
+  }
+  const nextQuery = params.toString();
+  const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
+  window.history.replaceState({}, "", nextUrl);
 }
 
 function renderActiveFilters() {
   const activeFilters = [];
+  if (state.targetCaseId) {
+    activeFilters.push(`
+      <div class="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50 px-4 py-2 text-sm font-semibold text-teal-800">
+        Case: ${state.targetCaseId}
+      </div>
+    `);
+  }
   if (state.filters.state) {
     activeFilters.push(`
       <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
@@ -303,11 +378,41 @@ function renderActiveFilters() {
       </div>
     `);
   }
+  if (state.filters.urgency) {
+    activeFilters.push(`
+      <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+        Urgency: ${titleCase(state.filters.urgency)}
+      </div>
+    `);
+  }
 
   elements.activeFilters.innerHTML = activeFilters.length
     ? `${activeFilters.join("")}<button class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" type="button" data-clear-filters="true">Reset drill-down</button>`
     : `<div class="rounded-full border border-dashed border-slate-300 bg-white/50 px-4 py-2 text-sm text-slate-500">Use the metric and state cards above to drill directly into the queue.</div>`;
   elements.activeFilters.querySelector("[data-clear-filters]")?.addEventListener("click", clearFilters);
+}
+
+function renderCaseFocus(cases) {
+  if (!state.targetCaseId) {
+    elements.caseFocus.innerHTML = "";
+    return;
+  }
+
+  const matchingCase = (cases || []).find((item) => item.case_id === state.targetCaseId);
+  if (matchingCase) {
+    elements.caseFocus.innerHTML = `
+      <div class="rounded-[1.5rem] border border-teal-200 bg-teal-50 p-4 text-sm leading-7 text-teal-900">
+        <strong class="text-teal-950">Cross-surface case context active:</strong> ${state.targetCaseId} is visible in the filtered queue below.
+      </div>
+    `;
+    return;
+  }
+
+  elements.caseFocus.innerHTML = `
+    <div class="rounded-[1.5rem] border border-amber-200 bg-amber-50 p-4 text-sm leading-7 text-amber-900">
+      <strong class="text-amber-950">Cross-surface case context active:</strong> ${state.targetCaseId} is not visible in the current filtered queue. Adjust the filters or refresh the queue if the case has moved.
+    </div>
+  `;
 }
 
 function buildFilterSummaryText() {
@@ -318,17 +423,24 @@ function buildFilterSummaryText() {
   if (state.filters.holder) {
     activeParts.push(`holder ${titleCase(state.filters.holder)}`);
   }
+  if (state.filters.urgency) {
+    activeParts.push(`urgency ${titleCase(state.filters.urgency)}`);
+  }
   return activeParts.length ? ` Active filters: ${activeParts.join(", ")}.` : "";
 }
 
 function applyMockFilters(casesResponse, filters) {
   const stateFilter = String(filters.state || "").toUpperCase();
   const holderFilter = String(filters.holder || "").toUpperCase();
+  const urgencyFilter = String(filters.urgency || "").toUpperCase();
   const cases = (casesResponse.cases || []).filter((item) => {
     if (stateFilter && item.current_state !== stateFilter) {
       return false;
     }
     if (holderFilter && item.current_holder !== holderFilter) {
+      return false;
+    }
+    if (urgencyFilter && item.urgency_level !== urgencyFilter) {
       return false;
     }
     return true;
@@ -338,6 +450,7 @@ function applyMockFilters(casesResponse, filters) {
     filtered_count: cases.length,
     state_filter: stateFilter,
     holder_filter: holderFilter,
+    urgency_filter: urgencyFilter,
     cases,
   };
 }
@@ -361,6 +474,28 @@ function formatCaseTimestamp(value) {
 
 function buildHotspots(queues) {
   const hotspots = [];
+
+  if (queues.overdue_cases > 0) {
+    hotspots.push({
+      code: "OVERDUE_DECISIONS",
+      title: "Overdue decision deadlines need intervention",
+      level: "danger",
+      tone: "danger",
+      message:
+        "At least one supervisor-visible case is already past its decision deadline. Rebalance reviewer load or escalate the stuck cases before the backlog worsens.",
+    });
+  }
+
+  if (queues.due_within_48h > 0) {
+    hotspots.push({
+      code: "DUE_SOON",
+      title: "Upcoming deadline pressure is building",
+      level: "warning",
+      tone: "warning",
+      message:
+        "Some cases are due within the next 48 hours. Use this early signal to clear officer-ready inventory before they become overdue.",
+    });
+  }
 
   if (queues.waiting_for_documents > 0) {
     hotspots.push({
@@ -407,6 +542,19 @@ function buildHotspots(queues) {
   }
 
   return hotspots;
+}
+
+function toneForUrgency(value) {
+  switch (String(value || "").toUpperCase()) {
+    case "OVERDUE":
+      return "danger";
+    case "DUE_WITHIN_48H":
+      return "warning";
+    case "ON_TRACK":
+      return "success";
+    default:
+      return "info";
+  }
 }
 
 initialize();

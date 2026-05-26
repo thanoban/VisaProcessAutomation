@@ -369,6 +369,9 @@ class SupervisorQueueSummary(BaseModel):
     manual_referrals: int
     waiting_for_documents: int
     ready_for_officer_review: int
+    overdue_cases: int = 0
+    due_within_48h: int = 0
+    oldest_due_at: str | None = None
 
 
 class SupervisorCaseSummary(BaseModel):
@@ -386,6 +389,7 @@ class SupervisorCaseSummary(BaseModel):
     rule_version_used: str = ""
     publication_reference: str = ""
     decision_due_at: str | None = None
+    urgency_level: str = "UNSCHEDULED"
     updated_at: str = ""
 
 
@@ -395,4 +399,5 @@ class SupervisorCaseListResponse(BaseModel):
     filtered_count: int
     state_filter: str = ""
     holder_filter: str = ""
+    urgency_filter: str = ""
     cases: list[SupervisorCaseSummary] = Field(default_factory=list)

@@ -6,6 +6,8 @@ import {
   formatDateTime,
   getStoredApiBaseUrl,
   isMissingFileUploadSupport,
+  linkListMarkup,
+  linkMarkup,
   listMarkup,
   rememberRecentCase,
   setButtonBusy,
@@ -133,7 +135,7 @@ function renderChecklist(payload) {
         : []),
       ...((payload.official_sources || []).length
         ? [
-            `<div class="rounded-[1.25rem] border border-slate-200/80 bg-white/75 p-4 text-sm leading-6 text-slate-600"><strong class="text-slate-900">Official sources:</strong> ${payload.official_sources.join(", ")}</div>`,
+            `<div class="rounded-[1.25rem] border border-slate-200/80 bg-white/75 p-4 text-sm leading-6 text-slate-600"><strong class="text-slate-900">Official sources:</strong><div class="mt-3">${linkListMarkup(payload.official_sources)}</div></div>`,
           ]
         : []),
       ...(payload.notes || []).map(
@@ -236,6 +238,7 @@ async function handleApplicationSubmit(event) {
       api.getCaseStatus(createdCase.case_id),
     ]);
 
+    state.linkedCaseId = createdCase.case_id;
     elements.lookupCaseIdInput.value = createdCase.case_id;
     renderCaseStatus(processedCase, {
       latestStatus: caseStatus,
@@ -333,6 +336,7 @@ async function handleDocumentResponseSubmit(event) {
       latestStatus: caseStatus,
       useMock: false,
     });
+    state.linkedCaseId = caseId;
     elements.lookupCaseIdInput.value = caseId;
     elements.documentResponseFeedback.textContent = fileUploadWarnings.length
       ? `Document response accepted with URI-backed fallback. ${fileUploadWarnings.join(" ")}`
@@ -368,9 +372,14 @@ function renderCaseStatus(casePacket, options) {
   elements.stateValue.innerHTML = buildStatusChip(status.status);
   elements.holderValue.textContent = titleCase(status.current_holder);
   elements.nextActionValue.textContent = titleCase(status.next_action);
-  elements.workspaceLinksPanel.innerHTML = buildWorkspaceLinks(casePacket.case_id, "applicant");
+  elements.workspaceLinksPanel.innerHTML = buildWorkspaceLinks(casePacket.case_id, "applicant", {
+    state: status.status,
+    holder: status.current_holder,
+  });
 
   if (!options.useMock) {
+    state.linkedCaseId = casePacket.case_id;
+    syncCaseQueryParam(casePacket.case_id);
     rememberRecentCase({
       case_id: casePacket.case_id,
       surface: "applicant",
@@ -392,7 +401,8 @@ function renderCaseStatus(casePacket, options) {
     ["Policy version", status.authorization_status?.policy_version || casePacket.policy_context.policy_version],
     ["Rule version", status.authorization_status?.rule_version_used || casePacket.policy_context.effective_rule_version],
     ["Publication reference", status.authorization_status?.publication_reference || casePacket.policy_context.publication_reference],
-    ["Policy source", status.authorization_status?.source_uri || casePacket.policy_context.source_uri],
+    ["Policy source", linkMarkup(status.authorization_status?.source_uri || casePacket.policy_context.source_uri)],
+    ["Official sources", linkListMarkup(status.authorization_status?.official_sources || casePacket.policy_context.official_sources)],
   ];
 
   elements.statusDefinitionGrid.innerHTML = detailItems
@@ -597,7 +607,7 @@ function renderCaseStatus(casePacket, options) {
           </div>
           ${
             document.file_uri
-              ? `<a class="text-sm leading-7 text-teal-800 underline break-all" href="${document.file_uri}" target="_blank" rel="noreferrer">${document.file_uri}</a>`
+              ? `<div class="text-sm leading-7 text-slate-600">${linkMarkup(document.file_uri, state.apiBaseUrl)}</div>`
               : `<p class="text-sm leading-7 text-slate-600 break-all">No file reference available.</p>`
           }
         </article>
@@ -644,6 +654,18 @@ function setDocumentInputValue(fieldName, documents, documentType) {
     return;
   }
   input.value = documents.find((document) => document.document_type === documentType)?.file_uri || "";
+}
+
+function syncCaseQueryParam(caseId) {
+  const params = new URLSearchParams(window.location.search);
+  if (caseId) {
+    params.set("case", caseId);
+  } else {
+    params.delete("case");
+  }
+  const nextQuery = params.toString();
+  const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
+  window.history.replaceState({}, "", nextUrl);
 }
 
 function buildMockStatus(casePacket) {
@@ -769,7 +791,7 @@ function buildDocumentsPayload(formData, prefix = "") {
     }));
 }
 
-function buildWorkspaceLinks(caseId, currentSurface) {
+function buildWorkspaceLinks(caseId, currentSurface, queueContext = {}) {
   const links = [
     ["Applicant Portal", "../applicant-portal/", "applicant"],
     ["Officer Dashboard", "../officer-dashboard/", "officer"],
@@ -782,11 +804,28 @@ function buildWorkspaceLinks(caseId, currentSurface) {
         surface === currentSurface
           ? "bg-visa-navy text-white shadow-lg shadow-slate-900/10"
           : "border border-slate-200 bg-white text-slate-700";
-      const target =
-        surface === "governance" ? href : `${href}?case=${encodeURIComponent(caseId)}`;
+      const target = buildSurfaceHref(surface, href, caseId, queueContext);
       return `<a class="rounded-full px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5 ${activeClasses}" href="${target}">${label}</a>`;
     })
     .join("");
+}
+
+function buildSurfaceHref(surface, href, caseId, queueContext = {}) {
+  if (surface === "governance") {
+    return href;
+  }
+
+  const params = new URLSearchParams();
+  params.set("case", caseId);
+  if (surface === "supervisor") {
+    if (queueContext.state) {
+      params.set("state", queueContext.state);
+    }
+    if (queueContext.holder) {
+      params.set("holder", queueContext.holder);
+    }
+  }
+  return `${href}?${params.toString()}`;
 }
 
 initialize();

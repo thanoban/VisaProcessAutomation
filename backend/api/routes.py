@@ -197,9 +197,10 @@ def get_supervisor_queues() -> SupervisorQueueSummary:
 
 
 @router.get("/supervisor/cases", response_model=SupervisorCaseListResponse)
-def get_supervisor_cases(state: str = "", holder: str = "") -> SupervisorCaseListResponse:
+def get_supervisor_cases(state: str = "", holder: str = "", urgency: str = "") -> SupervisorCaseListResponse:
     return sri_lanka_reference.build_supervisor_case_list(
         case_service.list_cases(),
         state_filter=state,
         holder_filter=holder,
+        urgency_filter=urgency,
     )
