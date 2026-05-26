@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 
 from backend.models.schemas import (
     ApplicantMessageResponse,
@@ -18,12 +18,14 @@ from backend.models.schemas import (
 )
 from backend.services.case_service import CaseService
 from backend.services.sri_lanka_reference_service import SriLankaReferenceService
+from backend.services.storage_service import LocalDocumentStorageService
 from backend.workflows.tourist_visa_workflow import TouristVisaWorkflow
 
 router = APIRouter()
 case_service = CaseService()
 workflow = TouristVisaWorkflow()
 sri_lanka_reference = SriLankaReferenceService()
+storage_service = LocalDocumentStorageService()
 
 
 @router.get("/health")
@@ -53,6 +55,35 @@ def upload_documents(case_id: str, payload: DocumentUploadRequest) -> CasePacket
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
     return case
+
+
+@router.post("/cases/{case_id}/document-files", response_model=CasePacket)
+async def upload_document_file(
+    case_id: str,
+    document_type: str = Form(...),
+    file: UploadFile = File(...),
+) -> CasePacket:
+    case = case_service.get_case(case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    content = await file.read()
+    await file.close()
+    if not content:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Uploaded file exceeds the 10 MB PoC limit")
+
+    document = storage_service.save_case_document(
+        case_id,
+        document_type,
+        original_filename=file.filename or "",
+        content=content,
+    )
+    updated_case = case_service.add_documents(case_id, [document])
+    if not updated_case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    return updated_case
 
 
 @router.post("/cases/{case_id}/process")
