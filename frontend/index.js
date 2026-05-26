@@ -215,6 +215,27 @@ function renderOperationalSnapshot(queues, notices, rules, observability = gover
       appendWorkspacePreviewParam("./supervisor-dashboard/?state=READY_FOR_OFFICER_REVIEW&holder=OFFICER"),
       "Open officer queue",
     ],
+    [
+      "Extension requests",
+      queues.extension_requested || 0,
+      (queues.extension_requested || 0) > 0 ? "warning" : "success",
+      appendWorkspacePreviewParam("./supervisor-dashboard/?state=EXTENSION_REQUESTED&holder=OFFICER"),
+      "Open extension review",
+    ],
+    [
+      "Extension appointments",
+      queues.extension_appointment_required || 0,
+      (queues.extension_appointment_required || 0) > 0 ? "warning" : "success",
+      appendWorkspacePreviewParam("./supervisor-dashboard/?state=EXTENSION_APPOINTMENT_REQUIRED&holder=APPLICANT"),
+      "Open appointment backlog",
+    ],
+    [
+      "Extension review backlog",
+      queues.under_extension_review || 0,
+      (queues.under_extension_review || 0) > 0 ? "info" : "success",
+      appendWorkspacePreviewParam("./supervisor-dashboard/?state=UNDER_EXTENSION_REVIEW&holder=OFFICER"),
+      "Open extension review queue",
+    ],
   ];
 
   elements.homeOpsMetrics.innerHTML = metrics

@@ -46,6 +46,7 @@ For the hackathon demo, the frontend should visibly prove:
 - applicant submission and status flow
 - officer recommendation and human decision flow
 - supervisor queue visibility
+- extension backlog visibility from the launchpad and supervisor surface
 - governance and Arize observability posture visibility
 - Phoenix readiness and redaction guardrail visibility
 - launchpad-level observability summary before entering internal surfaces
