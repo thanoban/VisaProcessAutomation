@@ -4,6 +4,8 @@ import {
   formatDate,
   getStoredApiBaseUrl,
   governanceCenterMock,
+  linkListMarkup,
+  linkMarkup,
   listMarkup,
   setRegionBusy,
   titleCase,
@@ -181,9 +183,9 @@ function renderGovernanceCenter(requirements, rules) {
   elements.sourcesList.innerHTML = listMarkup(
     sourceEntries.map(
       (source) => `
-        <a class="rounded-[1.25rem] border border-slate-200/80 bg-white/80 p-4 text-sm leading-6 text-teal-800 underline break-all" href="${source}" target="_blank" rel="noreferrer">
-          ${source}
-        </a>
+        <div class="rounded-[1.25rem] border border-slate-200/80 bg-white/80 p-4 text-sm leading-6 text-slate-700">
+          ${linkMarkup(source)}
+        </div>
       `
     ),
     "No official sources are available yet."
@@ -207,6 +209,27 @@ function renderGovernanceCenter(requirements, rules) {
             <strong class="text-slate-900">Primary source URI:</strong> ${linkMarkup(requirements.source_uri || "Not available")}<br />
             <strong class="text-slate-900">Verified at:</strong> ${formatDate(rules.verified_at || requirements.verified_at)}
           </p>
+        </article>
+      `,
+      `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Official source stack</span>
+              <h3 class="mt-2 text-lg font-extrabold text-slate-900">Policy and governance reference lineage</h3>
+            </div>
+            ${buildStatusChip(`${sourceEntries.length} linked sources`, sourceEntries.length ? "success" : "warning")}
+          </div>
+          <div class="grid gap-4 md:grid-cols-2">
+            <div class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-6 text-slate-700">
+              <strong class="text-slate-900">Governance pack sources</strong>
+              <div class="mt-3">${linkListMarkup(rules.official_sources)}</div>
+            </div>
+            <div class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-6 text-slate-700">
+              <strong class="text-slate-900">Policy requirement sources</strong>
+              <div class="mt-3">${linkListMarkup(requirements.official_sources)}</div>
+            </div>
+          </div>
         </article>
       `,
       `
@@ -299,13 +322,6 @@ function renderGovernanceCenter(requirements, rules) {
     elements.heroCopy.textContent =
       "The governance data currently includes non-active circular records alongside the active rule pack, so publication drift is being surfaced instead of hidden.";
   }
-}
-
-function linkMarkup(value) {
-  if (!value || value === "Not available") {
-    return "Not available";
-  }
-  return `<a class="text-teal-800 underline break-all" href="${value}" target="_blank" rel="noreferrer">${value}</a>`;
 }
 
 initialize();
