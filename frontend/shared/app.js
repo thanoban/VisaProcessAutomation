@@ -258,6 +258,39 @@ export function listMarkup(items, emptyText) {
   return items.join("");
 }
 
+export const workflowGlossary = [
+  {
+    code: "ETA",
+    title: "Electronic Travel Authorization",
+    description:
+      "ETA is a travel authorization step for short visits, but it is not the same as final entry clearance at the Sri Lanka port of entry.",
+  },
+  {
+    code: "MANUAL_REFERRAL",
+    title: "Manual Referral",
+    description:
+      "A case leaves the straight-through route when sponsor, nationality, exception, or other policy conditions require mission or head-office handling.",
+  },
+  {
+    code: "OFFICER_REVIEW",
+    title: "Officer Review",
+    description:
+      "The system can prepare a recommendation and structured evidence summary, but the legal decision still belongs to a human immigration officer.",
+  },
+  {
+    code: "PORT_OF_ENTRY",
+    title: "Port-of-Entry Clearance",
+    description:
+      "Even after authorization is ready, the traveler may still need to present documents for final immigration inspection at arrival.",
+  },
+  {
+    code: "EXTENSION",
+    title: "Extension Handling",
+    description:
+      "Extension-related handling may involve online steps, appointments, or head-office processing outside the original straight-through ETA path.",
+  },
+];
+
 export function setRegionBusy(element, isBusy) {
   if (!element) {
     return;

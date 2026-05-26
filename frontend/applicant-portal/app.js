@@ -12,6 +12,7 @@ import {
   setRegionBusy,
   startCaseId,
   titleCase,
+  workflowGlossary,
 } from "../shared/app.js";
 
 const elements = {
@@ -30,6 +31,7 @@ const elements = {
   checklistList: document.querySelector("#checklist-list"),
   checklistNotes: document.querySelector("#checklist-notes"),
   noticeList: document.querySelector("#notice-list"),
+  workflowGlossaryList: document.querySelector("#workflow-glossary-list"),
   statusResults: document.querySelector("#status-results"),
   statusEmpty: document.querySelector("#status-empty"),
   stateValue: document.querySelector("#state-value"),
@@ -101,6 +103,7 @@ async function loadOperationalChrome() {
     renderChecklist(applicantPortalMock.checklist);
     renderNotices(applicantPortalMock.notices);
   }
+  renderGlossary();
 }
 
 function renderChecklist(payload) {
@@ -158,6 +161,20 @@ function renderNotices(notices) {
   );
 
   elements.noticeList.innerHTML = listMarkup(items, "No current notices have been published.");
+}
+
+function renderGlossary() {
+  elements.workflowGlossaryList.innerHTML = workflowGlossary
+    .map(
+      (item) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${item.code}</span>
+          <h3 class="mt-2 text-lg font-extrabold text-slate-900">${item.title}</h3>
+          <p class="mt-3 text-sm leading-7 text-slate-600">${item.description}</p>
+        </article>
+      `
+    )
+    .join("");
 }
 
 function loadSampleIntoForm() {

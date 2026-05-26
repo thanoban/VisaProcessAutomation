@@ -7,6 +7,7 @@ import {
   getStoredApiBaseUrl,
   setButtonBusy,
   setStoredApiBaseUrl,
+  workflowGlossary,
 } from "./shared/app.js";
 
 const elements = {
@@ -19,6 +20,7 @@ const elements = {
   feedback: document.querySelector("#api-target-feedback"),
   clearRecentCasesButton: document.querySelector("#clear-recent-cases-button"),
   recentCasesList: document.querySelector("#recent-cases-list"),
+  workflowGlossaryList: document.querySelector("#workflow-glossary-list"),
 };
 
 async function initialize() {
@@ -27,6 +29,7 @@ async function initialize() {
   elements.resetButton.addEventListener("click", handleResetTarget);
   elements.clearRecentCasesButton.addEventListener("click", handleClearRecentCases);
   renderRecentCases();
+  renderGlossary();
   await refreshHealthState("Saved API target loaded.");
 }
 
@@ -105,6 +108,20 @@ function renderRecentCases() {
               Officer View
             </a>
           </div>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function renderGlossary() {
+  elements.workflowGlossaryList.innerHTML = workflowGlossary
+    .map(
+      (item) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/85 p-5">
+          <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${item.code}</span>
+          <h3 class="mt-2 text-lg font-extrabold text-slate-900">${item.title}</h3>
+          <p class="mt-3 text-sm leading-7 text-slate-600">${item.description}</p>
         </article>
       `
     )
