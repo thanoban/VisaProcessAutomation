@@ -1,16 +1,26 @@
 import {
+  applicantPortalMock,
   buildStatusChip,
   clearStoredApiBaseUrl,
   createApiClient,
   formatDateTime,
+  governanceCenterMock,
   getRecentCases,
   getStoredApiBaseUrl,
   setButtonBusy,
+  setRegionBusy,
   setStoredApiBaseUrl,
+  supervisorDashboardMock,
+  titleCase,
   workflowGlossary,
 } from "./shared/app.js";
 
 const elements = {
+  snapshotModePill: document.querySelector("#snapshot-mode-pill"),
+  snapshotFeedback: document.querySelector("#snapshot-feedback"),
+  homeOpsMetrics: document.querySelector("#home-ops-metrics"),
+  homeNoticesList: document.querySelector("#home-notices-list"),
+  homeGovernanceSummary: document.querySelector("#home-governance-summary"),
   apiPill: document.querySelector("#frontend-api-pill"),
   apiForm: document.querySelector("#api-target-form"),
   apiInput: document.querySelector("#api-base-url"),
@@ -30,6 +40,9 @@ async function initialize() {
   elements.clearRecentCasesButton.addEventListener("click", handleClearRecentCases);
   renderRecentCases();
   renderGlossary();
+  setRegionBusy(elements.homeOpsMetrics, true);
+  setRegionBusy(elements.homeNoticesList, true);
+  setRegionBusy(elements.homeGovernanceSummary, true);
   await refreshHealthState("Saved API target loaded.");
 }
 
@@ -50,22 +63,150 @@ async function refreshHealthState(messagePrefix) {
   const apiBaseUrl = getStoredApiBaseUrl();
   const api = createApiClient(apiBaseUrl);
   elements.currentTarget.textContent = apiBaseUrl;
+  setRegionBusy(elements.homeOpsMetrics, true);
+  setRegionBusy(elements.homeNoticesList, true);
+  setRegionBusy(elements.homeGovernanceSummary, true);
   setButtonBusy(elements.apiForm.querySelector("button[type='submit']"), true, "Saving...");
   setButtonBusy(elements.resetButton, true, "Resetting...");
 
   try {
     const health = await api.getHealth();
+    const [queues, notices, rules] = await Promise.all([
+      api.getSupervisorQueues(),
+      api.getSystemNotices(),
+      api.getActiveGovernanceRules(),
+    ]);
     elements.apiPill.textContent = `Live API: ${apiBaseUrl}`;
     elements.healthChip.innerHTML = buildStatusChip(health.status || "connected", "success");
     elements.feedback.textContent = `${messagePrefix} Health check succeeded for ${apiBaseUrl}.`;
+    setSnapshotMode(true);
+    elements.snapshotFeedback.textContent =
+      "Queue, notice, and governance summaries below are being pulled from the selected live backend target.";
+    renderOperationalSnapshot(queues, notices, rules);
   } catch (error) {
     elements.apiPill.textContent = `Saved target: ${apiBaseUrl}`;
     elements.healthChip.innerHTML = buildStatusChip("unreachable", "warning");
     elements.feedback.textContent = `${messagePrefix} Health check failed for ${apiBaseUrl}: ${error.message}`;
+    setSnapshotMode(false);
+    elements.snapshotFeedback.textContent =
+      `The selected API target is not reachable right now, so the operational snapshot is showing contract-aligned mock data instead. Last error: ${error.message}`;
+    renderOperationalSnapshot(
+      supervisorDashboardMock.queues,
+      applicantPortalMock.notices,
+      governanceCenterMock.rules
+    );
   } finally {
     setButtonBusy(elements.apiForm.querySelector("button[type='submit']"), false, "Saving...");
     setButtonBusy(elements.resetButton, false, "Resetting...");
+    setRegionBusy(elements.homeOpsMetrics, false);
+    setRegionBusy(elements.homeNoticesList, false);
+    setRegionBusy(elements.homeGovernanceSummary, false);
   }
+}
+
+function setSnapshotMode(isLive) {
+  elements.snapshotModePill.textContent = isLive ? "Live snapshot" : "Mock snapshot";
+  elements.snapshotModePill.className = `rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] ${
+    isLive
+      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+      : "border-amber-200 bg-amber-50 text-amber-800"
+  }`;
+}
+
+function renderOperationalSnapshot(queues, notices, rules) {
+  const totalCases = Object.values(queues.counts_by_state || {}).reduce((sum, value) => sum + value, 0);
+  const metrics = [
+    ["Total active cases", totalCases, "info", "./supervisor-dashboard/", "Open supervisor operations"],
+    [
+      "Manual referrals",
+      queues.manual_referrals || 0,
+      (queues.manual_referrals || 0) > 0 ? "warning" : "success",
+      "./supervisor-dashboard/?state=REFERRED_TO_MANUAL_REVIEW&holder=MISSION_OR_HEAD_OFFICE",
+      "Open manual referrals",
+    ],
+    [
+      "Waiting for documents",
+      queues.waiting_for_documents || 0,
+      (queues.waiting_for_documents || 0) > 0 ? "warning" : "success",
+      "./supervisor-dashboard/?state=WAITING_FOR_DOCUMENTS&holder=APPLICANT",
+      "Open document queue",
+    ],
+    [
+      "Ready for officer review",
+      queues.ready_for_officer_review || 0,
+      (queues.ready_for_officer_review || 0) > 0 ? "info" : "warning",
+      "./supervisor-dashboard/?state=READY_FOR_OFFICER_REVIEW&holder=OFFICER",
+      "Open officer queue",
+    ],
+  ];
+
+  elements.homeOpsMetrics.innerHTML = metrics
+    .map(
+      ([label, value, tone, href, actionLabel]) => `
+        <article class="rounded-3xl border border-slate-200/80 bg-white/85 p-5">
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${label}</span>
+              <strong class="mt-3 block text-3xl font-extrabold text-slate-950">${value}</strong>
+            </div>
+            ${buildStatusChip(label, tone)}
+          </div>
+          <a class="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="${href}">
+            ${actionLabel}
+          </a>
+        </article>
+      `
+    )
+    .join("");
+
+  elements.homeNoticesList.innerHTML = (notices || []).length
+    ? notices
+        .map(
+          (notice) => `
+            <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/85 p-5">
+              <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${notice.code}</span>
+                  <h3 class="mt-2 text-lg font-extrabold text-slate-900">${titleCase(notice.level)}</h3>
+                </div>
+                ${buildStatusChip(notice.level)}
+              </div>
+              <p class="text-sm leading-7 text-slate-600">${notice.message}</p>
+            </article>
+          `
+        )
+        .join("")
+    : '<div class="rounded-3xl border border-dashed border-slate-300 bg-white/45 p-5 text-sm leading-7 text-slate-600">No service notices are currently published.</div>';
+
+  const activeVersion = rules.active_policy_version || {};
+  const driftSignals = (rules.active_circulars || []).filter(
+    (circular) => String(circular.status || "").toUpperCase() !== "ACTIVE"
+  );
+  const governanceCards = [
+    ["Workflow pack", activeVersion.workflow_pack || rules.workflow_pack || "Not available"],
+    ["Policy version", activeVersion.policy_version || "Not available"],
+    ["Rule version", activeVersion.rule_version || "Not available"],
+    ["Publication reference", activeVersion.publication_reference || "Not available"],
+    ["Drift signals", driftSignals.length],
+    ["Official sources", (rules.official_sources || []).length],
+    ["Verified at", formatDateTime(rules.verified_at || "")],
+  ];
+
+  elements.homeGovernanceSummary.innerHTML = governanceCards
+    .map(
+      ([label, value]) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/85 p-5">
+          <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${label}</span>
+          <strong class="mt-2 block text-base font-extrabold text-slate-900">${value}</strong>
+        </article>
+      `
+    )
+    .join("") +
+    `
+      <a class="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="./governance-center/">
+        Open governance center
+      </a>
+    `;
 }
 
 function handleClearRecentCases() {
@@ -94,8 +235,8 @@ function renderRecentCases() {
             ${buildStatusChip(item.current_state || item.surface)}
           </div>
           <div class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-7 text-slate-600">
-            <strong class="text-slate-900">Current holder:</strong> ${titleForToken(item.current_holder)}<br />
-            <strong class="text-slate-900">Next action:</strong> ${titleForToken(item.next_action)}
+            <strong class="text-slate-900">Current holder:</strong> ${titleCase(item.current_holder)}<br />
+            <strong class="text-slate-900">Next action:</strong> ${titleCase(item.next_action)}
           </div>
           <div class="mt-4 flex flex-wrap gap-3">
             <a class="rounded-full bg-visa-navy px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5" href="${surfaceHref(item.surface, item.case_id)}">
@@ -138,15 +279,6 @@ function surfaceHref(surface, caseId) {
 
 function titleForSurface(surface) {
   return surface === "officer" ? "Officer Dashboard" : "Applicant Portal";
-}
-
-function titleForToken(value) {
-  return String(value || "")
-    .toLowerCase()
-    .split(/[_\s-]+/)
-    .filter(Boolean)
-    .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
-    .join(" ");
 }
 
 initialize();

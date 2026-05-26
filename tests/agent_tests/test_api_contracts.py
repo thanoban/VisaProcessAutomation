@@ -1,5 +1,7 @@
 import io
 
+from fastapi.testclient import TestClient
+
 
 def test_case_status_and_brief_contract(client):
     payload = {
@@ -235,7 +237,10 @@ def test_reprocessing_waiting_case_does_not_duplicate_open_evidence_requests(cli
 
 
 def test_file_upload_endpoint_stores_document_locally(client, monkeypatch, tmp_path):
+    from backend.main import create_app
+
     monkeypatch.setenv("VISAFLOW_UPLOAD_DIR", str(tmp_path))
+    file_client = TestClient(create_app())
 
     payload = {
         "case_id": "VISA-2026-API-FILE-001",
@@ -262,9 +267,9 @@ def test_file_upload_endpoint_stores_document_locally(client, monkeypatch, tmp_p
             "effective_date": "2026-05-25",
         },
     }
-    assert client.post("/applications", json=payload).status_code == 201
+    assert file_client.post("/applications", json=payload).status_code == 201
 
-    upload_response = client.post(
+    upload_response = file_client.post(
         f"/cases/{payload['case_id']}/document-files",
         data={"document_type": "PASSPORT"},
         files={"file": ("passport.pdf", io.BytesIO(b"passport-content"), "application/pdf")},
@@ -277,6 +282,10 @@ def test_file_upload_endpoint_stores_document_locally(client, monkeypatch, tmp_p
     assert document["uploaded_at"]
     assert document["file_uri"].endswith(".pdf")
     assert document["file_uri"].startswith(f"/uploads/{payload['case_id']}/")
+    fetch_response = file_client.get(document["file_uri"])
+    assert fetch_response.status_code == 200
+    assert fetch_response.content == b"passport-content"
+    file_client.close()
 
 
 def test_manual_referral_status_exposes_appointments_and_reason(client):
