@@ -236,6 +236,7 @@ async function handleApplicationSubmit(event) {
       api.getCaseStatus(createdCase.case_id),
     ]);
 
+    state.linkedCaseId = createdCase.case_id;
     elements.lookupCaseIdInput.value = createdCase.case_id;
     renderCaseStatus(processedCase, {
       latestStatus: caseStatus,
@@ -333,6 +334,7 @@ async function handleDocumentResponseSubmit(event) {
       latestStatus: caseStatus,
       useMock: false,
     });
+    state.linkedCaseId = caseId;
     elements.lookupCaseIdInput.value = caseId;
     elements.documentResponseFeedback.textContent = fileUploadWarnings.length
       ? `Document response accepted with URI-backed fallback. ${fileUploadWarnings.join(" ")}`
@@ -371,6 +373,8 @@ function renderCaseStatus(casePacket, options) {
   elements.workspaceLinksPanel.innerHTML = buildWorkspaceLinks(casePacket.case_id, "applicant");
 
   if (!options.useMock) {
+    state.linkedCaseId = casePacket.case_id;
+    syncCaseQueryParam(casePacket.case_id);
     rememberRecentCase({
       case_id: casePacket.case_id,
       surface: "applicant",
@@ -644,6 +648,18 @@ function setDocumentInputValue(fieldName, documents, documentType) {
     return;
   }
   input.value = documents.find((document) => document.document_type === documentType)?.file_uri || "";
+}
+
+function syncCaseQueryParam(caseId) {
+  const params = new URLSearchParams(window.location.search);
+  if (caseId) {
+    params.set("case", caseId);
+  } else {
+    params.delete("case");
+  }
+  const nextQuery = params.toString();
+  const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
+  window.history.replaceState({}, "", nextUrl);
 }
 
 function buildMockStatus(casePacket) {

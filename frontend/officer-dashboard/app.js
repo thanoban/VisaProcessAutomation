@@ -69,6 +69,7 @@ function wireEvents() {
   elements.sampleButton.addEventListener("click", () => {
     state.currentCaseId = officerDashboardMock.casePacket.case_id;
     elements.caseIdInput.value = state.currentCaseId;
+    syncCaseQueryParam(state.currentCaseId);
     renderDashboard(officerDashboardMock.casePacket, officerDashboardMock.officerBrief, true);
   });
   elements.decisionForm.addEventListener("submit", handleDecisionSubmit);
@@ -141,6 +142,8 @@ function renderDashboard(casePacket, brief, useMock) {
   elements.workspaceLinks.innerHTML = buildWorkspaceLinks(casePacket.case_id, "officer");
 
   if (!useMock) {
+    state.currentCaseId = casePacket.case_id;
+    syncCaseQueryParam(casePacket.case_id);
     rememberRecentCase({
       case_id: casePacket.case_id,
       surface: "officer",
@@ -554,6 +557,18 @@ function arrayMarkup(items) {
     return "None";
   }
   return items.map((item) => `<span class="mr-2 inline-block rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">${item}</span>`).join("");
+}
+
+function syncCaseQueryParam(caseId) {
+  const params = new URLSearchParams(window.location.search);
+  if (caseId) {
+    params.set("case", caseId);
+  } else {
+    params.delete("case");
+  }
+  const nextQuery = params.toString();
+  const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
+  window.history.replaceState({}, "", nextUrl);
 }
 
 function buildWorkspaceLinks(caseId, currentSurface) {
