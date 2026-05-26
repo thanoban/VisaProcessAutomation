@@ -158,6 +158,11 @@ export function isMissingFileUploadSupport(error) {
   return message.includes("404") || message.includes("not found") || message.includes("405");
 }
 
+export function isExtensionWorkflowActive(value) {
+  const normalized = String(value || "").trim().toUpperCase();
+  return Boolean(normalized && normalized !== "NOT_REQUESTED");
+}
+
 export function getRecentCases() {
   try {
     const parsed = JSON.parse(localStorage.getItem(RECENT_CASES_KEY) || "[]");
@@ -174,6 +179,7 @@ export function rememberRecentCase(entry) {
     current_state: String(entry.current_state || "").trim(),
     current_holder: String(entry.current_holder || "").trim(),
     next_action: String(entry.next_action || "").trim(),
+    extension_state: String(entry.extension_state || "").trim(),
     updated_at: entry.updated_at || new Date().toISOString(),
   };
   if (!normalizedEntry.case_id) {
@@ -256,6 +262,9 @@ export function createApiClient(baseUrl) {
     getActiveGovernanceRules() {
       return request("/governance/rules/active");
     },
+    getObservabilityStatus() {
+      return request("/governance/observability/status");
+    },
     createApplication(payload) {
       return request("/applications", {
         method: "POST",
@@ -283,6 +292,9 @@ export function createApiClient(baseUrl) {
     getCaseStatus(caseId) {
       return request(`/cases/${encodeURIComponent(caseId)}/status`);
     },
+    getExtensionStatus(caseId) {
+      return request(`/cases/${encodeURIComponent(caseId)}/extension-status`);
+    },
     getAuthorizationStatus(caseId) {
       return request(`/cases/${encodeURIComponent(caseId)}/authorization-status`);
     },
@@ -302,6 +314,24 @@ export function createApiClient(baseUrl) {
     },
     submitOfficerDecision(caseId, payload) {
       return request(`/cases/${encodeURIComponent(caseId)}/officer-decision`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    },
+    createExtensionRequest(caseId, payload) {
+      return request(`/cases/${encodeURIComponent(caseId)}/extension-request`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    },
+    recordExtensionAppointment(caseId, payload) {
+      return request(`/cases/${encodeURIComponent(caseId)}/extension-appointment`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    },
+    recordExtensionDecision(caseId, payload) {
+      return request(`/cases/${encodeURIComponent(caseId)}/extension-decision`, {
         method: "POST",
         body: JSON.stringify(payload),
       });
@@ -607,6 +637,7 @@ export const applicantPortalMock = {
       extension_state: "NOT_REQUESTED",
       workflow_pack: "SRI_LANKA_TOURIST_VISIT",
       manual_referral_reason: null,
+      extension_requests: [],
       appointments: [],
       port_clearance_events: [],
       decision_notice: null,
@@ -811,6 +842,9 @@ export const supervisorDashboardMock = {
     manual_referrals: 2,
     waiting_for_documents: 3,
     ready_for_officer_review: 6,
+    extension_requested: 1,
+    extension_appointment_required: 1,
+    under_extension_review: 1,
     overdue_cases: 1,
     due_within_48h: 2,
     oldest_due_at: "2026-06-01T09:00:00Z",
@@ -832,6 +866,7 @@ export const supervisorDashboardMock = {
         next_action: "HUMAN_OFFICER_FINAL_REVIEW",
         action_required_from: "OFFICER",
         eta_status: "ETA_UNDER_OFFICER_REVIEW",
+        extension_state: "NOT_REQUESTED",
         manual_referral_reason: null,
         policy_version: "sl-tourist-policy-v1",
         rule_version_used: "sl-rule-pack-2026-05-25",
@@ -850,6 +885,7 @@ export const supervisorDashboardMock = {
         next_action: "MANUAL_SPONSOR_OR_EXCEPTION_REVIEW",
         action_required_from: "MISSION_OR_HEAD_OFFICE",
         eta_status: "ETA_MANUAL_REVIEW",
+        extension_state: "NOT_REQUESTED",
         manual_referral_reason: "Tourist or business ETA should be routed through Sri Lankan sponsor and head-office handling.",
         policy_version: "sl-tourist-policy-v1",
         rule_version_used: "sl-rule-pack-2026-05-25",
@@ -868,6 +904,7 @@ export const supervisorDashboardMock = {
         next_action: "RESPOND_TO_INFORMATION_REQUEST",
         action_required_from: "APPLICANT",
         eta_status: "ETA_ADDITIONAL_EVIDENCE_REQUIRED",
+        extension_state: "EXTENSION_APPOINTMENT_REQUIRED",
         manual_referral_reason: null,
         policy_version: "sl-tourist-policy-v1",
         rule_version_used: "sl-rule-pack-2026-05-25",
@@ -886,6 +923,7 @@ export const supervisorDashboardMock = {
         next_action: "MANUAL_SPONSOR_OR_EXCEPTION_REVIEW",
         action_required_from: "MISSION_OR_HEAD_OFFICE",
         eta_status: "ETA_MANUAL_REVIEW",
+        extension_state: "UNDER_EXTENSION_REVIEW",
         manual_referral_reason: "Tourist or business ETA should be routed through Sri Lankan sponsor and head-office handling.",
         policy_version: "sl-tourist-policy-v1",
         rule_version_used: "sl-rule-pack-2026-05-25",
@@ -1009,5 +1047,14 @@ export const governanceCenterMock = {
         reason: "Tourist or business ETA should be routed through Sri Lankan sponsor and head-office handling.",
       },
     ],
+  },
+  observability: {
+    enabled: false,
+    target: "LOCAL_ONLY",
+    project_name: "visaflow-mas",
+    provider: "Phoenix",
+    google_genai_instrumentation_enabled: false,
+    phoenix_mcp_expected: true,
+    status: "DISABLED",
   },
 };

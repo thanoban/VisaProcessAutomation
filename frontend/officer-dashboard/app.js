@@ -6,6 +6,7 @@ import {
   formatDate,
   formatDateTime,
   getStoredApiBaseUrl,
+  isExtensionWorkflowActive,
   linkListMarkup,
   linkMarkup,
   listMarkup,
@@ -47,6 +48,23 @@ const elements = {
   questionList: document.querySelector("#question-list"),
   auditList: document.querySelector("#audit-list"),
   decisionOutcomePanel: document.querySelector("#decision-outcome-panel"),
+  extensionPanel: document.querySelector("#extension-operations-panel"),
+  extensionSummaryPanel: document.querySelector("#extension-summary-panel"),
+  extensionRequestList: document.querySelector("#extension-request-list"),
+  extensionAppointmentForm: document.querySelector("#extension-appointment-form"),
+  extensionAppointmentFeedback: document.querySelector("#extension-appointment-feedback"),
+  extensionAppointmentStatus: document.querySelector("#extension-appointment-status"),
+  extensionAppointmentId: document.querySelector("#extension-appointment-id"),
+  extensionAppointmentLocation: document.querySelector("#extension-appointment-location"),
+  extensionAppointmentScheduledFor: document.querySelector("#extension-appointment-scheduled-for"),
+  extensionAppointmentInstructions: document.querySelector("#extension-appointment-instructions"),
+  extensionAppointmentSubmitButton: document.querySelector("#extension-appointment-form button[type='submit']"),
+  extensionDecisionForm: document.querySelector("#extension-decision-form"),
+  extensionDecisionFeedback: document.querySelector("#extension-decision-feedback"),
+  extensionDecisionOfficerId: document.querySelector("#extension-decision-officer-id"),
+  extensionDecisionChoice: document.querySelector("#extension-decision-choice"),
+  extensionDecisionReason: document.querySelector("#extension-decision-reason"),
+  extensionDecisionSubmitButton: document.querySelector("#extension-decision-form button[type='submit']"),
   decisionForm: document.querySelector("#decision-form"),
   decisionChoice: document.querySelector("#decision-choice"),
   decisionGuidance: document.querySelector("#decision-guidance"),
@@ -62,6 +80,7 @@ const state = {
   apiAvailable: false,
   currentCaseId: new URLSearchParams(window.location.search).get("case")?.trim() || officerDashboardMock.casePacket.case_id,
   currentRecommendation: officerDashboardMock.officerBrief.recommendation,
+  currentExtensionStatus: buildFallbackExtensionStatus(officerDashboardMock.casePacket),
 };
 
 const api = createApiClient(state.apiBaseUrl);
@@ -97,7 +116,8 @@ async function initialize() {
   }
   wireEvents();
   await loadDashboardChrome();
-  renderDashboard(officerDashboardMock.casePacket, officerDashboardMock.officerBrief, true);
+  renderDashboard(officerDashboardMock.casePacket, officerDashboardMock.officerBrief, true, state.currentExtensionStatus);
+  syncExtensionDeepLinkState();
   if (state.apiAvailable && state.currentCaseId) {
     await loadAndRenderCase(state.currentCaseId);
   }
@@ -109,10 +129,18 @@ function wireEvents() {
     state.currentCaseId = officerDashboardMock.casePacket.case_id;
     elements.caseIdInput.value = state.currentCaseId;
     syncCaseQueryParam(state.currentCaseId);
-    renderDashboard(officerDashboardMock.casePacket, officerDashboardMock.officerBrief, true);
+    renderDashboard(
+      officerDashboardMock.casePacket,
+      officerDashboardMock.officerBrief,
+      true,
+      buildFallbackExtensionStatus(officerDashboardMock.casePacket)
+    );
   });
   elements.decisionForm.addEventListener("submit", handleDecisionSubmit);
   elements.decisionChoice.addEventListener("change", syncDecisionGuidance);
+  elements.extensionAppointmentForm.addEventListener("submit", handleExtensionAppointmentSubmit);
+  elements.extensionDecisionForm.addEventListener("submit", handleExtensionDecisionSubmit);
+  window.addEventListener("hashchange", syncExtensionDeepLinkState);
 }
 
 async function loadDashboardChrome() {
@@ -150,13 +178,18 @@ async function loadAndRenderCase(caseId) {
 
   try {
     if (!state.apiAvailable) {
-      renderDashboard(officerDashboardMock.casePacket, officerDashboardMock.officerBrief, true);
+      renderDashboard(
+        officerDashboardMock.casePacket,
+        officerDashboardMock.officerBrief,
+        true,
+        buildFallbackExtensionStatus(officerDashboardMock.casePacket)
+      );
       elements.feedback.textContent = "Mock mode is active. Showing the sample officer review case.";
       return;
     }
 
-    const { casePacket, officerBrief } = await loadOfficerReviewCase(caseId);
-    renderDashboard(casePacket, officerBrief, false);
+    const { casePacket, officerBrief, extensionStatus } = await loadOfficerReviewCase(caseId);
+    renderDashboard(casePacket, officerBrief, false, extensionStatus);
     elements.feedback.textContent = `Officer brief loaded for ${caseId}.`;
   } catch (error) {
     elements.empty.hidden = false;
@@ -169,8 +202,9 @@ async function loadAndRenderCase(caseId) {
   }
 }
 
-function renderDashboard(casePacket, brief, useMock) {
+function renderDashboard(casePacket, brief, useMock, extensionStatus = buildFallbackExtensionStatus(casePacket)) {
   state.currentRecommendation = brief.recommendation;
+  state.currentExtensionStatus = extensionStatus;
   elements.results.hidden = false;
   elements.empty.hidden = true;
   elements.recommendationValue.innerHTML = buildStatusChip(brief.recommendation);
@@ -181,6 +215,7 @@ function renderDashboard(casePacket, brief, useMock) {
   elements.workspaceLinks.innerHTML = buildWorkspaceLinks(casePacket.case_id, "officer", {
     state: casePacket.workflow.current_state,
     holder: casePacket.workflow.current_holder,
+    extensionState: extensionStatus.extension_state || casePacket.workflow.extension_state,
   });
 
   if (!useMock) {
@@ -192,6 +227,7 @@ function renderDashboard(casePacket, brief, useMock) {
       current_state: casePacket.workflow.current_state,
       current_holder: casePacket.workflow.current_holder,
       next_action: casePacket.workflow.next_action,
+      extension_state: extensionStatus.extension_state || casePacket.workflow.extension_state,
     });
   }
 
@@ -401,6 +437,8 @@ function renderDashboard(casePacket, brief, useMock) {
   );
 
   elements.decisionOutcomePanel.innerHTML = buildDecisionOutcomeMarkup(casePacket);
+  renderExtensionOperations(casePacket, extensionStatus, useMock);
+  syncExtensionDeepLinkState();
 
   elements.decisionFeedback.textContent = useMock
     ? "Decision submission is disabled in mock mode and becomes live when the API is reachable."
@@ -429,14 +467,96 @@ async function handleDecisionSubmit(event) {
     setButtonBusy(elements.decisionSubmitButton, true, "Submitting decision...");
     setRegionBusy(elements.results, true);
     const result = await api.submitOfficerDecision(state.currentCaseId, payload);
-    const { casePacket, officerBrief } = await loadOfficerReviewCase(state.currentCaseId, false);
-    renderDashboard(casePacket, officerBrief, false);
+    const { casePacket, officerBrief, extensionStatus } = await loadOfficerReviewCase(state.currentCaseId, false);
+    renderDashboard(casePacket, officerBrief, false, extensionStatus);
     elements.decisionFeedback.textContent = `Decision recorded with status: ${result.status}. The dashboard has been refreshed with the latest case state and audit trail.`;
   } catch (error) {
     elements.decisionFeedback.textContent = `Decision submission failed: ${error.message}`;
   } finally {
     setButtonBusy(elements.decisionSubmitButton, false, "Submitting decision...");
     setRegionBusy(elements.results, false);
+  }
+}
+
+async function handleExtensionAppointmentSubmit(event) {
+  event.preventDefault();
+
+  if (!state.apiAvailable) {
+    elements.extensionAppointmentFeedback.textContent =
+      "Mock mode is active. Start the backend to record a real extension appointment update.";
+    return;
+  }
+
+  if (!hasExtensionRequest(state.currentExtensionStatus)) {
+    elements.extensionAppointmentFeedback.textContent =
+      "This case does not currently have an extension request. Load a case with extension activity before recording an appointment update.";
+    return;
+  }
+
+  const formData = new FormData(elements.extensionAppointmentForm);
+  const payload = {
+    status: String(formData.get("status") || "").trim(),
+    appointment_id: String(formData.get("appointmentId") || "").trim() || null,
+    location: String(formData.get("location") || "").trim(),
+    scheduled_for: toApiDateTimeValue(formData.get("scheduledFor")),
+    instructions: String(formData.get("instructions") || "").trim(),
+  };
+
+  try {
+    elements.extensionAppointmentFeedback.textContent = "Recording extension appointment update...";
+    setButtonBusy(elements.extensionAppointmentSubmitButton, true, "Recording appointment...");
+    setRegionBusy(elements.extensionSummaryPanel, true);
+    setRegionBusy(elements.extensionRequestList, true);
+    const result = await api.recordExtensionAppointment(state.currentCaseId, payload);
+    const { casePacket, officerBrief, extensionStatus } = await loadOfficerReviewCase(state.currentCaseId, false);
+    renderDashboard(casePacket, officerBrief, false, extensionStatus);
+    elements.extensionAppointmentFeedback.textContent = `Extension appointment update recorded with status: ${result.status}. The case has been refreshed with the latest workflow state.`;
+  } catch (error) {
+    elements.extensionAppointmentFeedback.textContent = `Extension appointment update failed: ${error.message}`;
+  } finally {
+    setButtonBusy(elements.extensionAppointmentSubmitButton, false, "Recording appointment...");
+    setRegionBusy(elements.extensionSummaryPanel, false);
+    setRegionBusy(elements.extensionRequestList, false);
+  }
+}
+
+async function handleExtensionDecisionSubmit(event) {
+  event.preventDefault();
+
+  if (!state.apiAvailable) {
+    elements.extensionDecisionFeedback.textContent =
+      "Mock mode is active. Start the backend to record a real extension decision.";
+    return;
+  }
+
+  if (!hasExtensionRequest(state.currentExtensionStatus)) {
+    elements.extensionDecisionFeedback.textContent =
+      "This case does not currently have an extension request. Load a case with extension activity before recording an extension decision.";
+    return;
+  }
+
+  const formData = new FormData(elements.extensionDecisionForm);
+  const payload = {
+    decision: String(formData.get("decision") || "").trim(),
+    officer_id: String(formData.get("officerId") || "").trim(),
+    reason: String(formData.get("reason") || "").trim(),
+  };
+
+  try {
+    elements.extensionDecisionFeedback.textContent = "Recording extension decision...";
+    setButtonBusy(elements.extensionDecisionSubmitButton, true, "Recording extension decision...");
+    setRegionBusy(elements.extensionSummaryPanel, true);
+    setRegionBusy(elements.extensionRequestList, true);
+    const result = await api.recordExtensionDecision(state.currentCaseId, payload);
+    const { casePacket, officerBrief, extensionStatus } = await loadOfficerReviewCase(state.currentCaseId, false);
+    renderDashboard(casePacket, officerBrief, false, extensionStatus);
+    elements.extensionDecisionFeedback.textContent = `Extension decision recorded with status: ${result.status}. The dashboard now reflects the latest extension outcome and notices.`;
+  } catch (error) {
+    elements.extensionDecisionFeedback.textContent = `Extension decision failed: ${error.message}`;
+  } finally {
+    setButtonBusy(elements.extensionDecisionSubmitButton, false, "Recording extension decision...");
+    setRegionBusy(elements.extensionSummaryPanel, false);
+    setRegionBusy(elements.extensionRequestList, false);
   }
 }
 
@@ -454,10 +574,14 @@ async function loadOfficerReviewCase(caseId, processIfMissingBrief = true) {
     officerBrief = await api.getOfficerBrief(caseId);
   }
 
-  const auditTimeline = await api.getAudit(caseId);
+  const [auditTimeline, extensionStatus] = await Promise.all([
+    api.getAudit(caseId),
+    api.getExtensionStatus(caseId).catch(() => buildFallbackExtensionStatus(casePacket)),
+  ]);
   return {
     casePacket,
     officerBrief: mergeBriefWithCurrentCase(officerBrief, casePacket, auditTimeline),
+    extensionStatus,
   };
 }
 
@@ -585,6 +709,124 @@ function buildDecisionOutcomeMarkup(casePacket) {
   return outcomeCards.join("");
 }
 
+function renderExtensionOperations(casePacket, extensionStatus, useMock) {
+  const workflow = casePacket.workflow || {};
+  const requests = extensionStatus.extension_requests?.length
+    ? extensionStatus.extension_requests
+    : workflow.extension_requests || [];
+  const appointments = extensionStatus.appointments?.length
+    ? extensionStatus.appointments
+    : (workflow.appointments || []).filter((appointment) => appointment.appointment_type === "EXTENSION_APPOINTMENT");
+  const latestRequest = extensionStatus.latest_extension_request || requests.at(-1) || null;
+  const activeAppointment = appointments.at(-1) || null;
+  const extensionState = extensionStatus.extension_state || workflow.extension_state || "NOT_REQUESTED";
+
+  elements.extensionSummaryPanel.innerHTML = [
+    `
+      <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+        <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Live extension state</span>
+            <h3 class="mt-2 text-lg font-extrabold text-slate-900">${titleCase(extensionState)}</h3>
+          </div>
+          ${buildStatusChip(extensionState)}
+        </div>
+        <p class="text-sm leading-7 text-slate-600">
+          <strong class="text-slate-900">Current holder:</strong> ${titleCase(extensionStatus.current_holder || workflow.current_holder || "SYSTEM")}<br />
+          <strong class="text-slate-900">Next action:</strong> ${titleCase(extensionStatus.next_action || workflow.next_action || "Not available")}<br />
+          <strong class="text-slate-900">Action required from:</strong> ${titleCase(
+            extensionStatus.action_required_from || workflow.action_required_from || "SYSTEM"
+          )}
+        </p>
+      </article>
+    `,
+    latestRequest
+      ? `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${latestRequest.request_id || "Extension request"}</span>
+              <h3 class="mt-2 text-lg font-extrabold text-slate-900">Latest requested departure: ${formatDate(
+                latestRequest.requested_new_departure_date
+              )}</h3>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              ${buildStatusChip(latestRequest.status || "OPEN")}
+              ${buildStatusChip(latestRequest.decision || "PENDING", latestRequest.decision === "REFUSED" ? "danger" : "info")}
+            </div>
+          </div>
+          <p class="text-sm leading-7 text-slate-600">
+            ${latestRequest.reason || "No extension reason is recorded yet."}<br />
+            ${
+              latestRequest.requires_appointment
+                ? `<strong class="text-slate-900">Appointment handling:</strong> ${
+                    latestRequest.appointment_required_reason || "Appointment or manual handling is required."
+                  }<br />`
+                : ""
+            }
+            <strong class="text-slate-900">Supporting note:</strong> ${latestRequest.supporting_note || "No supporting note provided."}
+          </p>
+        </article>
+      `
+      : `
+        <div class="rounded-[1.5rem] border border-dashed border-slate-300 bg-white/45 p-5 text-sm leading-7 text-slate-600">
+          No extension request is recorded for this case yet. Once an applicant submits one, this dashboard will expose the appointment and decision path here.
+        </div>
+      `,
+    activeAppointment
+      ? `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${activeAppointment.appointment_id || "Extension appointment"}</span>
+              <h3 class="mt-2 text-lg font-extrabold text-slate-900">${titleCase(activeAppointment.appointment_type || "Extension appointment")}</h3>
+            </div>
+            ${buildStatusChip(activeAppointment.status || "PENDING")}
+          </div>
+          <p class="text-sm leading-7 text-slate-600">
+            <strong class="text-slate-900">Location:</strong> ${activeAppointment.location || "Not assigned yet"}<br />
+            <strong class="text-slate-900">Scheduled for:</strong> ${formatDateTime(activeAppointment.scheduled_for)}<br />
+            ${activeAppointment.instructions || "No additional appointment instructions are attached yet."}
+          </p>
+        </article>
+      `
+      : "",
+  ]
+    .filter(Boolean)
+    .join("");
+
+  elements.extensionRequestList.innerHTML = listMarkup(
+    requests.map(
+      (request) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${request.request_id || "Extension request"}</span>
+              <h3 class="mt-2 text-lg font-extrabold text-slate-900">Requested departure: ${formatDate(
+                request.requested_new_departure_date
+              )}</h3>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              ${buildStatusChip(request.status || "OPEN")}
+              ${buildStatusChip(request.decision || "PENDING", request.decision === "REFUSED" ? "danger" : "info")}
+            </div>
+          </div>
+          <p class="text-sm leading-7 text-slate-600">
+            <strong class="text-slate-900">Reason:</strong> ${request.reason || "Not available"}<br />
+            <strong class="text-slate-900">Requested at:</strong> ${formatDateTime(request.requested_at)}<br />
+            <strong class="text-slate-900">Decided by:</strong> ${request.decided_by || "Pending"}<br />
+            <strong class="text-slate-900">Decision note:</strong> ${request.decision_notes || "Pending"}
+          </p>
+        </article>
+      `
+    ),
+    "No extension requests have been recorded for this case yet."
+  );
+
+  hydrateExtensionForms(latestRequest, activeAppointment);
+  syncExtensionControlState(useMock, requests.length > 0);
+}
+
 function objectPairsMarkup(value) {
   const entries = Object.entries(value || {});
   if (!entries.length) {
@@ -634,6 +876,129 @@ function documentLinksMarkup(documents) {
     .join("");
 }
 
+function hydrateExtensionForms(latestRequest, appointment) {
+  if (latestRequest?.decided_by) {
+    elements.extensionDecisionOfficerId.value = latestRequest.decided_by;
+  } else if (!elements.extensionDecisionOfficerId.value.trim()) {
+    elements.extensionDecisionOfficerId.value = "EXT-OFF-001";
+  }
+
+  elements.extensionAppointmentStatus.value = appointment?.status || "PENDING";
+  elements.extensionAppointmentId.value = appointment?.appointment_id || "";
+  elements.extensionAppointmentLocation.value = appointment?.location || "";
+  elements.extensionAppointmentScheduledFor.value = toDateTimeLocalValue(appointment?.scheduled_for);
+  elements.extensionAppointmentInstructions.value =
+    appointment?.instructions ||
+    (latestRequest?.requires_appointment
+      ? latestRequest.appointment_required_reason || "Bring passport and supporting extension records."
+      : "");
+}
+
+function syncExtensionControlState(useMock, hasRequest) {
+  const appointmentEnabled = !useMock && hasRequest;
+  const decisionEnabled = !useMock && hasRequest;
+  setFormEnabled(elements.extensionAppointmentForm, appointmentEnabled);
+  setFormEnabled(elements.extensionDecisionForm, decisionEnabled);
+
+  elements.extensionAppointmentFeedback.textContent = useMock
+    ? "Extension actions are disabled in mock mode and become live when the API is reachable."
+    : hasRequest
+      ? `Ready to record appointment handling for ${state.currentCaseId}.`
+      : "Load a case with an extension request before recording appointment handling.";
+
+  elements.extensionDecisionFeedback.textContent = useMock
+    ? "Extension decisions are disabled in mock mode and become live when the API is reachable."
+    : hasRequest
+      ? `Ready to record an extension decision for ${state.currentCaseId}.`
+      : "Load a case with an extension request before recording an extension decision.";
+}
+
+function setFormEnabled(form, enabled) {
+  if (!form) {
+    return;
+  }
+  form.querySelectorAll("input, select, textarea, button").forEach((field) => {
+    field.disabled = !enabled;
+  });
+}
+
+function hasExtensionRequest(extensionStatus) {
+  return Boolean(extensionStatus?.extension_requests?.length || extensionStatus?.latest_extension_request);
+}
+
+function toDateTimeLocalValue(value) {
+  if (!value) {
+    return "";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+  const hours = String(parsed.getHours()).padStart(2, "0");
+  const minutes = String(parsed.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function toApiDateTimeValue(value) {
+  const normalized = String(value || "").trim();
+  if (!normalized) {
+    return "";
+  }
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return normalized;
+  }
+  return parsed.toISOString();
+}
+
+function buildFallbackExtensionStatus(casePacket) {
+  const workflow = casePacket.workflow || {};
+  const extensionRequests = workflow.extension_requests || [];
+  const extensionAppointments = (workflow.appointments || []).filter(
+    (appointment) => appointment.appointment_type === "EXTENSION_APPOINTMENT"
+  );
+  return {
+    case_id: casePacket.case_id,
+    extension_state: workflow.extension_state || "NOT_REQUESTED",
+    status: workflow.current_state || "",
+    current_holder: workflow.current_holder || "SYSTEM",
+    next_action: workflow.next_action || "",
+    action_required_from: workflow.action_required_from || "SYSTEM",
+    latest_message: null,
+    latest_extension_request: extensionRequests.at(-1) || null,
+    extension_requests: extensionRequests,
+    appointments: extensionAppointments,
+    timeline: (casePacket.status_timeline || []).filter(
+      (entry) =>
+        String(entry.state || "").includes("EXTENSION") || String(entry.description || "").toLowerCase().includes("extension")
+    ),
+  };
+}
+
+function syncExtensionDeepLinkState() {
+  if (!elements.extensionPanel) {
+    return;
+  }
+
+  const isExtensionTarget = window.location.hash === "#extension-operations-panel";
+  elements.extensionPanel.classList.toggle("ring-2", isExtensionTarget);
+  elements.extensionPanel.classList.toggle("ring-teal-300", isExtensionTarget);
+  elements.extensionPanel.classList.toggle("border-teal-300", isExtensionTarget);
+
+  if (isExtensionTarget) {
+    elements.extensionPanel.setAttribute("tabindex", "-1");
+    window.requestAnimationFrame(() => {
+      elements.extensionPanel.focus({ preventScroll: true });
+    });
+    return;
+  }
+
+  elements.extensionPanel.removeAttribute("tabindex");
+}
+
 function syncCaseQueryParam(caseId) {
   const params = new URLSearchParams(window.location.search);
   if (caseId) {
@@ -657,6 +1022,9 @@ function buildWorkspaceLinks(caseId, currentSurface, queueContext = {}) {
   const links = [
     ["Applicant Portal", "../applicant-portal/", "applicant"],
     ["Officer Dashboard", "../officer-dashboard/", "officer"],
+    ...(isExtensionWorkflowActive(queueContext.extensionState)
+      ? [["Officer Extension Ops", "../officer-dashboard/", "officer-extension"]]
+      : []),
     ["Supervisor Dashboard", "../supervisor-dashboard/", "supervisor"],
     ["Governance Center", "../governance-center/", "governance"],
   ];
@@ -679,6 +1047,9 @@ function buildSurfaceHref(surface, href, caseId, queueContext = {}) {
 
   const params = new URLSearchParams();
   params.set("case", caseId);
+  if (surface === "officer-extension") {
+    return appendWorkspacePreviewParam(`${href}?${params.toString()}#extension-operations-panel`);
+  }
   if (surface === "supervisor") {
     if (queueContext.state) {
       params.set("state", queueContext.state);

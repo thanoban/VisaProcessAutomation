@@ -7,6 +7,8 @@ Current scope:
 - case retrieval
 - officer brief retrieval
 - audit timeline visibility
+- extension appointment handling
+- extension decision recording
 - final decision submission
 
 Frontend priorities:

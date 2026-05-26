@@ -46,6 +46,9 @@ class SriLankaReferenceService:
         manual_referrals = 0
         waiting_for_documents = 0
         ready_for_officer_review = 0
+        extension_requested = 0
+        extension_appointment_required = 0
+        under_extension_review = 0
         overdue_cases = 0
         due_within_48h = 0
         due_dates: list[datetime] = []
@@ -59,6 +62,12 @@ class SriLankaReferenceService:
                 waiting_for_documents += 1
             if state == "READY_FOR_OFFICER_REVIEW":
                 ready_for_officer_review += 1
+            if case.workflow.extension_state == "EXTENSION_REQUESTED":
+                extension_requested += 1
+            if case.workflow.extension_state == "EXTENSION_APPOINTMENT_REQUIRED":
+                extension_appointment_required += 1
+            if case.workflow.extension_state == "UNDER_EXTENSION_REVIEW":
+                under_extension_review += 1
             due_at = self._parse_iso_datetime(case.decision_due_at)
             if due_at:
                 due_dates.append(due_at)
@@ -73,6 +82,9 @@ class SriLankaReferenceService:
             manual_referrals=manual_referrals,
             waiting_for_documents=waiting_for_documents,
             ready_for_officer_review=ready_for_officer_review,
+            extension_requested=extension_requested,
+            extension_appointment_required=extension_appointment_required,
+            under_extension_review=under_extension_review,
             overdue_cases=overdue_cases,
             due_within_48h=due_within_48h,
             oldest_due_at=min(due_dates).isoformat().replace("+00:00", "Z") if due_dates else None,
@@ -111,6 +123,7 @@ class SriLankaReferenceService:
                 next_action=case.workflow.next_action,
                 action_required_from=case.workflow.action_required_from,
                 eta_status=case.workflow.eta_status,
+                extension_state=case.workflow.extension_state,
                 manual_referral_reason=case.workflow.manual_referral_reason,
                 policy_version=case.policy_context.policy_version,
                 rule_version_used=case.policy_context.effective_rule_version,

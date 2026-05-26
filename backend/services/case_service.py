@@ -13,6 +13,7 @@ from backend.models.schemas import (
     CaseTimelineEvent,
     CaseStatusResponse,
     DocumentItem,
+    ExtensionStatusResponse,
     OfficerBrief,
     WorkflowState,
 )
@@ -272,10 +273,37 @@ class CaseService:
             authorization_status=authorization_status.model_dump(),
             port_clearance_state=case.workflow.port_clearance_state,
             extension_state=case.workflow.extension_state,
+            extension_requests=[request.model_dump() for request in case.workflow.extension_requests],
             manual_referral_reason=case.workflow.manual_referral_reason,
             appointments=[appointment.model_dump() for appointment in case.workflow.appointments],
             decision_notice=case.workflow.decision_notice.model_dump() if case.workflow.decision_notice else None,
             port_clearance_events=[event.model_dump() for event in case.workflow.port_clearance_events],
+        )
+
+    def get_extension_status(self, case: CasePacket) -> ExtensionStatusResponse:
+        latest_message = case.applicant_message_history[-1] if case.applicant_message_history else None
+        latest_request = case.workflow.extension_requests[-1].model_dump() if case.workflow.extension_requests else None
+        extension_timeline = [
+            event.model_dump()
+            for event in case.status_timeline
+            if "EXTENSION" in event.state or "extension" in event.description.lower()
+        ]
+        return ExtensionStatusResponse(
+            case_id=case.case_id,
+            extension_state=case.workflow.extension_state,
+            status=case.workflow.current_state,
+            current_holder=case.workflow.current_holder,
+            next_action=case.workflow.next_action,
+            action_required_from=case.workflow.action_required_from,
+            latest_message=latest_message,
+            latest_extension_request=latest_request,
+            extension_requests=[request.model_dump() for request in case.workflow.extension_requests],
+            appointments=[
+                appointment.model_dump()
+                for appointment in case.workflow.appointments
+                if appointment.appointment_type == "EXTENSION_APPOINTMENT"
+            ],
+            timeline=extension_timeline,
         )
 
     def add_notification(self, case_id: str, payload: dict) -> None:

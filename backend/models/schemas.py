@@ -99,6 +99,21 @@ class AdditionalEvidenceRequest(BaseModel):
     status: str = "OPEN"
 
 
+class ExtensionRequest(BaseModel):
+    request_id: str
+    requested_at: str = Field(default_factory=utc_now)
+    requested_new_departure_date: str
+    reason: str
+    supporting_note: str = ""
+    status: str = "OPEN"
+    requires_appointment: bool = False
+    appointment_required_reason: str = ""
+    decision: str = "PENDING"
+    decided_at: str = ""
+    decided_by: str = ""
+    decision_notes: str = ""
+
+
 class Appointment(BaseModel):
     appointment_type: str
     appointment_id: str | None = None
@@ -157,6 +172,7 @@ class WorkflowState(BaseModel):
     extension_state: str = "NOT_REQUESTED"
     manual_referral_reason: str | None = None
     additional_evidence_requests: list[AdditionalEvidenceRequest] = Field(default_factory=list)
+    extension_requests: list[ExtensionRequest] = Field(default_factory=list)
     appointments: list[Appointment] = Field(default_factory=list)
     port_clearance_events: list[PortClearanceEvent] = Field(default_factory=list)
     decision_notice: DecisionNotice | None = None
@@ -280,6 +296,40 @@ class ApplicantMessageResponse(BaseModel):
     deadline: str = ""
 
 
+class ExtensionRequestCreateRequest(BaseModel):
+    reason: str
+    requested_new_departure_date: str
+    supporting_note: str = ""
+
+
+class ExtensionAppointmentRequest(BaseModel):
+    status: str
+    location: str = ""
+    scheduled_for: str = ""
+    instructions: str = ""
+    appointment_id: str | None = None
+
+
+class ExtensionDecisionRequest(BaseModel):
+    decision: Literal["APPROVE", "REFUSE", "REQUEST_MORE_INFO"]
+    officer_id: str
+    reason: str
+
+
+class ExtensionStatusResponse(BaseModel):
+    case_id: str
+    extension_state: str = "NOT_REQUESTED"
+    status: str = ""
+    current_holder: str = "SYSTEM"
+    next_action: str = ""
+    action_required_from: str = "SYSTEM"
+    latest_message: dict[str, Any] | None = None
+    latest_extension_request: dict[str, Any] | None = None
+    extension_requests: list[dict[str, Any]] = Field(default_factory=list)
+    appointments: list[dict[str, Any]] = Field(default_factory=list)
+    timeline: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class ChecklistResponse(BaseModel):
     workflow_pack: str
     country: str = ""
@@ -323,6 +373,7 @@ class CaseStatusResponse(BaseModel):
     authorization_status: dict[str, Any] = Field(default_factory=dict)
     port_clearance_state: str = "NOT_STARTED"
     extension_state: str = "NOT_REQUESTED"
+    extension_requests: list[dict[str, Any]] = Field(default_factory=list)
     manual_referral_reason: str | None = None
     appointments: list[dict[str, Any]] = Field(default_factory=list)
     decision_notice: dict[str, Any] | None = None
@@ -369,6 +420,9 @@ class SupervisorQueueSummary(BaseModel):
     manual_referrals: int
     waiting_for_documents: int
     ready_for_officer_review: int
+    extension_requested: int = 0
+    extension_appointment_required: int = 0
+    under_extension_review: int = 0
     overdue_cases: int = 0
     due_within_48h: int = 0
     oldest_due_at: str | None = None
@@ -384,6 +438,7 @@ class SupervisorCaseSummary(BaseModel):
     next_action: str
     action_required_from: str
     eta_status: str
+    extension_state: str = "NOT_REQUESTED"
     manual_referral_reason: str | None = None
     policy_version: str = ""
     rule_version_used: str = ""

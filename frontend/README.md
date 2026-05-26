@@ -35,6 +35,7 @@ uvicorn backend.main:app --host 127.0.0.1 --port 8000
 
 - Applicant and officer views accept `?case=<CASE_ID>` for direct case loading when the live API is reachable.
 - Supervisor drill-down cards link directly into applicant and officer case views.
+- Extension-aware supervisor and recent-case links can jump straight into the officer dashboard extension module via `#extension-operations-panel` when a case has active extension handling.
 - Recent live applicant and officer cases are remembered locally on the frontend home.
 
 ## Verification Steps

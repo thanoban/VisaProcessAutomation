@@ -350,6 +350,48 @@
               </form>
             </div>
 
+            <div class="mt-5 rounded-[1.75rem] border border-slate-200/80 bg-slate-50/80 p-5">
+              <div class="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Sri Lanka extension workflow</span>
+                  <h3 class="mt-2 text-xl font-extrabold text-slate-900">Request an extension for an existing case</h3>
+                  <p class="mt-2 text-sm leading-7 text-slate-600">
+                    Use this when the traveler needs a longer stay after the original tourist visit request. The system will route the case into extension handling, and a human officer still records the outcome.
+                  </p>
+                </div>
+                <span class="rounded-full border border-slate-200 bg-white/85 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+                  Human-reviewed extension path
+                </span>
+              </div>
+
+              <form id="extension-request-form" class="grid gap-4 md:grid-cols-2">
+                <div class="grid gap-2 md:col-span-2">
+                  <label class="text-sm font-semibold text-slate-700" for="extension-case-id">Case ID</label>
+                  <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="extension-case-id" name="extensionCaseId" placeholder="VISA-2026-0001" required />
+                </div>
+                <div class="grid gap-2">
+                  <label class="text-sm font-semibold text-slate-700" for="extension-new-departure-date">Requested new departure date</label>
+                  <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="extension-new-departure-date" name="requestedNewDepartureDate" type="date" required />
+                </div>
+                <div class="grid gap-2">
+                  <label class="text-sm font-semibold text-slate-700" for="extension-reason">Reason for extension</label>
+                  <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="extension-reason" name="extensionReason" placeholder="Need to extend travel for additional family visit days" required />
+                </div>
+                <div class="grid gap-2 md:col-span-2">
+                  <label class="text-sm font-semibold text-slate-700" for="extension-supporting-note">Supporting note</label>
+                  <textarea class="min-h-28 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="extension-supporting-note" name="extensionSupportingNote" placeholder="Add any extra context for the extension desk or officer."></textarea>
+                </div>
+                <div class="flex flex-wrap gap-3 md:col-span-2">
+                  <button class="rounded-full bg-visa-navy px-5 py-3 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5" type="submit">
+                    Submit extension request
+                  </button>
+                </div>
+                <p class="text-sm text-slate-500 md:col-span-2" id="extension-request-feedback" role="status" aria-live="polite">
+                  Load a case first so the extension form can reuse the current case ID and original departure date.
+                </p>
+              </form>
+            </div>
+
             <div id="status-results" class="mt-6 grid gap-5" hidden>
               <div class="grid gap-4 md:grid-cols-3">
                 <div class="rounded-3xl border border-slate-200/80 bg-white/85 p-5">
