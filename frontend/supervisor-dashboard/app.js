@@ -11,11 +11,13 @@ const elements = {
   heroCopy: document.querySelector("#supervisor-hero-copy"),
   refreshButton: document.querySelector("#refresh-queues-button"),
   filterForm: document.querySelector("#supervisor-filter-form"),
+  clearFiltersButton: document.querySelector("#clear-filters-button"),
   stateFilter: document.querySelector("#supervisor-state-filter"),
   holderFilter: document.querySelector("#supervisor-holder-filter"),
   metrics: document.querySelector("#supervisor-metrics"),
   stateCounts: document.querySelector("#state-counts-list"),
   caseMeta: document.querySelector("#supervisor-case-meta"),
+  activeFilters: document.querySelector("#supervisor-active-filters"),
   caseList: document.querySelector("#supervisor-case-list"),
   hotspotList: document.querySelector("#hotspot-list"),
   noticeList: document.querySelector("#supervisor-notice-list"),
@@ -35,6 +37,10 @@ const api = createApiClient(state.apiBaseUrl);
 async function initialize() {
   elements.refreshButton.addEventListener("click", loadSupervisorData);
   elements.filterForm.addEventListener("change", handleFilterChange);
+  elements.clearFiltersButton.addEventListener("click", clearFilters);
+  elements.metrics.addEventListener("click", handleDrillDownClick);
+  elements.stateCounts.addEventListener("click", handleDrillDownClick);
+  syncFilterControls();
   await loadSupervisorData();
 }
 
@@ -67,45 +73,84 @@ async function loadSupervisorData() {
 function renderSupervisorDashboard(queues, notices, casesResponse) {
   const totalCases = Object.values(queues.counts_by_state || {}).reduce((sum, value) => sum + value, 0);
   const metrics = [
-    ["Total active cases", totalCases, "info"],
-    ["Manual referrals", queues.manual_referrals, queues.manual_referrals > 0 ? "warning" : "success"],
+    ["Total active cases", totalCases, "info", "", "", "Show all cases"],
+    [
+      "Manual referrals",
+      queues.manual_referrals,
+      queues.manual_referrals > 0 ? "warning" : "success",
+      "REFERRED_TO_MANUAL_REVIEW",
+      "MISSION_OR_HEAD_OFFICE",
+      "Open manual referral cases",
+    ],
     [
       "Waiting for documents",
       queues.waiting_for_documents,
       queues.waiting_for_documents > 0 ? "warning" : "success",
+      "WAITING_FOR_DOCUMENTS",
+      "APPLICANT",
+      "Open waiting cases",
     ],
     [
       "Ready for officer review",
       queues.ready_for_officer_review,
       queues.ready_for_officer_review > 0 ? "info" : "warning",
+      "READY_FOR_OFFICER_REVIEW",
+      "OFFICER",
+      "Open officer-ready cases",
     ],
   ];
 
   elements.metrics.innerHTML = metrics
     .map(
-      ([label, value, tone]) => `
+      ([label, value, tone, filterState, filterHolder, buttonLabel]) => `
         <article class="rounded-3xl border border-slate-200/80 bg-white/85 p-5">
-          <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${label}</span>
-          <strong class="mt-3 block text-3xl font-extrabold text-slate-950">${value}</strong>
-          <div class="mt-4">${buildStatusChip(label, tone)}</div>
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${label}</span>
+              <strong class="mt-3 block text-3xl font-extrabold text-slate-950">${value}</strong>
+            </div>
+            ${buildStatusChip(label, tone)}
+          </div>
+          <button
+            class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5"
+            type="button"
+            data-filter-state="${filterState}"
+            data-filter-holder="${filterHolder}"
+          >
+            ${buttonLabel}
+          </button>
         </article>
       `
     )
     .join("");
 
+  renderActiveFilters();
   elements.stateCounts.innerHTML = listMarkup(
     Object.entries(queues.counts_by_state || {}).map(
       ([stateName, count]) => `
         <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
-          <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${titleCase(stateName)}</span>
-          <strong class="mt-2 block text-2xl font-extrabold text-slate-950">${count}</strong>
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${titleCase(stateName)}</span>
+              <strong class="mt-2 block text-2xl font-extrabold text-slate-950">${count}</strong>
+            </div>
+            ${buildStatusChip(stateName)}
+          </div>
+          <button
+            class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5"
+            type="button"
+            data-filter-state="${stateName}"
+            data-filter-holder=""
+          >
+            Show matching cases
+          </button>
         </article>
       `
     ),
     "No queue states are available yet."
   );
 
-  elements.caseMeta.textContent = `Showing ${casesResponse.filtered_count} of ${casesResponse.total_cases} supervisor-visible cases.`;
+  elements.caseMeta.textContent = `Showing ${casesResponse.filtered_count} of ${casesResponse.total_cases} supervisor-visible cases.${buildFilterSummaryText()}`;
   elements.caseList.innerHTML = listMarkup(
     (casesResponse.cases || []).map(
       (item) => `
@@ -183,9 +228,71 @@ function renderSupervisorDashboard(queues, notices, casesResponse) {
 }
 
 function handleFilterChange() {
-  state.filters.state = elements.stateFilter.value;
-  state.filters.holder = elements.holderFilter.value;
+  applyFilters({
+    state: elements.stateFilter.value,
+    holder: elements.holderFilter.value,
+  });
+}
+
+function handleDrillDownClick(event) {
+  const button = event.target.closest("[data-filter-state],[data-filter-holder]");
+  if (!button) {
+    return;
+  }
+  applyFilters({
+    state: button.dataset.filterState ?? state.filters.state,
+    holder: button.dataset.filterHolder ?? state.filters.holder,
+  });
+}
+
+function applyFilters(nextFilters) {
+  state.filters.state = String(nextFilters.state || "");
+  state.filters.holder = String(nextFilters.holder || "");
+  syncFilterControls();
   loadSupervisorData();
+}
+
+function clearFilters() {
+  applyFilters({ state: "", holder: "" });
+}
+
+function syncFilterControls() {
+  elements.stateFilter.value = state.filters.state;
+  elements.holderFilter.value = state.filters.holder;
+}
+
+function renderActiveFilters() {
+  const activeFilters = [];
+  if (state.filters.state) {
+    activeFilters.push(`
+      <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+        State: ${titleCase(state.filters.state)}
+      </div>
+    `);
+  }
+  if (state.filters.holder) {
+    activeFilters.push(`
+      <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+        Holder: ${titleCase(state.filters.holder)}
+      </div>
+    `);
+  }
+
+  elements.activeFilters.innerHTML = activeFilters.length
+    ? `${activeFilters.join("")}<button class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" type="button" data-clear-filters="true">Reset drill-down</button>`
+    : `<div class="rounded-full border border-dashed border-slate-300 bg-white/50 px-4 py-2 text-sm text-slate-500">Use the metric and state cards above to drill directly into the queue.</div>`;
+  elements.activeFilters.querySelector("[data-clear-filters]")?.addEventListener("click", clearFilters);
+}
+
+function buildFilterSummaryText() {
+  const activeParts = [];
+  if (state.filters.state) {
+    activeParts.push(`state ${titleCase(state.filters.state)}`);
+  }
+  if (state.filters.holder) {
+    activeParts.push(`holder ${titleCase(state.filters.holder)}`);
+  }
+  return activeParts.length ? ` Active filters: ${activeParts.join(", ")}.` : "";
 }
 
 function applyMockFilters(casesResponse, filters) {
