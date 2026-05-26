@@ -258,11 +258,25 @@ export function listMarkup(items, emptyText) {
   return items.join("");
 }
 
-export function linkMarkup(value) {
+export function resolveAppHref(value, baseUrl = getStoredApiBaseUrl()) {
+  if (!value || value === "Not available") {
+    return "";
+  }
+  if (/^(https?:|mailto:|tel:)/i.test(value)) {
+    return value;
+  }
+  if (value.startsWith("/")) {
+    return `${normalizeApiBaseUrl(baseUrl)}${value}`;
+  }
+  return value;
+}
+
+export function linkMarkup(value, baseUrl = getStoredApiBaseUrl()) {
   if (!value || value === "Not available") {
     return "Not available";
   }
-  return `<a class="text-teal-800 underline break-all" href="${value}" target="_blank" rel="noreferrer">${value}</a>`;
+  const href = resolveAppHref(value, baseUrl);
+  return `<a class="text-teal-800 underline break-all" href="${href}" target="_blank" rel="noreferrer">${value}</a>`;
 }
 
 export function linkListMarkup(items) {
