@@ -45,7 +45,7 @@ const elements = {
 const state = {
   apiBaseUrl: localStorage.getItem("visaFlowApiBaseUrl") || "http://127.0.0.1:8000",
   apiAvailable: false,
-  currentCaseId: officerDashboardMock.casePacket.case_id,
+  currentCaseId: new URLSearchParams(window.location.search).get("case")?.trim() || officerDashboardMock.casePacket.case_id,
   currentRecommendation: officerDashboardMock.officerBrief.recommendation,
 };
 
@@ -56,6 +56,9 @@ async function initialize() {
   wireEvents();
   await loadDashboardChrome();
   renderDashboard(officerDashboardMock.casePacket, officerDashboardMock.officerBrief, true);
+  if (state.apiAvailable && state.currentCaseId) {
+    await loadAndRenderCase(state.currentCaseId);
+  }
 }
 
 function wireEvents() {
@@ -91,6 +94,10 @@ async function handleLookup(event) {
     return;
   }
 
+  await loadAndRenderCase(caseId);
+}
+
+async function loadAndRenderCase(caseId) {
   state.currentCaseId = caseId;
   elements.feedback.textContent = "Loading case packet and officer brief...";
   elements.empty.hidden = false;

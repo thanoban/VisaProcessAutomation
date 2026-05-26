@@ -48,15 +48,19 @@ const elements = {
 const state = {
   apiBaseUrl: localStorage.getItem("visaFlowApiBaseUrl") || "http://127.0.0.1:8000",
   apiAvailable: false,
+  linkedCaseId: new URLSearchParams(window.location.search).get("case")?.trim() || "",
 };
 
 const api = createApiClient(state.apiBaseUrl);
 
 async function initialize() {
   elements.caseIdInput.value = startCaseId();
-  elements.lookupCaseIdInput.value = applicantPortalMock.casePacket.case_id;
+  elements.lookupCaseIdInput.value = state.linkedCaseId || applicantPortalMock.casePacket.case_id;
   wireEvents();
   await Promise.all([loadOperationalChrome(), renderSampleCasePreview()]);
+  if (state.linkedCaseId && state.apiAvailable) {
+    await loadCaseStatus(state.linkedCaseId);
+  }
 }
 
 function wireEvents() {
@@ -230,6 +234,10 @@ async function handleStatusLookup(event) {
     return;
   }
 
+  await loadCaseStatus(caseId);
+}
+
+async function loadCaseStatus(caseId) {
   elements.statusEmpty.hidden = false;
   elements.statusEmpty.textContent = `Loading case ${caseId}...`;
   setButtonBusy(elements.statusSubmitButton, true, "Loading status...");
@@ -241,6 +249,8 @@ async function handleStatusLookup(event) {
         latestStatus: buildMockStatus(applicantPortalMock.casePacket),
         useMock: true,
       });
+      elements.statusEmpty.textContent =
+        "Mock mode is active. Start the backend to replace the sample case with the requested live case.";
       return;
     }
 

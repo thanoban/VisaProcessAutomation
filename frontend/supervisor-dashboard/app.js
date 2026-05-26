@@ -189,6 +189,20 @@ function renderSupervisorDashboard(queues, notices, casesResponse) {
               <strong class="text-slate-900">Decision due:</strong> ${formatCaseTimestamp(item.decision_due_at)}
             </div>
           </div>
+          <div class="mt-4 flex flex-wrap gap-3">
+            <a
+              class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5"
+              href="../officer-dashboard/?case=${encodeURIComponent(item.case_id)}"
+            >
+              Open officer view
+            </a>
+            <a
+              class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5"
+              href="../applicant-portal/?case=${encodeURIComponent(item.case_id)}"
+            >
+              Open applicant view
+            </a>
+          </div>
           ${
             item.manual_referral_reason
               ? `<div class="mt-4 rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900"><strong>Manual referral reason:</strong> ${item.manual_referral_reason}</div>`
