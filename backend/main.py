@@ -6,18 +6,23 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.api.routes import router
 from backend.database.session import init_db
+from backend.services.storage_service import LocalDocumentStorageService
 
 
 def create_app() -> FastAPI:
     init_db()
     repo_root = Path(__file__).resolve().parents[1]
     frontend_dir = repo_root / "frontend"
+    upload_dir = LocalDocumentStorageService().upload_root()
     app = FastAPI(
         title="VisaFlow MAS",
         version="0.1.0",
         description="Government-grade Tourist Visa multi-agent decision support PoC.",
     )
     app.include_router(router)
+
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=upload_dir), name="uploads")
 
     if frontend_dir.exists():
         app.mount("/frontend", StaticFiles(directory=frontend_dir, html=True), name="frontend")

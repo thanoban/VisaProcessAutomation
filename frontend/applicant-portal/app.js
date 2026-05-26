@@ -595,7 +595,11 @@ function renderCaseStatus(casePacket, options) {
             </div>
             ${buildStatusChip(document.status || "UPLOADED")}
           </div>
-          <p class="text-sm leading-7 text-slate-600 break-all">${document.file_uri || "No file reference available."}</p>
+          ${
+            document.file_uri
+              ? `<a class="text-sm leading-7 text-teal-800 underline break-all" href="${document.file_uri}" target="_blank" rel="noreferrer">${document.file_uri}</a>`
+              : `<p class="text-sm leading-7 text-slate-600 break-all">No file reference available.</p>`
+          }
         </article>
       `
     ),

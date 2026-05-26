@@ -16,6 +16,9 @@ class LocalDocumentStorageService:
             return Path(override)
         return Path(__file__).resolve().parents[2] / "data" / "uploads"
 
+    def public_uri(self, case_id: str, filename: str) -> str:
+        return f"/uploads/{case_id}/{filename}"
+
     def save_case_document(
         self,
         case_id: str,
@@ -36,7 +39,7 @@ class LocalDocumentStorageService:
         return DocumentItem(
             document_id=f"DOC-UPL-{uuid4().hex[:8].upper()}",
             document_type=normalized_type,
-            file_uri=str(target_path.resolve()),
+            file_uri=self.public_uri(case_id, target_path.name),
             uploaded_at=utc_now(),
             status="UPLOADED",
         )
