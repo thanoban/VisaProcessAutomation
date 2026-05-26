@@ -5,6 +5,7 @@ import {
   formatDate,
   formatDateTime,
   getStoredApiBaseUrl,
+  isMissingFileUploadSupport,
   listMarkup,
   setButtonBusy,
   setRegionBusy,
@@ -206,7 +207,9 @@ async function handleApplicationSubmit(event) {
     }
 
     const createdCase = await api.createApplication(payload);
-    await uploadSelectedFiles(createdCase.case_id, elements.applicationForm);
+    const fileUploadWarnings = await uploadSelectedFiles(createdCase.case_id, elements.applicationForm, "", {
+      hasUriFallback: payload.documents.length > 0,
+    });
     await api.processCase(createdCase.case_id);
 
     const [processedCase, caseStatus] = await Promise.all([
@@ -219,7 +222,9 @@ async function handleApplicationSubmit(event) {
       latestStatus: caseStatus,
       useMock: false,
     });
-    elements.formFeedback.textContent = `Application ${createdCase.case_id} created and entered the Sri Lanka processing workflow.`;
+    elements.formFeedback.textContent = fileUploadWarnings.length
+      ? `Application ${createdCase.case_id} was created with URI-backed documents. ${fileUploadWarnings.join(" ")}`
+      : `Application ${createdCase.case_id} created and entered the Sri Lanka processing workflow.`;
   } catch (error) {
     elements.formFeedback.textContent = `Submission failed: ${error.message}`;
   } finally {
@@ -300,7 +305,9 @@ async function handleDocumentResponseSubmit(event) {
     if (documents.length) {
       await api.uploadDocuments(caseId, { documents });
     }
-    await uploadSelectedFiles(caseId, elements.documentResponseForm, "documentResponse");
+    const fileUploadWarnings = await uploadSelectedFiles(caseId, elements.documentResponseForm, "documentResponse", {
+      hasUriFallback: documents.length > 0,
+    });
     await api.processCase(caseId);
     const [casePacket, caseStatus] = await Promise.all([api.getCase(caseId), api.getCaseStatus(caseId)]);
     renderCaseStatus(casePacket, {
@@ -308,8 +315,9 @@ async function handleDocumentResponseSubmit(event) {
       useMock: false,
     });
     elements.lookupCaseIdInput.value = caseId;
-    elements.documentResponseFeedback.textContent =
-      "Document response accepted. The case has been sent back through the Sri Lanka review workflow.";
+    elements.documentResponseFeedback.textContent = fileUploadWarnings.length
+      ? `Document response accepted with URI-backed fallback. ${fileUploadWarnings.join(" ")}`
+      : "Document response accepted. The case has been sent back through the Sri Lanka review workflow.";
   } catch (error) {
     elements.documentResponseFeedback.textContent = `Document response failed: ${error.message}`;
   } finally {
@@ -669,11 +677,28 @@ function buildApplicationPayload(formData) {
   };
 }
 
-async function uploadSelectedFiles(caseId, form, prefix = "") {
+async function uploadSelectedFiles(caseId, form, prefix = "", options = {}) {
   const selectedFiles = collectSelectedFiles(form, prefix);
+  const warnings = [];
   for (const upload of selectedFiles) {
-    await api.uploadDocumentFile(caseId, upload.documentType, upload.file);
+    try {
+      await api.uploadDocumentFile(caseId, upload.documentType, upload.file);
+    } catch (error) {
+      if (isMissingFileUploadSupport(error) && options.hasUriFallback) {
+        warnings.push(
+          "Direct file upload is not enabled on the current backend target yet, so the portal used the provided file URI values instead."
+        );
+        return warnings;
+      }
+      if (isMissingFileUploadSupport(error)) {
+        throw new Error(
+          "The current backend target does not support direct file uploads yet. Provide document URIs for this flow or enable the backend document-files endpoint."
+        );
+      }
+      throw error;
+    }
   }
+  return warnings;
 }
 
 function collectSelectedFiles(form, prefix = "") {

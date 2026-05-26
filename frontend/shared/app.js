@@ -19,6 +19,11 @@ export function clearStoredApiBaseUrl() {
   return DEFAULT_API_BASE_URL;
 }
 
+export function isMissingFileUploadSupport(error) {
+  const message = String(error?.message || error || "").toLowerCase();
+  return message.includes("404") || message.includes("not found") || message.includes("405");
+}
+
 export function createApiClient(baseUrl) {
   const normalizedBaseUrl = normalizeApiBaseUrl(baseUrl);
 
