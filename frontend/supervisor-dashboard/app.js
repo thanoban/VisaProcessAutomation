@@ -4,6 +4,7 @@ import {
   createApiClient,
   getStoredApiBaseUrl,
   listMarkup,
+  renderInternalSurfaceGate,
   renderSurfaceNavigation,
   setButtonBusy,
   setRegionBusy,
@@ -17,6 +18,8 @@ const elements = {
   heroCopy: document.querySelector("#supervisor-hero-copy"),
   surfaceNav: document.querySelector("#surface-nav"),
   surfaceAccessNote: document.querySelector("#surface-access-note"),
+  internalSurfaceGate: document.querySelector("#internal-surface-gate"),
+  protectedSurfaceShell: document.querySelector("#protected-surface-shell"),
   refreshButton: document.querySelector("#refresh-queues-button"),
   filterForm: document.querySelector("#supervisor-filter-form"),
   clearFiltersButton: document.querySelector("#clear-filters-button"),
@@ -60,6 +63,20 @@ async function initialize() {
       { label: "Governance Center", href: "../governance-center/", surface: "governance" },
     ],
   });
+  const canAccessSurface = renderInternalSurfaceGate({
+    gateElement: elements.internalSurfaceGate,
+    protectedElement: elements.protectedSurfaceShell,
+    surfaceTitle: "The supervisor dashboard",
+    detail:
+      "Role-scoped mode intentionally hides queue pressure signals, backlog drill-downs, and cross-role drill-down links outside internal workspace preview.",
+    homeHref: "../",
+  });
+  if (!canAccessSurface) {
+    elements.heroCopy.textContent =
+      "Internal workspace preview is required before supervisor queue tooling is shown on this surface.";
+    elements.apiPill.textContent = "Role-scoped mode";
+    return;
+  }
   elements.refreshButton.addEventListener("click", loadSupervisorData);
   elements.filterForm.addEventListener("change", handleFilterChange);
   elements.clearFiltersButton.addEventListener("click", clearFilters);

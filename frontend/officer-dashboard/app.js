@@ -11,6 +11,7 @@ import {
   listMarkup,
   officerDashboardMock,
   rememberRecentCase,
+  renderInternalSurfaceGate,
   renderSurfaceNavigation,
   setButtonBusy,
   setRegionBusy,
@@ -24,6 +25,8 @@ const elements = {
   heroCopy: document.querySelector("#dashboard-hero-copy"),
   surfaceNav: document.querySelector("#surface-nav"),
   surfaceAccessNote: document.querySelector("#surface-access-note"),
+  internalSurfaceGate: document.querySelector("#internal-surface-gate"),
+  protectedSurfaceShell: document.querySelector("#protected-surface-shell"),
   lookupForm: document.querySelector("#dashboard-lookup-form"),
   sampleButton: document.querySelector("#dashboard-sample-button"),
   feedback: document.querySelector("#dashboard-feedback"),
@@ -78,6 +81,20 @@ async function initialize() {
       { label: "Governance Center", href: "../governance-center/", surface: "governance" },
     ],
   });
+  const canAccessSurface = renderInternalSurfaceGate({
+    gateElement: elements.internalSurfaceGate,
+    protectedElement: elements.protectedSurfaceShell,
+    surfaceTitle: "The officer dashboard",
+    detail:
+      "Role-scoped mode intentionally hides officer review tooling, evidence panels, and decision actions outside internal workspace preview.",
+    homeHref: "../",
+  });
+  if (!canAccessSurface) {
+    elements.heroCopy.textContent =
+      "Internal workspace preview is required before officer review tooling is shown on this surface.";
+    elements.apiPill.textContent = "Role-scoped mode";
+    return;
+  }
   wireEvents();
   await loadDashboardChrome();
   renderDashboard(officerDashboardMock.casePacket, officerDashboardMock.officerBrief, true);

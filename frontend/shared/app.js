@@ -119,6 +119,40 @@ export function renderSurfaceNavigation({
   }
 }
 
+export function renderInternalSurfaceGate({
+  gateElement,
+  protectedElement,
+  surfaceTitle,
+  detail,
+  homeHref = "../",
+}) {
+  const workspaceMode = workspacePreviewModeEnabled();
+  if (protectedElement) {
+    protectedElement.hidden = !workspaceMode;
+  }
+  if (!gateElement) {
+    return workspaceMode;
+  }
+  if (workspaceMode) {
+    gateElement.hidden = true;
+    gateElement.innerHTML = "";
+    return true;
+  }
+  gateElement.hidden = false;
+  gateElement.innerHTML = `
+    <div class="rounded-[1.75rem] border border-amber-200 bg-amber-50 p-5 text-sm leading-7 text-amber-900">
+      <strong class="text-amber-950">${surfaceTitle} is restricted outside internal workspace preview.</strong><br />
+      ${detail}
+      <div class="mt-4 flex flex-wrap gap-3">
+        <a class="rounded-full border border-amber-200 bg-white px-4 py-2 text-sm font-semibold text-amber-900 transition hover:-translate-y-0.5" href="${appendWorkspacePreviewParam(homeHref, false)}">
+          Return to frontend home
+        </a>
+      </div>
+    </div>
+  `;
+  return false;
+}
+
 export function isMissingFileUploadSupport(error) {
   const message = String(error?.message || error || "").toLowerCase();
   return message.includes("404") || message.includes("not found") || message.includes("405");

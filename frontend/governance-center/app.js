@@ -7,6 +7,7 @@ import {
   linkListMarkup,
   linkMarkup,
   listMarkup,
+  renderInternalSurfaceGate,
   renderSurfaceNavigation,
   setRegionBusy,
   titleCase,
@@ -17,6 +18,8 @@ const elements = {
   heroCopy: document.querySelector("#governance-hero-copy"),
   surfaceNav: document.querySelector("#surface-nav"),
   surfaceAccessNote: document.querySelector("#surface-access-note"),
+  internalSurfaceGate: document.querySelector("#internal-surface-gate"),
+  protectedSurfaceShell: document.querySelector("#protected-surface-shell"),
   activePolicyGrid: document.querySelector("#active-policy-grid"),
   publicationSignalGrid: document.querySelector("#publication-signal-grid"),
   requirementsList: document.querySelector("#requirements-list"),
@@ -47,6 +50,20 @@ async function initialize() {
       { label: "Governance Center", href: "./", surface: "governance" },
     ],
   });
+  const canAccessSurface = renderInternalSurfaceGate({
+    gateElement: elements.internalSurfaceGate,
+    protectedElement: elements.protectedSurfaceShell,
+    surfaceTitle: "The governance center",
+    detail:
+      "Role-scoped mode intentionally hides internal rule-pack traceability, publication drift checks, and source-lineage tooling outside workspace preview.",
+    homeHref: "../",
+  });
+  if (!canAccessSurface) {
+    elements.heroCopy.textContent =
+      "Internal workspace preview is required before governance reference tooling is shown on this surface.";
+    elements.apiPill.textContent = "Role-scoped mode";
+    return;
+  }
   setRegionBusy(elements.activePolicyGrid, true);
   setRegionBusy(elements.publicationSignalGrid, true);
   setRegionBusy(elements.traceabilityList, true);
