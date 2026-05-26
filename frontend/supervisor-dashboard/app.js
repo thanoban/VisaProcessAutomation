@@ -9,6 +9,7 @@ import {
   setRegionBusy,
   supervisorDashboardMock,
   titleCase,
+  workspacePreviewModeEnabled,
 } from "../shared/app.js";
 
 const elements = {
@@ -240,18 +241,7 @@ function renderSupervisorDashboard(queues, notices, casesResponse) {
                 ? `<span class="rounded-full border border-teal-200 bg-white px-4 py-2 text-sm font-semibold text-teal-800">Focused case from cross-surface link</span>`
                 : ""
             }
-            <a
-              class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5"
-              href="${appendWorkspacePreviewParam(`../officer-dashboard/?case=${encodeURIComponent(item.case_id)}`)}"
-            >
-              Open officer view
-            </a>
-            <a
-              class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5"
-              href="${appendWorkspacePreviewParam(`../applicant-portal/?case=${encodeURIComponent(item.case_id)}`)}"
-            >
-              Open applicant view
-            </a>
+            ${buildCrossSurfaceActions(item)}
           </div>
           ${
             item.manual_referral_reason
@@ -572,6 +562,29 @@ function toneForUrgency(value) {
     default:
       return "info";
   }
+}
+
+function buildCrossSurfaceActions(item) {
+  if (!workspacePreviewModeEnabled()) {
+    return `<div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-white/45 px-4 py-3 text-sm leading-6 text-slate-600">
+      Cross-role drill-down links are hidden outside internal workspace preview mode.
+    </div>`;
+  }
+
+  return `
+    <a
+      class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5"
+      href="${appendWorkspacePreviewParam(`../officer-dashboard/?case=${encodeURIComponent(item.case_id)}`)}"
+    >
+      Open officer view
+    </a>
+    <a
+      class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5"
+      href="${appendWorkspacePreviewParam(`../applicant-portal/?case=${encodeURIComponent(item.case_id)}`)}"
+    >
+      Open applicant view
+    </a>
+  `;
 }
 
 initialize();
