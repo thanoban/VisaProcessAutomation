@@ -50,6 +50,24 @@
         </div>
       </header>
 
+      <nav aria-label="Surface navigation" class="mb-6 flex flex-wrap gap-3">
+        <a class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="../">
+          Frontend Home
+        </a>
+        <a class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="../applicant-portal/">
+          Applicant Portal
+        </a>
+        <a class="rounded-full bg-visa-navy px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-slate-900/10" href="./">
+          Officer Dashboard
+        </a>
+        <a class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="../supervisor-dashboard/">
+          Supervisor Dashboard
+        </a>
+        <a class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="../governance-center/">
+          Governance Center
+        </a>
+      </nav>
+
       <section class="rounded-[2.25rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-8">
         <div class="grid gap-6 xl:grid-cols-[1.4fr_minmax(18rem,0.9fr)]">
           <div>
@@ -144,6 +162,14 @@
                   <span class="mt-3 block text-lg font-extrabold text-slate-900" id="dashboard-action-value">-</span>
                 </div>
               </div>
+
+              <section class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+                <div class="mb-4">
+                  <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Connected workspace</span>
+                  <h3 class="mt-2 text-lg font-extrabold text-slate-900">Open the same case in another surface</h3>
+                </div>
+                <div class="flex flex-wrap gap-3" id="dashboard-workspace-links"></div>
+              </section>
 
               <div class="grid gap-4 lg:grid-cols-2">
                 <section class="rounded-[1.75rem] border border-slate-200/80 bg-white/75 p-5">

@@ -1,6 +1,7 @@
 import {
   buildStatusChip,
   createApiClient,
+  getStoredApiBaseUrl,
   listMarkup,
   setButtonBusy,
   setRegionBusy,
@@ -26,7 +27,7 @@ const elements = {
 };
 
 const state = {
-  apiBaseUrl: localStorage.getItem("visaFlowApiBaseUrl") || "http://127.0.0.1:8000",
+  apiBaseUrl: getStoredApiBaseUrl(),
   apiAvailable: false,
   filters: {
     state: "",
@@ -188,6 +189,20 @@ function renderSupervisorDashboard(queues, notices, casesResponse) {
               <strong class="text-slate-900">Publication reference:</strong> ${item.publication_reference || "Not available"}<br />
               <strong class="text-slate-900">Decision due:</strong> ${formatCaseTimestamp(item.decision_due_at)}
             </div>
+          </div>
+          <div class="mt-4 flex flex-wrap gap-3">
+            <a
+              class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5"
+              href="../officer-dashboard/?case=${encodeURIComponent(item.case_id)}"
+            >
+              Open officer view
+            </a>
+            <a
+              class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5"
+              href="../applicant-portal/?case=${encodeURIComponent(item.case_id)}"
+            >
+              Open applicant view
+            </a>
           </div>
           ${
             item.manual_referral_reason

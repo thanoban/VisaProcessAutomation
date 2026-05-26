@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -16,11 +17,23 @@ from backend.database.session import engine, init_db
 from backend.main import create_app
 
 
+def _remove_test_db_with_retry() -> None:
+    for _ in range(10):
+        if not TEST_DB.exists():
+            return
+        try:
+            TEST_DB.unlink()
+            return
+        except PermissionError:
+            time.sleep(0.1)
+    if TEST_DB.exists():
+        TEST_DB.unlink()
+
+
 @pytest.fixture(autouse=True)
 def reset_db():
     engine.dispose()
-    if TEST_DB.exists():
-        TEST_DB.unlink()
+    _remove_test_db_with_retry()
     init_db()
     yield
     engine.dispose()

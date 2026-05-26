@@ -56,6 +56,24 @@
         </div>
       </header>
 
+      <nav aria-label="Surface navigation" class="mb-6 flex flex-wrap gap-3">
+        <a class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="../">
+          Frontend Home
+        </a>
+        <a class="rounded-full bg-visa-navy px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-slate-900/10" href="./">
+          Applicant Portal
+        </a>
+        <a class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="../officer-dashboard/">
+          Officer Dashboard
+        </a>
+        <a class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="../supervisor-dashboard/">
+          Supervisor Dashboard
+        </a>
+        <a class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="../governance-center/">
+          Governance Center
+        </a>
+      </nav>
+
       <section class="relative overflow-hidden rounded-[2.25rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-8">
         <div class="pointer-events-none absolute -bottom-24 -right-16 h-72 w-72 rounded-full bg-teal-200/30 blur-3xl"></div>
         <div class="grid gap-6 xl:grid-cols-[1.55fr_minmax(18rem,0.95fr)]">
@@ -363,6 +381,14 @@
                 </div>
               </div>
 
+              <div class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+                <div class="mb-4">
+                  <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Connected workspace</span>
+                  <h3 class="mt-2 text-lg font-extrabold text-slate-900">Open the same case in another surface</h3>
+                </div>
+                <div class="flex flex-wrap gap-3" id="workspace-links-panel"></div>
+              </div>
+
               <div class="grid gap-4 md:grid-cols-2" id="status-definition-grid"></div>
 
               <div class="grid gap-4 md:grid-cols-2">
@@ -456,6 +482,16 @@
               </div>
             </div>
             <div id="notice-list" class="grid gap-4"></div>
+          </section>
+
+          <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7">
+            <div class="mb-5">
+              <div>
+                <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Workflow glossary</span>
+                <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Key Sri Lanka workflow terms</h2>
+              </div>
+            </div>
+            <div id="workflow-glossary-list" class="grid gap-4"></div>
           </section>
         </aside>
       </div>

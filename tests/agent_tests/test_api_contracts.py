@@ -276,7 +276,7 @@ def test_file_upload_endpoint_stores_document_locally(client, monkeypatch, tmp_p
     assert document["document_type"] == "PASSPORT"
     assert document["uploaded_at"]
     assert document["file_uri"].endswith(".pdf")
-    assert tmp_path.name in document["file_uri"]
+    assert document["file_uri"].startswith(f"/uploads/{payload['case_id']}/")
 
 
 def test_manual_referral_status_exposes_appointments_and_reason(client):

@@ -4,11 +4,15 @@ import {
   createApiClient,
   formatDate,
   formatDateTime,
+  getStoredApiBaseUrl,
+  isMissingFileUploadSupport,
   listMarkup,
+  rememberRecentCase,
   setButtonBusy,
   setRegionBusy,
   startCaseId,
   titleCase,
+  workflowGlossary,
 } from "../shared/app.js";
 
 const elements = {
@@ -27,6 +31,7 @@ const elements = {
   checklistList: document.querySelector("#checklist-list"),
   checklistNotes: document.querySelector("#checklist-notes"),
   noticeList: document.querySelector("#notice-list"),
+  workflowGlossaryList: document.querySelector("#workflow-glossary-list"),
   statusResults: document.querySelector("#status-results"),
   statusEmpty: document.querySelector("#status-empty"),
   stateValue: document.querySelector("#state-value"),
@@ -38,6 +43,7 @@ const elements = {
   specialHandlingPanel: document.querySelector("#special-handling-panel"),
   caseServiceNoticesPanel: document.querySelector("#case-service-notices-panel"),
   travelFollowUpPanel: document.querySelector("#travel-follow-up-panel"),
+  workspaceLinksPanel: document.querySelector("#workspace-links-panel"),
   documentSummaryList: document.querySelector("#document-summary-list"),
   timelineList: document.querySelector("#timeline-list"),
   applicationSubmitButton: document.querySelector("#application-form button[type='submit']"),
@@ -46,17 +52,21 @@ const elements = {
 };
 
 const state = {
-  apiBaseUrl: localStorage.getItem("visaFlowApiBaseUrl") || "http://127.0.0.1:8000",
+  apiBaseUrl: getStoredApiBaseUrl(),
   apiAvailable: false,
+  linkedCaseId: new URLSearchParams(window.location.search).get("case")?.trim() || "",
 };
 
 const api = createApiClient(state.apiBaseUrl);
 
 async function initialize() {
   elements.caseIdInput.value = startCaseId();
-  elements.lookupCaseIdInput.value = applicantPortalMock.casePacket.case_id;
+  elements.lookupCaseIdInput.value = state.linkedCaseId || applicantPortalMock.casePacket.case_id;
   wireEvents();
   await Promise.all([loadOperationalChrome(), renderSampleCasePreview()]);
+  if (state.linkedCaseId && state.apiAvailable) {
+    await loadCaseStatus(state.linkedCaseId);
+  }
 }
 
 function wireEvents() {
@@ -93,6 +103,7 @@ async function loadOperationalChrome() {
     renderChecklist(applicantPortalMock.checklist);
     renderNotices(applicantPortalMock.notices);
   }
+  renderGlossary();
 }
 
 function renderChecklist(payload) {
@@ -152,6 +163,20 @@ function renderNotices(notices) {
   elements.noticeList.innerHTML = listMarkup(items, "No current notices have been published.");
 }
 
+function renderGlossary() {
+  elements.workflowGlossaryList.innerHTML = workflowGlossary
+    .map(
+      (item) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${item.code}</span>
+          <h3 class="mt-2 text-lg font-extrabold text-slate-900">${item.title}</h3>
+          <p class="mt-3 text-sm leading-7 text-slate-600">${item.description}</p>
+        </article>
+      `
+    )
+    .join("");
+}
+
 function loadSampleIntoForm() {
   const sample = applicantPortalMock.casePacket;
   const form = elements.applicationForm;
@@ -201,7 +226,9 @@ async function handleApplicationSubmit(event) {
     }
 
     const createdCase = await api.createApplication(payload);
-    await uploadSelectedFiles(createdCase.case_id, elements.applicationForm);
+    const fileUploadWarnings = await uploadSelectedFiles(createdCase.case_id, elements.applicationForm, "", {
+      hasUriFallback: payload.documents.length > 0,
+    });
     await api.processCase(createdCase.case_id);
 
     const [processedCase, caseStatus] = await Promise.all([
@@ -214,7 +241,9 @@ async function handleApplicationSubmit(event) {
       latestStatus: caseStatus,
       useMock: false,
     });
-    elements.formFeedback.textContent = `Application ${createdCase.case_id} created and entered the Sri Lanka processing workflow.`;
+    elements.formFeedback.textContent = fileUploadWarnings.length
+      ? `Application ${createdCase.case_id} was created with URI-backed documents. ${fileUploadWarnings.join(" ")}`
+      : `Application ${createdCase.case_id} created and entered the Sri Lanka processing workflow.`;
   } catch (error) {
     elements.formFeedback.textContent = `Submission failed: ${error.message}`;
   } finally {
@@ -230,6 +259,10 @@ async function handleStatusLookup(event) {
     return;
   }
 
+  await loadCaseStatus(caseId);
+}
+
+async function loadCaseStatus(caseId) {
   elements.statusEmpty.hidden = false;
   elements.statusEmpty.textContent = `Loading case ${caseId}...`;
   setButtonBusy(elements.statusSubmitButton, true, "Loading status...");
@@ -241,6 +274,8 @@ async function handleStatusLookup(event) {
         latestStatus: buildMockStatus(applicantPortalMock.casePacket),
         useMock: true,
       });
+      elements.statusEmpty.textContent =
+        "Mock mode is active. Start the backend to replace the sample case with the requested live case.";
       return;
     }
 
@@ -289,7 +324,9 @@ async function handleDocumentResponseSubmit(event) {
     if (documents.length) {
       await api.uploadDocuments(caseId, { documents });
     }
-    await uploadSelectedFiles(caseId, elements.documentResponseForm, "documentResponse");
+    const fileUploadWarnings = await uploadSelectedFiles(caseId, elements.documentResponseForm, "documentResponse", {
+      hasUriFallback: documents.length > 0,
+    });
     await api.processCase(caseId);
     const [casePacket, caseStatus] = await Promise.all([api.getCase(caseId), api.getCaseStatus(caseId)]);
     renderCaseStatus(casePacket, {
@@ -297,8 +334,9 @@ async function handleDocumentResponseSubmit(event) {
       useMock: false,
     });
     elements.lookupCaseIdInput.value = caseId;
-    elements.documentResponseFeedback.textContent =
-      "Document response accepted. The case has been sent back through the Sri Lanka review workflow.";
+    elements.documentResponseFeedback.textContent = fileUploadWarnings.length
+      ? `Document response accepted with URI-backed fallback. ${fileUploadWarnings.join(" ")}`
+      : "Document response accepted. The case has been sent back through the Sri Lanka review workflow.";
   } catch (error) {
     elements.documentResponseFeedback.textContent = `Document response failed: ${error.message}`;
   } finally {
@@ -330,6 +368,17 @@ function renderCaseStatus(casePacket, options) {
   elements.stateValue.innerHTML = buildStatusChip(status.status);
   elements.holderValue.textContent = titleCase(status.current_holder);
   elements.nextActionValue.textContent = titleCase(status.next_action);
+  elements.workspaceLinksPanel.innerHTML = buildWorkspaceLinks(casePacket.case_id, "applicant");
+
+  if (!options.useMock) {
+    rememberRecentCase({
+      case_id: casePacket.case_id,
+      surface: "applicant",
+      current_state: status.status,
+      current_holder: status.current_holder,
+      next_action: status.next_action,
+    });
+  }
 
   const detailItems = [
     ["Case ID", casePacket.case_id],
@@ -546,7 +595,11 @@ function renderCaseStatus(casePacket, options) {
             </div>
             ${buildStatusChip(document.status || "UPLOADED")}
           </div>
-          <p class="text-sm leading-7 text-slate-600 break-all">${document.file_uri || "No file reference available."}</p>
+          ${
+            document.file_uri
+              ? `<a class="text-sm leading-7 text-teal-800 underline break-all" href="${document.file_uri}" target="_blank" rel="noreferrer">${document.file_uri}</a>`
+              : `<p class="text-sm leading-7 text-slate-600 break-all">No file reference available.</p>`
+          }
         </article>
       `
     ),
@@ -658,11 +711,28 @@ function buildApplicationPayload(formData) {
   };
 }
 
-async function uploadSelectedFiles(caseId, form, prefix = "") {
+async function uploadSelectedFiles(caseId, form, prefix = "", options = {}) {
   const selectedFiles = collectSelectedFiles(form, prefix);
+  const warnings = [];
   for (const upload of selectedFiles) {
-    await api.uploadDocumentFile(caseId, upload.documentType, upload.file);
+    try {
+      await api.uploadDocumentFile(caseId, upload.documentType, upload.file);
+    } catch (error) {
+      if (isMissingFileUploadSupport(error) && options.hasUriFallback) {
+        warnings.push(
+          "Direct file upload is not enabled on the current backend target yet, so the portal used the provided file URI values instead."
+        );
+        return warnings;
+      }
+      if (isMissingFileUploadSupport(error)) {
+        throw new Error(
+          "The current backend target does not support direct file uploads yet. Provide document URIs for this flow or enable the backend document-files endpoint."
+        );
+      }
+      throw error;
+    }
   }
+  return warnings;
 }
 
 function collectSelectedFiles(form, prefix = "") {
@@ -697,6 +767,26 @@ function buildDocumentsPayload(formData, prefix = "") {
       file_uri: String(fileUri).trim(),
       status: "UPLOADED",
     }));
+}
+
+function buildWorkspaceLinks(caseId, currentSurface) {
+  const links = [
+    ["Applicant Portal", "../applicant-portal/", "applicant"],
+    ["Officer Dashboard", "../officer-dashboard/", "officer"],
+    ["Supervisor Dashboard", "../supervisor-dashboard/", "supervisor"],
+    ["Governance Center", "../governance-center/", "governance"],
+  ];
+  return links
+    .map(([label, href, surface]) => {
+      const activeClasses =
+        surface === currentSurface
+          ? "bg-visa-navy text-white shadow-lg shadow-slate-900/10"
+          : "border border-slate-200 bg-white text-slate-700";
+      const target =
+        surface === "governance" ? href : `${href}?case=${encodeURIComponent(caseId)}`;
+      return `<a class="rounded-full px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5 ${activeClasses}" href="${target}">${label}</a>`;
+    })
+    .join("");
 }
 
 initialize();
