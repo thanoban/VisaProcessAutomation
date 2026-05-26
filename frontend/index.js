@@ -248,6 +248,9 @@ function renderRecentCases() {
             <a class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="./officer-dashboard/?case=${encodeURIComponent(item.case_id)}">
               Officer View
             </a>
+            <a class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="${supervisorHref(item)}">
+              Supervisor Queue
+            </a>
           </div>
         </article>
       `
@@ -275,6 +278,18 @@ function surfaceHref(surface, caseId) {
     return `./officer-dashboard/?case=${encoded}`;
   }
   return `./applicant-portal/?case=${encoded}`;
+}
+
+function supervisorHref(item) {
+  const params = new URLSearchParams();
+  params.set("case", item.case_id);
+  if (item.current_state) {
+    params.set("state", item.current_state);
+  }
+  if (item.current_holder) {
+    params.set("holder", item.current_holder);
+  }
+  return `./supervisor-dashboard/?${params.toString()}`;
 }
 
 function titleForSurface(surface) {
