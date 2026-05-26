@@ -19,6 +19,7 @@ const elements = {
   holderFilter: document.querySelector("#supervisor-holder-filter"),
   metrics: document.querySelector("#supervisor-metrics"),
   stateCounts: document.querySelector("#state-counts-list"),
+  caseFocus: document.querySelector("#supervisor-case-focus"),
   caseMeta: document.querySelector("#supervisor-case-meta"),
   activeFilters: document.querySelector("#supervisor-active-filters"),
   caseList: document.querySelector("#supervisor-case-list"),
@@ -29,6 +30,7 @@ const elements = {
 const state = {
   apiBaseUrl: getStoredApiBaseUrl(),
   apiAvailable: false,
+  targetCaseId: "",
   filters: {
     state: "",
     holder: "",
@@ -138,6 +140,7 @@ function renderSupervisorDashboard(queues, notices, casesResponse) {
     .join("");
 
   renderActiveFilters();
+  renderCaseFocus(casesResponse.cases || []);
   elements.stateCounts.innerHTML = listMarkup(
     Object.entries(queues.counts_by_state || {}).map(
       ([stateName, count]) => `
@@ -166,8 +169,13 @@ function renderSupervisorDashboard(queues, notices, casesResponse) {
   elements.caseMeta.textContent = `Showing ${casesResponse.filtered_count} of ${casesResponse.total_cases} supervisor-visible cases.${buildFilterSummaryText()}`;
   elements.caseList.innerHTML = listMarkup(
     (casesResponse.cases || []).map(
-      (item) => `
-        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+      (item) => {
+        const isTargetCase = item.case_id === state.targetCaseId;
+        const cardClasses = isTargetCase
+          ? "rounded-[1.5rem] border border-teal-300 bg-teal-50/60 p-5 ring-1 ring-teal-200"
+          : "rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5";
+        return `
+        <article class="${cardClasses}">
           <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${item.case_id}</span>
@@ -192,6 +200,11 @@ function renderSupervisorDashboard(queues, notices, casesResponse) {
             </div>
           </div>
           <div class="mt-4 flex flex-wrap gap-3">
+            ${
+              isTargetCase
+                ? `<span class="rounded-full border border-teal-200 bg-white px-4 py-2 text-sm font-semibold text-teal-800">Focused case from cross-surface link</span>`
+                : ""
+            }
             <a
               class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5"
               href="../officer-dashboard/?case=${encodeURIComponent(item.case_id)}"
@@ -211,7 +224,8 @@ function renderSupervisorDashboard(queues, notices, casesResponse) {
               : ""
           }
         </article>
-      `
+      `;
+      }
     ),
     "No cases match the current supervisor filters."
   );
@@ -291,6 +305,7 @@ function syncFilterControls() {
 
 function readInitialFilters() {
   const params = new URLSearchParams(window.location.search);
+  state.targetCaseId = String(params.get("case") || "").trim();
   state.filters.state = String(params.get("state") || "");
   state.filters.holder = String(params.get("holder") || "");
 }
@@ -314,6 +329,13 @@ function syncFilterQueryParams() {
 
 function renderActiveFilters() {
   const activeFilters = [];
+  if (state.targetCaseId) {
+    activeFilters.push(`
+      <div class="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50 px-4 py-2 text-sm font-semibold text-teal-800">
+        Case: ${state.targetCaseId}
+      </div>
+    `);
+  }
   if (state.filters.state) {
     activeFilters.push(`
       <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
@@ -333,6 +355,29 @@ function renderActiveFilters() {
     ? `${activeFilters.join("")}<button class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" type="button" data-clear-filters="true">Reset drill-down</button>`
     : `<div class="rounded-full border border-dashed border-slate-300 bg-white/50 px-4 py-2 text-sm text-slate-500">Use the metric and state cards above to drill directly into the queue.</div>`;
   elements.activeFilters.querySelector("[data-clear-filters]")?.addEventListener("click", clearFilters);
+}
+
+function renderCaseFocus(cases) {
+  if (!state.targetCaseId) {
+    elements.caseFocus.innerHTML = "";
+    return;
+  }
+
+  const matchingCase = (cases || []).find((item) => item.case_id === state.targetCaseId);
+  if (matchingCase) {
+    elements.caseFocus.innerHTML = `
+      <div class="rounded-[1.5rem] border border-teal-200 bg-teal-50 p-4 text-sm leading-7 text-teal-900">
+        <strong class="text-teal-950">Cross-surface case context active:</strong> ${state.targetCaseId} is visible in the filtered queue below.
+      </div>
+    `;
+    return;
+  }
+
+  elements.caseFocus.innerHTML = `
+    <div class="rounded-[1.5rem] border border-amber-200 bg-amber-50 p-4 text-sm leading-7 text-amber-900">
+      <strong class="text-amber-950">Cross-surface case context active:</strong> ${state.targetCaseId} is not visible in the current filtered queue. Adjust the filters or refresh the queue if the case has moved.
+    </div>
+  `;
 }
 
 function buildFilterSummaryText() {

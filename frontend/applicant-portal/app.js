@@ -372,7 +372,10 @@ function renderCaseStatus(casePacket, options) {
   elements.stateValue.innerHTML = buildStatusChip(status.status);
   elements.holderValue.textContent = titleCase(status.current_holder);
   elements.nextActionValue.textContent = titleCase(status.next_action);
-  elements.workspaceLinksPanel.innerHTML = buildWorkspaceLinks(casePacket.case_id, "applicant");
+  elements.workspaceLinksPanel.innerHTML = buildWorkspaceLinks(casePacket.case_id, "applicant", {
+    state: status.status,
+    holder: status.current_holder,
+  });
 
   if (!options.useMock) {
     state.linkedCaseId = casePacket.case_id;
@@ -788,7 +791,7 @@ function buildDocumentsPayload(formData, prefix = "") {
     }));
 }
 
-function buildWorkspaceLinks(caseId, currentSurface) {
+function buildWorkspaceLinks(caseId, currentSurface, queueContext = {}) {
   const links = [
     ["Applicant Portal", "../applicant-portal/", "applicant"],
     ["Officer Dashboard", "../officer-dashboard/", "officer"],
@@ -801,11 +804,28 @@ function buildWorkspaceLinks(caseId, currentSurface) {
         surface === currentSurface
           ? "bg-visa-navy text-white shadow-lg shadow-slate-900/10"
           : "border border-slate-200 bg-white text-slate-700";
-      const target =
-        surface === "governance" ? href : `${href}?case=${encodeURIComponent(caseId)}`;
+      const target = buildSurfaceHref(surface, href, caseId, queueContext);
       return `<a class="rounded-full px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5 ${activeClasses}" href="${target}">${label}</a>`;
     })
     .join("");
+}
+
+function buildSurfaceHref(surface, href, caseId, queueContext = {}) {
+  if (surface === "governance") {
+    return href;
+  }
+
+  const params = new URLSearchParams();
+  params.set("case", caseId);
+  if (surface === "supervisor") {
+    if (queueContext.state) {
+      params.set("state", queueContext.state);
+    }
+    if (queueContext.holder) {
+      params.set("holder", queueContext.holder);
+    }
+  }
+  return `${href}?${params.toString()}`;
 }
 
 initialize();
