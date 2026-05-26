@@ -265,6 +265,9 @@ export function createApiClient(baseUrl) {
     getObservabilityStatus() {
       return request("/governance/observability/status");
     },
+    getAgentRuntimeStatus() {
+      return request("/governance/agent-runtime/status");
+    },
     createApplication(payload) {
       return request("/applications", {
         method: "POST",
@@ -334,6 +337,11 @@ export function createApiClient(baseUrl) {
       return request(`/cases/${encodeURIComponent(caseId)}/extension-decision`, {
         method: "POST",
         body: JSON.stringify(payload),
+      });
+    },
+    requestSelfImprovementReview(caseId) {
+      return request(`/cases/${encodeURIComponent(caseId)}/self-improvement/review`, {
+        method: "POST",
       });
     },
   };
@@ -1056,5 +1064,34 @@ export const governanceCenterMock = {
     google_genai_instrumentation_enabled: false,
     phoenix_mcp_expected: true,
     status: "DISABLED",
+  },
+  agentRuntime: {
+    runtime: "GOOGLE_ADK",
+    provider: "Gemini",
+    status: "MOCK_ONLY",
+    configured: false,
+    live_model_available: false,
+    google_adk_installed: true,
+    google_adk_instrumentation_enabled: false,
+    google_genai_instrumentation_enabled: false,
+    model_name: "gemini-2.0-flash",
+    project_name: "",
+    location: "",
+    phoenix_mcp_config_present: true,
+    agent_names: [
+      "supervisor_agent",
+      "intake_completeness_agent",
+      "document_validator_agent",
+      "financial_employment_agent",
+      "policy_compliance_agent",
+      "security_background_agent",
+      "risk_fraud_agent",
+      "officer_liaison_agent",
+      "audit_compliance_agent",
+      "self_improvement_agent",
+    ],
+    notes: [
+      "Google ADK is installed, but GOOGLE_API_KEY is not configured, so the self-improvement agent will run in mock mode.",
+    ],
   },
 };

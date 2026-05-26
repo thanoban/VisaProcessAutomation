@@ -124,3 +124,30 @@ The observability status payload is intended to expose:
 - project name
 - ADK or Gemini instrumentation posture
 - Phoenix MCP expectation
+
+### `GET /governance/agent-runtime/status`
+
+Returns the current Google ADK and Gemini runtime posture for the deployment target.
+
+The payload exposes:
+
+- runtime and provider
+- configured versus mock-only state
+- model name
+- ADK and GenAI instrumentation posture
+- Phoenix MCP config presence
+- configured agent names
+
+### `POST /cases/{case_id}/self-improvement/review`
+
+Runs the Self-Improvement Agent against the selected case using Google ADK.
+
+The response includes:
+
+- runtime mode
+- failure summary
+- detected issues
+- proposed safer changes
+- comparison questions
+- human approval requirement
+- observability metadata

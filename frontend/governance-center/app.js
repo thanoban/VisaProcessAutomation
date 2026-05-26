@@ -27,6 +27,8 @@ const elements = {
   sourcesList: document.querySelector("#sources-list"),
   traceabilityList: document.querySelector("#traceability-list"),
   observabilityStatusList: document.querySelector("#observability-status-list"),
+  agentRuntimeStatusList: document.querySelector("#agent-runtime-status-list"),
+  agentRuntimeNotesList: document.querySelector("#agent-runtime-notes-list"),
   observabilityReadinessList: document.querySelector("#observability-readiness-list"),
   observabilityGuardrailsList: document.querySelector("#observability-guardrails-list"),
   exceptionRulesList: document.querySelector("#exception-rules-list"),
@@ -71,20 +73,23 @@ async function initialize() {
   setRegionBusy(elements.publicationSignalGrid, true);
   setRegionBusy(elements.traceabilityList, true);
   setRegionBusy(elements.observabilityStatusList, true);
+  setRegionBusy(elements.agentRuntimeStatusList, true);
+  setRegionBusy(elements.agentRuntimeNotesList, true);
   setRegionBusy(elements.observabilityReadinessList, true);
   setRegionBusy(elements.observabilityGuardrailsList, true);
   try {
     await api.getHealth();
     state.apiAvailable = true;
     elements.apiPill.textContent = `Live API: ${api.baseUrl}`;
-    const [requirements, rules, observability] = await Promise.all([
+    const [requirements, rules, observability, agentRuntime] = await Promise.all([
       api.getPolicyRequirements("TOURIST"),
       api.getActiveGovernanceRules(),
       api.getObservabilityStatus(),
+      api.getAgentRuntimeStatus(),
     ]);
     elements.heroCopy.textContent =
       "Live API connected. The rule pack, policy source, and publication state below reflect the current backend governance references.";
-    renderGovernanceCenter(requirements, rules, observability);
+    renderGovernanceCenter(requirements, rules, observability, agentRuntime);
   } catch {
     state.apiAvailable = false;
     elements.apiPill.textContent = "Mock preview mode";
@@ -93,19 +98,22 @@ async function initialize() {
     renderGovernanceCenter(
       governanceCenterMock.requirements,
       governanceCenterMock.rules,
-      governanceCenterMock.observability
+      governanceCenterMock.observability,
+      governanceCenterMock.agentRuntime
     );
   } finally {
     setRegionBusy(elements.activePolicyGrid, false);
     setRegionBusy(elements.publicationSignalGrid, false);
     setRegionBusy(elements.traceabilityList, false);
     setRegionBusy(elements.observabilityStatusList, false);
+    setRegionBusy(elements.agentRuntimeStatusList, false);
+    setRegionBusy(elements.agentRuntimeNotesList, false);
     setRegionBusy(elements.observabilityReadinessList, false);
     setRegionBusy(elements.observabilityGuardrailsList, false);
   }
 }
 
-function renderGovernanceCenter(requirements, rules, observability) {
+function renderGovernanceCenter(requirements, rules, observability, agentRuntime) {
   const activeVersion = rules.active_policy_version || {};
   const circulars = rules.active_circulars || [];
   const publications = circulars.flatMap((circular) => circular.publications || []);
@@ -373,6 +381,7 @@ function renderGovernanceCenter(requirements, rules, observability) {
     ),
     "Observability status is not available yet."
   );
+  renderAgentRuntime(agentRuntime);
   renderObservabilityReadiness(observability);
   renderObservabilityGuardrails(observability);
 
@@ -400,6 +409,60 @@ function renderGovernanceCenter(requirements, rules, observability) {
     elements.heroCopy.textContent =
       "The governance data currently includes non-active circular records alongside the active rule pack, so publication drift is being surfaced instead of hidden.";
   }
+}
+
+function renderAgentRuntime(agentRuntime) {
+  const runtimeCards = [
+    ["Runtime", agentRuntime.runtime || "GOOGLE_ADK", "info"],
+    ["Provider", agentRuntime.provider || "Gemini", "info"],
+    ["Status", agentRuntime.status || "DEGRADED", agentRuntime.live_model_available ? "success" : "warning"],
+    ["Configured", agentRuntime.configured ? "Yes" : "No", agentRuntime.configured ? "success" : "warning"],
+    ["Model", agentRuntime.model_name || "Not configured", "info"],
+    ["Phoenix MCP config", agentRuntime.phoenix_mcp_config_present ? "Present" : "Missing", agentRuntime.phoenix_mcp_config_present ? "success" : "warning"],
+    [
+      "ADK instrumentation",
+      agentRuntime.google_adk_instrumentation_enabled ? "Enabled" : "Disabled",
+      agentRuntime.google_adk_instrumentation_enabled ? "success" : "info",
+    ],
+    [
+      "GenAI instrumentation",
+      agentRuntime.google_genai_instrumentation_enabled ? "Enabled" : "Disabled",
+      agentRuntime.google_genai_instrumentation_enabled ? "success" : "info",
+    ],
+  ];
+
+  elements.agentRuntimeStatusList.innerHTML = listMarkup(
+    runtimeCards.map(
+      ([label, value, tone]) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${label}</span>
+              <strong class="mt-2 block text-base font-extrabold text-slate-900">${value}</strong>
+            </div>
+            ${buildStatusChip(value, tone)}
+          </div>
+        </article>
+      `
+    ),
+    "Agent runtime status is not available yet."
+  );
+
+  const notes = [
+    `Configured agent set: ${(agentRuntime.agent_names || []).join(", ") || "Not available"}`,
+    ...(agentRuntime.notes || []),
+  ];
+
+  elements.agentRuntimeNotesList.innerHTML = listMarkup(
+    notes.map(
+      (note) => `
+        <div class="rounded-[1.25rem] border border-slate-200/80 bg-white/80 p-4 text-sm leading-7 text-slate-700">
+          ${note}
+        </div>
+      `
+    ),
+    "No agent runtime notes are available yet."
+  );
 }
 
 function renderObservabilityReadiness(observability) {

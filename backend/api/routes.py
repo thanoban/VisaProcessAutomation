@@ -1,6 +1,7 @@
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 
 from backend.models.schemas import (
+    AgentRuntimeStatusResponse,
     ApplicantMessageResponse,
     ApplicationCreateRequest,
     AuthorizationStatusResponse,
@@ -17,12 +18,15 @@ from backend.models.schemas import (
     OfficerBrief,
     OfficerDecisionRequest,
     PolicyRequirementsResponse,
+    SelfImprovementReviewResponse,
     SupervisorCaseListResponse,
     SupervisorQueueSummary,
     SystemNotice,
 )
+from backend.services.adk_runtime_service import AdkRuntimeService
 from backend.services.case_service import CaseService
 from backend.services.observability_service import ObservabilityService
+from backend.services.self_improvement_service import SelfImprovementService
 from backend.services.sri_lanka_reference_service import SriLankaReferenceService
 from backend.services.storage_service import LocalDocumentStorageService
 from backend.workflows.extension_workflow import ExtensionWorkflow
@@ -35,6 +39,8 @@ extension_workflow = ExtensionWorkflow()
 sri_lanka_reference = SriLankaReferenceService()
 storage_service = LocalDocumentStorageService()
 observability_service = ObservabilityService()
+adk_runtime_service = AdkRuntimeService()
+self_improvement_service = SelfImprovementService()
 
 
 @router.get("/health")
@@ -241,6 +247,19 @@ def get_active_governance_rules() -> GovernanceRulesResponse:
 @router.get("/governance/observability/status", response_model=ObservabilityStatusResponse)
 def get_observability_status() -> ObservabilityStatusResponse:
     return observability_service.status()
+
+
+@router.get("/governance/agent-runtime/status", response_model=AgentRuntimeStatusResponse)
+def get_agent_runtime_status() -> AgentRuntimeStatusResponse:
+    return adk_runtime_service.status()
+
+
+@router.post("/cases/{case_id}/self-improvement/review", response_model=SelfImprovementReviewResponse)
+def review_case_for_self_improvement(case_id: str) -> SelfImprovementReviewResponse:
+    review = self_improvement_service.review_case(case_id)
+    if not review:
+        raise HTTPException(status_code=404, detail="Case not found")
+    return review
 
 
 @router.get("/supervisor/queues", response_model=SupervisorQueueSummary)

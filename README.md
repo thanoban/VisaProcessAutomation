@@ -125,6 +125,12 @@ Phoenix MCP is part of the self-improvement story. The intended loop is:
 
 The MCP configuration sample is documented in [deployment/mcp/phoenix-mcp.sample.json](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/deployment/mcp/phoenix-mcp.sample.json) and explained in [deployment/arize_phoenix_setup.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/deployment/arize_phoenix_setup.md).
 
+Current implementation status:
+
+- the repo now includes a Google ADK runtime status service
+- the repo now includes a self-improvement review endpoint backed by Google ADK with a mock-safe local fallback
+- when `GOOGLE_API_KEY` is absent, the self-improvement lane runs in `GOOGLE_ADK_MOCK` mode instead of failing the workflow
+
 ## How evaluations work
 
 The repository uses scenario-based evaluation expectations for:
@@ -213,6 +219,7 @@ Recommended focused checks:
 
 ```bash
 pytest tests/agent_tests/test_observability_service.py -q
+pytest tests/agent_tests/test_adk_runtime_and_self_improvement.py -q
 pytest tests/workflow_tests/test_workflow_cases.py -q
 pytest tests/workflow_tests/test_end_to_end_case_journey.py -q
 ```

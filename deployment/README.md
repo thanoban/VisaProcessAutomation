@@ -35,6 +35,12 @@ The intended agent stack is:
 - OpenInference instrumentation for ADK and Gemini calls
 - Arize Phoenix as the trace and evaluation sink
 
+Current implementation notes:
+
+- visa routing remains deterministic in the workflow layer
+- the ADK runtime currently powers the self-improvement review lane
+- the runtime can operate in mock-safe local mode when `GOOGLE_API_KEY` is absent
+
 ## Arize track notes
 
 See:
