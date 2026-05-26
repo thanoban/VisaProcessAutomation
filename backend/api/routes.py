@@ -9,6 +9,8 @@ from backend.models.schemas import (
     CaseStatusResponse,
     ChecklistResponse,
     DocumentUploadRequest,
+    EvaluationCatalogResponse,
+    EvaluationRunResponse,
     ExtensionAppointmentRequest,
     ExtensionDecisionRequest,
     ExtensionRequestCreateRequest,
@@ -25,6 +27,7 @@ from backend.models.schemas import (
 )
 from backend.services.adk_runtime_service import AdkRuntimeService
 from backend.services.case_service import CaseService
+from backend.services.evaluation_service import EvaluationService
 from backend.services.observability_service import ObservabilityService
 from backend.services.self_improvement_service import SelfImprovementService
 from backend.services.sri_lanka_reference_service import SriLankaReferenceService
@@ -41,6 +44,7 @@ storage_service = LocalDocumentStorageService()
 observability_service = ObservabilityService()
 adk_runtime_service = AdkRuntimeService()
 self_improvement_service = SelfImprovementService()
+evaluation_service = EvaluationService()
 
 
 @router.get("/health")
@@ -260,6 +264,22 @@ def review_case_for_self_improvement(case_id: str) -> SelfImprovementReviewRespo
     if not review:
         raise HTTPException(status_code=404, detail="Case not found")
     return review
+
+
+@router.get("/governance/evaluations/catalog", response_model=EvaluationCatalogResponse)
+def get_evaluation_catalog() -> EvaluationCatalogResponse:
+    return evaluation_service.catalog()
+
+
+@router.post("/cases/{case_id}/evaluations/run", response_model=EvaluationRunResponse)
+def run_case_evaluation(case_id: str) -> EvaluationRunResponse:
+    try:
+        evaluation = evaluation_service.run_case_evaluation(case_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if not evaluation:
+        raise HTTPException(status_code=404, detail="Case not found")
+    return evaluation
 
 
 @router.get("/supervisor/queues", response_model=SupervisorQueueSummary)

@@ -32,6 +32,17 @@ const elements = {
   agentRuntimeNotesList: document.querySelector("#agent-runtime-notes-list"),
   observabilityReadinessList: document.querySelector("#observability-readiness-list"),
   observabilityGuardrailsList: document.querySelector("#observability-guardrails-list"),
+  evaluationCatalogList: document.querySelector("#evaluation-catalog-list"),
+  evaluationPanel: document.querySelector("#evaluation-panel"),
+  evaluationForm: document.querySelector("#evaluation-form"),
+  evaluationCaseId: document.querySelector("#evaluation-case-id"),
+  evaluationFeedback: document.querySelector("#evaluation-feedback"),
+  evaluationResults: document.querySelector("#evaluation-results"),
+  evaluationSummaryGrid: document.querySelector("#evaluation-summary-grid"),
+  evaluationChecksList: document.querySelector("#evaluation-checks-list"),
+  evaluationMetaList: document.querySelector("#evaluation-meta-list"),
+  evaluationEmpty: document.querySelector("#evaluation-empty"),
+  evaluationSubmitButton: document.querySelector("#evaluation-form button[type='submit']"),
   selfImprovementPanel: document.querySelector("#self-improvement-panel"),
   selfImprovementForm: document.querySelector("#self-improvement-form"),
   selfImprovementCaseId: document.querySelector("#self-improvement-case-id"),
@@ -84,7 +95,7 @@ async function initialize() {
     return;
   }
   wireEvents();
-  elements.selfImprovementCaseId.value = state.currentCaseId;
+  syncGovernanceCaseInputs(state.currentCaseId);
   setRegionBusy(elements.activePolicyGrid, true);
   setRegionBusy(elements.publicationSignalGrid, true);
   setRegionBusy(elements.traceabilityList, true);
@@ -93,19 +104,21 @@ async function initialize() {
   setRegionBusy(elements.agentRuntimeNotesList, true);
   setRegionBusy(elements.observabilityReadinessList, true);
   setRegionBusy(elements.observabilityGuardrailsList, true);
+  setRegionBusy(elements.evaluationCatalogList, true);
   try {
     await api.getHealth();
     state.apiAvailable = true;
     elements.apiPill.textContent = `Live API: ${api.baseUrl}`;
-    const [requirements, rules, observability, agentRuntime] = await Promise.all([
+    const [requirements, rules, observability, agentRuntime, evaluationCatalog] = await Promise.all([
       api.getPolicyRequirements("TOURIST"),
       api.getActiveGovernanceRules(),
       api.getObservabilityStatus(),
       api.getAgentRuntimeStatus(),
+      api.getEvaluationCatalog(),
     ]);
     elements.heroCopy.textContent =
       "Live API connected. The rule pack, policy source, and publication state below reflect the current backend governance references.";
-    renderGovernanceCenter(requirements, rules, observability, agentRuntime);
+    renderGovernanceCenter(requirements, rules, observability, agentRuntime, evaluationCatalog);
   } catch {
     state.apiAvailable = false;
     elements.apiPill.textContent = "Mock preview mode";
@@ -115,7 +128,8 @@ async function initialize() {
       governanceCenterMock.requirements,
       governanceCenterMock.rules,
       governanceCenterMock.observability,
-      governanceCenterMock.agentRuntime
+      governanceCenterMock.agentRuntime,
+      governanceCenterMock.evaluationCatalog
     );
   } finally {
     setRegionBusy(elements.activePolicyGrid, false);
@@ -126,16 +140,20 @@ async function initialize() {
     setRegionBusy(elements.agentRuntimeNotesList, false);
     setRegionBusy(elements.observabilityReadinessList, false);
     setRegionBusy(elements.observabilityGuardrailsList, false);
+    setRegionBusy(elements.evaluationCatalogList, false);
     syncSelfImprovementDeepLinkState();
+    syncEvaluationDeepLinkState();
   }
 }
 
 function wireEvents() {
   elements.selfImprovementForm.addEventListener("submit", handleSelfImprovementSubmit);
+  elements.evaluationForm.addEventListener("submit", handleEvaluationSubmit);
   window.addEventListener("hashchange", syncSelfImprovementDeepLinkState);
+  window.addEventListener("hashchange", syncEvaluationDeepLinkState);
 }
 
-function renderGovernanceCenter(requirements, rules, observability, agentRuntime) {
+function renderGovernanceCenter(requirements, rules, observability, agentRuntime, evaluationCatalog) {
   const activeVersion = rules.active_policy_version || {};
   const circulars = rules.active_circulars || [];
   const publications = circulars.flatMap((circular) => circular.publications || []);
@@ -406,6 +424,7 @@ function renderGovernanceCenter(requirements, rules, observability, agentRuntime
   renderAgentRuntime(agentRuntime);
   renderObservabilityReadiness(observability);
   renderObservabilityGuardrails(observability);
+  renderEvaluationCatalog(evaluationCatalog);
 
   elements.exceptionRulesList.innerHTML = listMarkup(
     (rules.nationality_exception_rules || []).map(
@@ -433,6 +452,68 @@ function renderGovernanceCenter(requirements, rules, observability, agentRuntime
   }
 }
 
+function renderEvaluationCatalog(evaluationCatalog) {
+  elements.evaluationCatalogList.innerHTML = listMarkup(
+    [
+      `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Workflow pack</span>
+              <h3 class="mt-2 text-lg font-extrabold text-slate-900">${evaluationCatalog.workflow_pack || "Not available"}</h3>
+            </div>
+            ${buildStatusChip(`${(evaluationCatalog.required_criteria || []).length} criteria`, "info")}
+          </div>
+          <p class="text-sm leading-7 text-slate-600">These are the baseline checks the governance flow expects before prompt or routing changes can be considered safe enough for human review.</p>
+        </article>
+      `,
+      `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Required scenarios</span>
+          <h3 class="mt-2 text-lg font-extrabold text-slate-900">Coverage set</h3>
+          <div class="mt-4 grid gap-3">
+            ${(evaluationCatalog.required_scenarios || [])
+              .map(
+                (item) =>
+                  `<div class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-6 text-slate-700">${item}</div>`
+              )
+              .join("")}
+          </div>
+        </article>
+      `,
+      `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Required criteria</span>
+          <h3 class="mt-2 text-lg font-extrabold text-slate-900">Safety and explainability rubric</h3>
+          <div class="mt-4 grid gap-3">
+            ${(evaluationCatalog.required_criteria || [])
+              .map(
+                (item) =>
+                  `<div class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-6 text-slate-700">${item}</div>`
+              )
+              .join("")}
+          </div>
+        </article>
+      `,
+      `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Operating notes</span>
+          <h3 class="mt-2 text-lg font-extrabold text-slate-900">How to use this rubric safely</h3>
+          <div class="mt-4 grid gap-3">
+            ${(evaluationCatalog.notes || [])
+              .map(
+                (item) =>
+                  `<div class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-6 text-slate-700">${item}</div>`
+              )
+              .join("")}
+          </div>
+        </article>
+      `,
+    ],
+    "Evaluation catalog data is not available yet."
+  );
+}
+
 async function handleSelfImprovementSubmit(event) {
   event.preventDefault();
   const caseId = String(elements.selfImprovementCaseId.value || "").trim();
@@ -442,6 +523,7 @@ async function handleSelfImprovementSubmit(event) {
   }
 
   state.currentCaseId = caseId;
+  syncGovernanceCaseInputs(caseId);
   syncCaseQueryParam(caseId);
   elements.selfImprovementFeedback.textContent = state.apiAvailable
     ? `Running self-improvement review for ${caseId}...`
@@ -465,6 +547,42 @@ async function handleSelfImprovementSubmit(event) {
   } finally {
     setButtonBusy(elements.selfImprovementSubmitButton, false, "Running review...");
     setRegionBusy(elements.selfImprovementResults, false);
+  }
+}
+
+async function handleEvaluationSubmit(event) {
+  event.preventDefault();
+  const caseId = String(elements.evaluationCaseId.value || "").trim();
+  if (!caseId) {
+    elements.evaluationFeedback.textContent = "Enter a case ID before running the evaluation.";
+    return;
+  }
+
+  state.currentCaseId = caseId;
+  syncGovernanceCaseInputs(caseId);
+  syncCaseQueryParam(caseId);
+  elements.evaluationFeedback.textContent = state.apiAvailable
+    ? `Running evaluation for ${caseId}...`
+    : `Mock mode is active. Showing a contract-aligned evaluation preview for ${caseId}.`;
+  setButtonBusy(elements.evaluationSubmitButton, true, "Running evaluation...");
+  setRegionBusy(elements.evaluationResults, true);
+
+  try {
+    const evaluation = state.apiAvailable
+      ? await api.runCaseEvaluation(caseId)
+      : buildMockEvaluation(caseId);
+    renderEvaluationRun(evaluation, !state.apiAvailable);
+    syncEvaluationDeepLinkState();
+    elements.evaluationFeedback.textContent = state.apiAvailable
+      ? `Evaluation recorded for ${caseId}. Review the failed checks before approving any prompt or routing changes.`
+      : `Mock evaluation loaded for ${caseId}.`;
+  } catch (error) {
+    elements.evaluationResults.hidden = true;
+    elements.evaluationEmpty.hidden = false;
+    elements.evaluationFeedback.textContent = `Evaluation failed: ${error.message}`;
+  } finally {
+    setButtonBusy(elements.evaluationSubmitButton, false, "Running evaluation...");
+    setRegionBusy(elements.evaluationResults, false);
   }
 }
 
@@ -603,6 +721,75 @@ function renderSelfImprovementReview(review, useMock = false) {
     .join("");
 }
 
+function renderEvaluationRun(evaluation, useMock = false) {
+  elements.evaluationResults.hidden = false;
+  elements.evaluationEmpty.hidden = true;
+
+  const summaryCards = [
+    ["Case ID", evaluation.case_id],
+    ["Scenario", evaluation.scenario_name || "scenario_review_required"],
+    ["Overall status", buildStatusChip(evaluation.overall_status || "FAIL", evaluation.overall_status === "PASS" ? "success" : "danger")],
+    ["Recommendation", buildStatusChip(evaluation.recommendation || "REQUEST_MORE_INFO")],
+    ["Checks", `${evaluation.passed_checks || 0} passed / ${evaluation.check_count || 0}`],
+    ["Failed checks", String(evaluation.failed_checks || 0)],
+    ["Export status", buildStatusChip(evaluation.observability_export_status || "DISABLED", toneForExportStatus(evaluation.observability_export_status))],
+    ["Trace target", evaluation.observability_target || "LOCAL_ONLY"],
+  ];
+
+  elements.evaluationSummaryGrid.innerHTML = summaryCards
+    .map(
+      ([label, value]) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/85 p-5">
+          <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${label}</span>
+          <strong class="mt-2 block text-base font-extrabold text-slate-900">${value || "Not available"}</strong>
+        </article>
+      `
+    )
+    .join("");
+
+  elements.evaluationChecksList.innerHTML = listMarkup(
+    (evaluation.checks || []).map(
+      (item) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/85 p-5">
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${item.check_name || "evaluation_check"}</span>
+              <h3 class="mt-2 text-lg font-extrabold text-slate-900">${item.details || "No details provided."}</h3>
+            </div>
+            ${buildStatusChip(item.status || "FAIL", item.status === "PASS" ? "success" : item.severity === "WARNING" ? "warning" : "danger")}
+          </div>
+          <p class="text-sm leading-7 text-slate-600"><strong class="text-slate-900">Expected:</strong> ${item.expected || "Not provided"}</p>
+          <p class="mt-3 text-sm leading-7 text-slate-600"><strong class="text-slate-900">Actual:</strong> ${item.actual || "Not provided"}</p>
+          ${
+            useMock
+              ? `<p class="mt-3 text-xs uppercase tracking-[0.18em] text-slate-500">Mock preview</p>`
+              : ""
+          }
+        </article>
+      `
+    ),
+    "No evaluation checks are available yet."
+  );
+
+  const metaItems = [
+    ["Trace ID", evaluation.trace_id || "Not available"],
+    ["Observation ID", evaluation.observation_id || "Not available"],
+    ["Evaluation labels", listMarkup((evaluation.evaluation_labels || []).map((label) => `<span>${label}</span>`), "None")],
+    ["Human review required", evaluation.human_review_required ? "Yes" : "No"],
+  ];
+
+  elements.evaluationMetaList.innerHTML = metaItems
+    .map(
+      ([label, value]) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/85 p-5">
+          <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${label}</span>
+          <div class="mt-3 text-sm leading-7 text-slate-600">${value}</div>
+        </article>
+      `
+    )
+    .join("");
+}
+
 function renderObservabilityReadiness(observability) {
   const status = String(observability.status || "DISABLED").toUpperCase();
   const readiness = observabilityReadinessState(status, observability);
@@ -698,6 +885,22 @@ function buildMockSelfImprovementReview(caseId) {
   };
 }
 
+function buildMockEvaluation(caseId) {
+  return {
+    ...governanceCenterMock.latestEvaluation,
+    case_id: caseId || governanceCenterMock.latestEvaluation.case_id,
+  };
+}
+
+function syncGovernanceCaseInputs(caseId) {
+  if (elements.selfImprovementCaseId) {
+    elements.selfImprovementCaseId.value = caseId || "";
+  }
+  if (elements.evaluationCaseId) {
+    elements.evaluationCaseId.value = caseId || "";
+  }
+}
+
 function syncCaseQueryParam(caseId) {
   const params = new URLSearchParams(window.location.search);
   if (caseId) {
@@ -722,6 +925,29 @@ function syncSelfImprovementDeepLinkState() {
   panel.classList.toggle("border-teal-300", isReviewHash);
 
   if (isReviewHash) {
+    panel.setAttribute("tabindex", "-1");
+    window.requestAnimationFrame(() => {
+      panel.focus({ preventScroll: true });
+      panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return;
+  }
+
+  panel.removeAttribute("tabindex");
+}
+
+function syncEvaluationDeepLinkState() {
+  const panel = elements.evaluationPanel;
+  if (!panel) {
+    return;
+  }
+
+  const isEvalHash = window.location.hash === "#evaluation-panel";
+  panel.classList.toggle("ring-2", isEvalHash);
+  panel.classList.toggle("ring-teal-300", isEvalHash);
+  panel.classList.toggle("border-teal-300", isEvalHash);
+
+  if (isEvalHash) {
     panel.setAttribute("tabindex", "-1");
     window.requestAnimationFrame(() => {
       panel.focus({ preventScroll: true });

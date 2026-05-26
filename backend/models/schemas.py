@@ -475,6 +475,39 @@ class SelfImprovementReviewResponse(BaseModel):
     observability_target: str = "LOCAL_ONLY"
 
 
+class EvaluationCheckResult(BaseModel):
+    check_name: str
+    status: Literal["PASS", "FAIL"]
+    severity: Literal["INFO", "WARNING", "ERROR"] = "INFO"
+    details: str
+    expected: str = ""
+    actual: str = ""
+
+
+class EvaluationRunResponse(BaseModel):
+    case_id: str
+    scenario_name: str
+    overall_status: Literal["PASS", "FAIL"]
+    human_review_required: bool = True
+    recommendation: Recommendation
+    check_count: int
+    passed_checks: int
+    failed_checks: int
+    checks: list[EvaluationCheckResult] = Field(default_factory=list)
+    trace_id: str = ""
+    observation_id: str = ""
+    observability_export_status: str = "DISABLED"
+    observability_target: str = "LOCAL_ONLY"
+    evaluation_labels: list[str] = Field(default_factory=list)
+
+
+class EvaluationCatalogResponse(BaseModel):
+    workflow_pack: str
+    required_scenarios: list[str] = Field(default_factory=list)
+    required_criteria: list[str] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
 class SupervisorQueueSummary(BaseModel):
     workflow_pack: str
     counts_by_state: dict[str, int]
