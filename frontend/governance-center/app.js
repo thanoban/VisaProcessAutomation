@@ -7,6 +7,7 @@ import {
   linkListMarkup,
   linkMarkup,
   listMarkup,
+  renderSurfaceNavigation,
   setRegionBusy,
   titleCase,
 } from "../shared/app.js";
@@ -14,6 +15,8 @@ import {
 const elements = {
   apiPill: document.querySelector("#governance-api-pill"),
   heroCopy: document.querySelector("#governance-hero-copy"),
+  surfaceNav: document.querySelector("#surface-nav"),
+  surfaceAccessNote: document.querySelector("#surface-access-note"),
   activePolicyGrid: document.querySelector("#active-policy-grid"),
   publicationSignalGrid: document.querySelector("#publication-signal-grid"),
   requirementsList: document.querySelector("#requirements-list"),
@@ -31,6 +34,19 @@ const state = {
 const api = createApiClient(state.apiBaseUrl);
 
 async function initialize() {
+  renderSurfaceNavigation({
+    navElement: elements.surfaceNav,
+    noticeElement: elements.surfaceAccessNote,
+    currentSurface: "governance",
+    homeHref: "../",
+    navLinks: [
+      { label: "Frontend Home", href: "../", surface: "home" },
+      { label: "Applicant Portal", href: "../applicant-portal/", surface: "applicant" },
+      { label: "Officer Dashboard", href: "../officer-dashboard/", surface: "officer" },
+      { label: "Supervisor Dashboard", href: "../supervisor-dashboard/", surface: "supervisor" },
+      { label: "Governance Center", href: "./", surface: "governance" },
+    ],
+  });
   setRegionBusy(elements.activePolicyGrid, true);
   setRegionBusy(elements.publicationSignalGrid, true);
   setRegionBusy(elements.traceabilityList, true);

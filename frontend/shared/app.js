@@ -1,5 +1,6 @@
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
 const RECENT_CASES_KEY = "visaFlowRecentCases";
+const WORKSPACE_PREVIEW_KEY = "visaFlowWorkspacePreviewMode";
 
 export function normalizeApiBaseUrl(value) {
   return (value || DEFAULT_API_BASE_URL).trim().replace(/\/+$/, "") || DEFAULT_API_BASE_URL;
@@ -18,6 +19,104 @@ export function setStoredApiBaseUrl(value) {
 export function clearStoredApiBaseUrl() {
   localStorage.removeItem("visaFlowApiBaseUrl");
   return DEFAULT_API_BASE_URL;
+}
+
+export function workspacePreviewModeEnabled() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("workspace") === "1") {
+      return true;
+    }
+    return localStorage.getItem(WORKSPACE_PREVIEW_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function setWorkspacePreviewMode(enabled) {
+  if (enabled) {
+    localStorage.setItem(WORKSPACE_PREVIEW_KEY, "1");
+  } else {
+    localStorage.removeItem(WORKSPACE_PREVIEW_KEY);
+  }
+  return enabled;
+}
+
+export function appendWorkspacePreviewParam(href, enabled = workspacePreviewModeEnabled()) {
+  if (!href || !enabled) {
+    return href;
+  }
+  try {
+    const url = new URL(href, window.location.href);
+    url.searchParams.set("workspace", "1");
+    if (url.origin === window.location.origin) {
+      return `${url.pathname}${url.search}${url.hash}`;
+    }
+    return url.toString();
+  } catch {
+    return href;
+  }
+}
+
+export function renderSurfaceNavigation({
+  navElement,
+  noticeElement,
+  currentSurface,
+  homeHref,
+  navLinks,
+}) {
+  const workspaceMode = workspacePreviewModeEnabled();
+  const links = Array.isArray(navLinks) ? navLinks : [];
+  const visibleLinks = workspaceMode ? links : links.filter((item) => item.surface === currentSurface || item.surface === "home");
+
+  if (navElement) {
+    navElement.innerHTML = visibleLinks
+      .map((item) => {
+        const isCurrent = item.surface === currentSurface;
+        const classes = isCurrent
+          ? "bg-visa-navy text-white shadow-lg shadow-slate-900/10"
+          : "border border-slate-200 bg-white/80 text-slate-700";
+        const href = isCurrent ? item.href : appendWorkspacePreviewParam(item.href, workspaceMode);
+        return `<a class="rounded-full px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5 ${classes}" href="${href}">${item.label}</a>`;
+      })
+      .join("");
+  }
+
+  if (noticeElement) {
+    const message = workspaceMode
+      ? "Internal workspace preview is active. Cross-role links are visible only for demo, QA, and operator walkthroughs."
+      : "Role-scoped mode is active. Cross-role navigation is intentionally hidden outside internal workspace preview.";
+    const actionLabel = workspaceMode ? "Exit workspace preview" : "Enable workspace preview";
+    noticeElement.innerHTML = `
+      <div class="flex flex-col gap-3 rounded-[1.5rem] border border-slate-200/80 bg-white/75 p-4 md:flex-row md:items-center md:justify-between">
+        <div class="text-sm leading-7 text-slate-600">
+          <strong class="text-slate-900">${workspaceMode ? "Internal preview mode" : "Role-scoped mode"}</strong><br />
+          ${message}
+        </div>
+        <div class="flex flex-wrap gap-3">
+          ${
+            homeHref
+              ? `<a class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="${appendWorkspacePreviewParam(homeHref, workspaceMode)}">Open frontend home</a>`
+              : ""
+          }
+          <button class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" type="button" data-workspace-toggle="${workspaceMode ? "off" : "on"}">
+            ${actionLabel}
+          </button>
+        </div>
+      </div>
+    `;
+    noticeElement.querySelector("[data-workspace-toggle]")?.addEventListener("click", () => {
+      const shouldEnable = noticeElement.querySelector("[data-workspace-toggle]")?.dataset.workspaceToggle === "on";
+      setWorkspacePreviewMode(shouldEnable);
+      const url = new URL(window.location.href);
+      if (shouldEnable) {
+        url.searchParams.set("workspace", "1");
+      } else {
+        url.searchParams.delete("workspace");
+      }
+      window.location.assign(`${url.pathname}${url.search}${url.hash}`);
+    });
+  }
 }
 
 export function isMissingFileUploadSupport(error) {

@@ -1,8 +1,10 @@
 import {
+  appendWorkspacePreviewParam,
   buildStatusChip,
   createApiClient,
   getStoredApiBaseUrl,
   listMarkup,
+  renderSurfaceNavigation,
   setButtonBusy,
   setRegionBusy,
   supervisorDashboardMock,
@@ -12,6 +14,8 @@ import {
 const elements = {
   apiPill: document.querySelector("#supervisor-api-pill"),
   heroCopy: document.querySelector("#supervisor-hero-copy"),
+  surfaceNav: document.querySelector("#surface-nav"),
+  surfaceAccessNote: document.querySelector("#surface-access-note"),
   refreshButton: document.querySelector("#refresh-queues-button"),
   filterForm: document.querySelector("#supervisor-filter-form"),
   clearFiltersButton: document.querySelector("#clear-filters-button"),
@@ -42,6 +46,19 @@ const state = {
 const api = createApiClient(state.apiBaseUrl);
 
 async function initialize() {
+  renderSurfaceNavigation({
+    navElement: elements.surfaceNav,
+    noticeElement: elements.surfaceAccessNote,
+    currentSurface: "supervisor",
+    homeHref: "../",
+    navLinks: [
+      { label: "Frontend Home", href: "../", surface: "home" },
+      { label: "Applicant Portal", href: "../applicant-portal/", surface: "applicant" },
+      { label: "Officer Dashboard", href: "../officer-dashboard/", surface: "officer" },
+      { label: "Supervisor Dashboard", href: "./", surface: "supervisor" },
+      { label: "Governance Center", href: "../governance-center/", surface: "governance" },
+    ],
+  });
   elements.refreshButton.addEventListener("click", loadSupervisorData);
   elements.filterForm.addEventListener("change", handleFilterChange);
   elements.clearFiltersButton.addEventListener("click", clearFilters);
@@ -225,13 +242,13 @@ function renderSupervisorDashboard(queues, notices, casesResponse) {
             }
             <a
               class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5"
-              href="../officer-dashboard/?case=${encodeURIComponent(item.case_id)}"
+              href="${appendWorkspacePreviewParam(`../officer-dashboard/?case=${encodeURIComponent(item.case_id)}`)}"
             >
               Open officer view
             </a>
             <a
               class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5"
-              href="../applicant-portal/?case=${encodeURIComponent(item.case_id)}"
+              href="${appendWorkspacePreviewParam(`../applicant-portal/?case=${encodeURIComponent(item.case_id)}`)}"
             >
               Open applicant view
             </a>

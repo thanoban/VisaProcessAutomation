@@ -1,4 +1,5 @@
 import {
+  appendWorkspacePreviewParam,
   applicantPortalMock,
   buildStatusChip,
   createApiClient,
@@ -11,12 +12,14 @@ import {
   linkMarkup,
   listMarkup,
   rememberRecentCase,
+  renderSurfaceNavigation,
   setButtonBusy,
   setRegionBusy,
   startCaseId,
   toneForDecisionUrgency,
   titleCase,
   workflowGlossary,
+  workspacePreviewModeEnabled,
 } from "../shared/app.js";
 
 const elements = {
@@ -36,6 +39,8 @@ const elements = {
   checklistNotes: document.querySelector("#checklist-notes"),
   noticeList: document.querySelector("#notice-list"),
   workflowGlossaryList: document.querySelector("#workflow-glossary-list"),
+  surfaceNav: document.querySelector("#surface-nav"),
+  surfaceAccessNote: document.querySelector("#surface-access-note"),
   statusResults: document.querySelector("#status-results"),
   statusEmpty: document.querySelector("#status-empty"),
   stateValue: document.querySelector("#state-value"),
@@ -66,6 +71,19 @@ const api = createApiClient(state.apiBaseUrl);
 async function initialize() {
   elements.caseIdInput.value = startCaseId();
   elements.lookupCaseIdInput.value = state.linkedCaseId || applicantPortalMock.casePacket.case_id;
+  renderSurfaceNavigation({
+    navElement: elements.surfaceNav,
+    noticeElement: elements.surfaceAccessNote,
+    currentSurface: "applicant",
+    homeHref: "../",
+    navLinks: [
+      { label: "Frontend Home", href: "../", surface: "home" },
+      { label: "Applicant Portal", href: "./", surface: "applicant" },
+      { label: "Officer Dashboard", href: "../officer-dashboard/", surface: "officer" },
+      { label: "Supervisor Dashboard", href: "../supervisor-dashboard/", surface: "supervisor" },
+      { label: "Governance Center", href: "../governance-center/", surface: "governance" },
+    ],
+  });
   wireEvents();
   await Promise.all([loadOperationalChrome(), renderSampleCasePreview()]);
   if (state.linkedCaseId && state.apiAvailable) {
@@ -801,6 +819,13 @@ function buildDocumentsPayload(formData, prefix = "") {
 }
 
 function buildWorkspaceLinks(caseId, currentSurface, queueContext = {}) {
+  if (!workspacePreviewModeEnabled()) {
+    return `
+      <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-white/45 p-4 text-sm leading-7 text-slate-600">
+        Cross-surface case switching is available only in internal workspace preview mode.
+      </div>
+    `;
+  }
   const links = [
     ["Applicant Portal", "../applicant-portal/", "applicant"],
     ["Officer Dashboard", "../officer-dashboard/", "officer"],
@@ -821,7 +846,7 @@ function buildWorkspaceLinks(caseId, currentSurface, queueContext = {}) {
 
 function buildSurfaceHref(surface, href, caseId, queueContext = {}) {
   if (surface === "governance") {
-    return href;
+    return appendWorkspacePreviewParam(href);
   }
 
   const params = new URLSearchParams();
@@ -834,7 +859,7 @@ function buildSurfaceHref(surface, href, caseId, queueContext = {}) {
       params.set("holder", queueContext.holder);
     }
   }
-  return `${href}?${params.toString()}`;
+  return appendWorkspacePreviewParam(`${href}?${params.toString()}`);
 }
 
 initialize();
