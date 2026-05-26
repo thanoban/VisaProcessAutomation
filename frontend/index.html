@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VisaFlow MAS Frontend</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Manrope", "Segoe UI", "sans-serif"],
+              display: ["Source Serif 4", "Georgia", "serif"],
+            },
+            colors: {
+              visa: {
+                ink: "#123042",
+                navy: "#12364D",
+              },
+            },
+            boxShadow: {
+              soft: "0 24px 60px rgba(17, 24, 39, 0.10)",
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="stylesheet" href="./shared/styles.css" />
+  </head>
+  <body class="min-h-screen text-visa-ink">
+    <div class="mx-auto w-[min(calc(100%-1.5rem),78rem)] py-4 md:w-[min(calc(100%-2rem),78rem)] md:py-6">
+      <header class="mb-7 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div class="flex items-center gap-4">
+          <div class="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-visa-navy to-sky-700 text-lg font-extrabold tracking-[0.18em] text-white shadow-soft">
+            VF
+          </div>
+          <div>
+            <small class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Sri Lanka workflow frontend</small>
+            <strong class="block text-lg text-slate-900">VisaFlow MAS Professional Frontend MVP</strong>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-3 md:justify-end">
+          <span class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+            FastAPI-served frontend
+          </span>
+          <span class="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+            Human decision boundary preserved
+          </span>
+        </div>
+      </header>
+
+      <section class="rounded-[2.25rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-8">
+        <span class="block text-[0.72rem] uppercase tracking-[0.22em] text-slate-500">Surface directory</span>
+        <h1 class="font-display mt-3 text-4xl leading-none tracking-[-0.05em] text-slate-950 md:text-6xl">
+          One workflow, four operational views.
+        </h1>
+        <p class="mt-4 max-w-3xl text-sm leading-7 text-slate-600 md:text-base">
+          The frontend now exposes dedicated surfaces for applicants, officers, supervisors, and governance review while
+          staying connected to the existing FastAPI workflow APIs.
+        </p>
+
+        <div class="mt-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+          <a class="rounded-[1.75rem] border border-slate-200/80 bg-white/85 p-5 transition hover:-translate-y-1 hover:shadow-soft" href="./applicant-portal/">
+            <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Applicant</span>
+            <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Portal</h2>
+            <p class="mt-3 text-sm leading-7 text-slate-600">Create cases, check status, review notices, and understand the next action clearly.</p>
+          </a>
+
+          <a class="rounded-[1.75rem] border border-slate-200/80 bg-white/85 p-5 transition hover:-translate-y-1 hover:shadow-soft" href="./officer-dashboard/">
+            <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Officer</span>
+            <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Dashboard</h2>
+            <p class="mt-3 text-sm leading-7 text-slate-600">Review evidence, policy references, audit history, and submit a human decision.</p>
+          </a>
+
+          <a class="rounded-[1.75rem] border border-slate-200/80 bg-white/85 p-5 transition hover:-translate-y-1 hover:shadow-soft" href="./supervisor-dashboard/">
+            <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Supervisor</span>
+            <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Operations</h2>
+            <p class="mt-3 text-sm leading-7 text-slate-600">See bottlenecks, manual referrals, and queue pressure across the workflow.</p>
+          </a>
+
+          <a class="rounded-[1.75rem] border border-slate-200/80 bg-white/85 p-5 transition hover:-translate-y-1 hover:shadow-soft" href="./governance-center/">
+            <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Governance</span>
+            <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Reference Center</h2>
+            <p class="mt-3 text-sm leading-7 text-slate-600">Review the active rule pack, circulars, official sources, and nationality exception handling.</p>
+          </a>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>

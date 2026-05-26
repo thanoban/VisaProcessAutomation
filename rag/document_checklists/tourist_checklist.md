@@ -1,7 +1,7 @@
-# Tourist Visa Checklist
+# Sri Lanka Tourist Visit Checklist
 
-- Passport
-- Bank statement
-- Flight itinerary
-- Accommodation or invitation evidence when requested by local policy
-- Payment confirmation
+- Passport valid for at least six months from arrival
+- Evidence of funds for the visit
+- Return or onward travel evidence
+- Accommodation or invitation evidence when appropriate
+- Official payment confirmation or ETA reference

@@ -1,8 +1,7 @@
-from datetime import datetime
-
 from sqlalchemy import Boolean, Column, DateTime, Integer, JSON, String, Text
 
 from backend.database.base import Base
+from backend.services.utils import utc_now_datetime
 
 
 class CaseRecord(Base):
@@ -24,8 +23,8 @@ class CaseRecord(Base):
     override_required = Column(Boolean, nullable=False, default=False)
     retention_class = Column(String, nullable=False, default="STANDARD_VISA")
     mock_profile = Column(JSON, nullable=False, default=dict)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now_datetime, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utc_now_datetime, onupdate=utc_now_datetime, nullable=False)
 
 
 class DocumentExtractionRecord(Base):
@@ -35,7 +34,7 @@ class DocumentExtractionRecord(Base):
     case_id = Column(String, nullable=False, index=True)
     document_id = Column(String, nullable=False)
     extraction = Column(JSON, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now_datetime, nullable=False)
 
 
 class AgentRunRecord(Base):
@@ -51,8 +50,12 @@ class AgentRunRecord(Base):
     tool_calls = Column(JSON, nullable=False, default=list)
     evidence_ids = Column(JSON, nullable=False, default=list)
     policy_ids = Column(JSON, nullable=False, default=list)
+    policy_version = Column(String, nullable=False, default="")
+    rule_version_used = Column(String, nullable=False, default="")
+    publication_reference = Column(String, nullable=False, default="")
+    policy_source_uri = Column(String, nullable=False, default="")
     output_json = Column(JSON, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now_datetime, nullable=False)
 
 
 class AgentOutputRecord(Base):
@@ -62,7 +65,7 @@ class AgentOutputRecord(Base):
     case_id = Column(String, nullable=False, index=True)
     agent_name = Column(String, nullable=False)
     payload = Column(JSON, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now_datetime, nullable=False)
 
 
 class OfficerBriefRecord(Base):
@@ -70,8 +73,8 @@ class OfficerBriefRecord(Base):
 
     case_id = Column(String, primary_key=True)
     payload = Column(JSON, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now_datetime, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utc_now_datetime, onupdate=utc_now_datetime, nullable=False)
 
 
 class AuditEventRecord(Base):
@@ -91,6 +94,10 @@ class AuditEventRecord(Base):
     output_hash = Column(String, nullable=False, default="")
     evidence_ids = Column(JSON, nullable=False, default=list)
     policy_ids = Column(JSON, nullable=False, default=list)
+    policy_version = Column(String, nullable=False, default="")
+    rule_version_used = Column(String, nullable=False, default="")
+    publication_reference = Column(String, nullable=False, default="")
+    policy_source_uri = Column(String, nullable=False, default="")
     recommendation = Column(String, nullable=False, default="")
     human_action = Column(String, nullable=False, default="")
     override_reason = Column(Text, nullable=False, default="")
@@ -108,7 +115,7 @@ class OfficerDecisionRecord(Base):
     officer_id = Column(String, nullable=False)
     reason = Column(Text, nullable=False)
     override_reason = Column(Text, nullable=False, default="")
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now_datetime, nullable=False)
 
 
 class PolicySnapshotRecord(Base):
@@ -120,7 +127,7 @@ class PolicySnapshotRecord(Base):
     effective_date = Column(String, nullable=False)
     source_uri = Column(String, nullable=False)
     sections = Column(JSON, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now_datetime, nullable=False)
 
 
 class NotificationRecord(Base):
@@ -130,4 +137,4 @@ class NotificationRecord(Base):
     case_id = Column(String, nullable=False, index=True)
     channel = Column(String, nullable=False)
     payload = Column(JSON, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now_datetime, nullable=False)

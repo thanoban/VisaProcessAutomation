@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
+
+from backend.services.utils import utc_now
 
 
 Recommendation = Literal["APPROVE_READY", "REQUEST_MORE_INFO", "ENHANCED_REVIEW", "REFUSAL_DRAFT_READY"]
@@ -84,7 +85,7 @@ class NationalityExceptionRule(BaseModel):
 
 class CaseTimelineEvent(BaseModel):
     state: str
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = Field(default_factory=utc_now)
     actor: str
     description: str = ""
     action_owner: str | None = None
@@ -110,7 +111,7 @@ class Appointment(BaseModel):
 class PortClearanceEvent(BaseModel):
     event_type: str
     status: str
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = Field(default_factory=utc_now)
     notes: str = ""
 
 
@@ -119,7 +120,7 @@ class DecisionNotice(BaseModel):
     subject: str
     summary: str
     next_steps: list[str] = Field(default_factory=list)
-    issued_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    issued_at: str = Field(default_factory=utc_now)
 
 
 class ChecklistItem(BaseModel):
@@ -131,11 +132,14 @@ class ChecklistItem(BaseModel):
 
 
 class PolicyContext(BaseModel):
-    country: str = "UNSPECIFIED"
-    policy_version: str = "tourist-policy-v1"
-    effective_date: str = "2026-01-01"
+    country: str = "Sri Lanka"
+    policy_version: str = "sl-tourist-policy-v1"
+    effective_date: str = "2026-05-25"
     effective_rule_version: str = "sl-rule-pack-2026-05-25"
     publication_reference: str = "ETA-40-COUNTRY-SCHEME-2026-05-25"
+    source_uri: str = "https://www.immigration.gov.lk/pages_e.php?id=14&os=av.."
+    official_sources: list[str] = Field(default_factory=list)
+    verified_at: str = "2026-05-25"
     publication_channels: list[ChannelPublication] = Field(default_factory=list)
 
 
@@ -159,8 +163,8 @@ class WorkflowState(BaseModel):
 
 
 class AuditInfo(BaseModel):
-    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
-    updated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = Field(default_factory=utc_now)
+    updated_at: str = Field(default_factory=utc_now)
     workflow_version: str = "v1.0"
 
 
@@ -174,7 +178,7 @@ class AgentEnvelope(BaseModel):
     policy_ids: list[str] = Field(default_factory=list)
     confidence: float
     requires_human_review: bool = True
-    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = Field(default_factory=utc_now)
     details: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -221,6 +225,10 @@ class AuditEvent(BaseModel):
     output_hash: str = ""
     evidence_ids: list[str] = Field(default_factory=list)
     policy_ids: list[str] = Field(default_factory=list)
+    policy_version: str = ""
+    rule_version_used: str = ""
+    publication_reference: str = ""
+    policy_source_uri: str = ""
     recommendation: str = ""
     human_action: str = ""
     override_reason: str = ""
@@ -274,8 +282,11 @@ class ApplicantMessageResponse(BaseModel):
 
 class ChecklistResponse(BaseModel):
     workflow_pack: str
+    country: str = ""
     visa_class: str
     checklist: list[ChecklistItem]
+    verified_at: str = ""
+    official_sources: list[str] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
 
 
@@ -287,8 +298,13 @@ class AuthorizationStatusResponse(BaseModel):
     manual_referral_reason: str | None = None
     action_required_from: str
     next_action: str
+    policy_version: str = ""
+    effective_date: str = ""
     rule_version_used: str
     publication_reference: str = ""
+    source_uri: str = ""
+    official_sources: list[str] = Field(default_factory=list)
+    verified_at: str = ""
 
 
 class CaseStatusResponse(BaseModel):
@@ -296,6 +312,7 @@ class CaseStatusResponse(BaseModel):
     status: str
     latest_message: dict[str, Any] | None = None
     required_actions: list[str] = Field(default_factory=list)
+    additional_evidence_requests: list[dict[str, Any]] = Field(default_factory=list)
     uploaded_documents: list[dict[str, Any]] = Field(default_factory=list)
     deadlines: dict[str, Any] = Field(default_factory=dict)
     service_notices: list[dict[str, Any]] = Field(default_factory=list)
@@ -306,6 +323,10 @@ class CaseStatusResponse(BaseModel):
     authorization_status: dict[str, Any] = Field(default_factory=dict)
     port_clearance_state: str = "NOT_STARTED"
     extension_state: str = "NOT_REQUESTED"
+    manual_referral_reason: str | None = None
+    appointments: list[dict[str, Any]] = Field(default_factory=list)
+    decision_notice: dict[str, Any] | None = None
+    port_clearance_events: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class OfficerDecisionRequest(BaseModel):
@@ -323,12 +344,20 @@ class SystemNotice(BaseModel):
 
 class PolicyRequirementsResponse(BaseModel):
     visa_class: str
+    workflow_pack: str = ""
     policy_version: str
+    effective_date: str = ""
+    source_uri: str = ""
+    official_sources: list[str] = Field(default_factory=list)
+    verified_at: str = ""
     requirements: list[dict[str, Any]]
 
 
 class GovernanceRulesResponse(BaseModel):
     workflow_pack: str
+    country: str = ""
+    verified_at: str = ""
+    official_sources: list[str] = Field(default_factory=list)
     active_policy_version: EffectivePolicyVersion
     active_circulars: list[RuleCircular]
     nationality_exception_rules: list[NationalityExceptionRule]
@@ -340,3 +369,30 @@ class SupervisorQueueSummary(BaseModel):
     manual_referrals: int
     waiting_for_documents: int
     ready_for_officer_review: int
+
+
+class SupervisorCaseSummary(BaseModel):
+    case_id: str
+    applicant_name: str
+    nationality: str
+    visa_class: str
+    current_state: str
+    current_holder: str
+    next_action: str
+    action_required_from: str
+    eta_status: str
+    manual_referral_reason: str | None = None
+    policy_version: str = ""
+    rule_version_used: str = ""
+    publication_reference: str = ""
+    decision_due_at: str | None = None
+    updated_at: str = ""
+
+
+class SupervisorCaseListResponse(BaseModel):
+    workflow_pack: str
+    total_cases: int
+    filtered_count: int
+    state_filter: str = ""
+    holder_filter: str = ""
+    cases: list[SupervisorCaseSummary] = Field(default_factory=list)

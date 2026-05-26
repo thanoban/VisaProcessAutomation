@@ -1,0 +1,45 @@
+{
+  "workflow_pack": "SRI_LANKA_TOURIST_VISIT",
+  "country": "Sri Lanka",
+  "visa_class": "TOURIST",
+  "verified_at": "2026-05-25",
+  "official_sources": [
+    "https://www.immigration.gov.lk/pages_e.php?id=14&os=av..",
+    "https://www.eta.gov.lk/slvisa/visainfo/weta.jsp?ch1=current&locale=en_US"
+  ],
+  "checklist": [
+    {
+      "code": "PASSPORT",
+      "title": "Valid Passport",
+      "description": "Provide a passport valid for at least six months from the intended date of arrival in Sri Lanka.",
+      "required": true,
+      "guidance": "Use a clear, readable copy. The passport details must match the application data."
+    },
+    {
+      "code": "FUNDS",
+      "title": "Funds and Return Assurance",
+      "description": "Show evidence of adequate funds and return or onward travel assurance for the intended short visit.",
+      "required": true,
+      "guidance": "Recent bank statements and onward ticket or itinerary evidence are the baseline support set in this PoC."
+    },
+    {
+      "code": "PURPOSE",
+      "title": "Tourist Visit Purpose",
+      "description": "Provide travel purpose details consistent with a short tourist visit to Sri Lanka.",
+      "required": true,
+      "guidance": "Avoid mixing tourist travel with work, long-stay, or business-only activity in the same purpose statement."
+    },
+    {
+      "code": "OFFICIAL_PAYMENT",
+      "title": "Official Payment Channel",
+      "description": "Use only the official ETA and immigration payment channels.",
+      "required": true,
+      "guidance": "The product should make official payment and case references explicit to reduce scam exposure."
+    }
+  ],
+  "notes": [
+    "ETA is not the same as final port-of-entry clearance.",
+    "Some nationalities or special cases may require sponsor-backed or manual handling.",
+    "Extension handling may require online steps, appointments, or head-office action."
+  ]
+}

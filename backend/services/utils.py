@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 
+def utc_now_datetime() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 def utc_now() -> str:
-    return datetime.utcnow().isoformat()
+    return utc_now_datetime().isoformat().replace("+00:00", "Z")
 
 
 def stable_hash(payload: Any) -> str:

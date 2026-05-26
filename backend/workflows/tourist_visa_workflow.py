@@ -18,6 +18,7 @@ from backend.models.schemas import (
 from backend.services.audit_service import AuditService
 from backend.services.case_service import CaseService
 from backend.services.notification_service import NotificationService
+from backend.services.policy_service import load_policy_manifest
 from backend.services.sri_lanka_reference_service import SriLankaReferenceService
 from backend.services.utils import stable_hash
 from tools.audit_tools import write_audit_log
@@ -109,6 +110,10 @@ class TouristVisaWorkflow:
                 recommendation=recommendation,
                 evidence_ids=supervisor_output["evidence_references"],
                 policy_ids=[ref["policy_id"] for ref in supervisor_output["policy_references"]],
+                policy_version=case.policy_context.policy_version,
+                rule_version_used=case.policy_context.effective_rule_version,
+                publication_reference=case.policy_context.publication_reference,
+                policy_source_uri=case.policy_context.source_uri,
             )
         else:
             self.audit_service.write_event(
@@ -120,6 +125,10 @@ class TouristVisaWorkflow:
                 recommendation=recommendation,
                 evidence_ids=supervisor_output["evidence_references"],
                 policy_ids=[ref["policy_id"] for ref in supervisor_output["policy_references"]],
+                policy_version=case.policy_context.policy_version,
+                rule_version_used=case.policy_context.effective_rule_version,
+                publication_reference=case.policy_context.publication_reference,
+                policy_source_uri=case.policy_context.source_uri,
             )
         return supervisor_output
 
@@ -129,9 +138,7 @@ class TouristVisaWorkflow:
             return None
 
         recommendation = case.agent_outputs.get("supervisor_agent", {}).get("recommendation", "")
-        override_required = payload.decision == "REJECT" and recommendation == "APPROVE_READY"
-        if payload.decision != "REQUEST_MORE_INFO" and recommendation and payload.override_reason:
-            override_required = True
+        override_required = self.override_reason_required(recommendation, payload.decision)
         case.override_required = override_required
 
         if payload.decision == "APPROVE":
@@ -166,13 +173,12 @@ class TouristVisaWorkflow:
                 action_owner="PORT_OF_ENTRY",
             )
         elif payload.decision == "REQUEST_MORE_INFO":
-            request = AdditionalEvidenceRequest(
-                request_id=f"REQ-{uuid4()}",
+            self._upsert_open_evidence_request(
+                case,
                 requested_items=["ADDITIONAL_SUPPORTING_EVIDENCE"],
                 reason=payload.reason,
-                status="OPEN",
+                deadline=case.decision_due_at or "",
             )
-            case.workflow.additional_evidence_requests.append(request)
             case.workflow.eta_status = "ETA_ADDITIONAL_EVIDENCE_REQUIRED"
             case.workflow.current_holder = "APPLICANT"
             case.workflow.action_required_from = "APPLICANT"
@@ -225,6 +231,10 @@ class TouristVisaWorkflow:
             actor_type="OFFICER",
             actor_id=payload.officer_id,
             payload=payload.model_dump(),
+            policy_version=case.policy_context.policy_version,
+            rule_version_used=case.policy_context.effective_rule_version,
+            publication_reference=case.policy_context.publication_reference,
+            policy_source_uri=case.policy_context.source_uri,
             recommendation=recommendation,
             human_action=payload.decision,
             override_reason=payload.override_reason,
@@ -248,6 +258,22 @@ class TouristVisaWorkflow:
         self.notification_service.store_message(case_id, applicant_message)
         return {"status": "RECORDED", "audit_event": event, "human_decision_required": True}
 
+    def override_reason_required(self, recommendation: str, decision: str) -> bool:
+        allowed_decisions = {
+            "APPROVE_READY": {"APPROVE"},
+            "REQUEST_MORE_INFO": {"REQUEST_MORE_INFO"},
+            "REFUSAL_DRAFT_READY": {"REJECT"},
+            # ENHANCED_REVIEW is a routing outcome rather than a final legal disposition,
+            # so the officer may still approve, reject, request more information, or escalate
+            # after completing the additional human review steps.
+            "ENHANCED_REVIEW": {"APPROVE", "REJECT", "REQUEST_MORE_INFO", "ESCALATE"},
+        }
+        normalized_recommendation = str(recommendation or "").upper()
+        normalized_decision = str(decision or "").upper()
+        if normalized_recommendation not in allowed_decisions:
+            return False
+        return normalized_decision not in allowed_decisions[normalized_recommendation]
+
     def send_applicant_message(self, case_id: str) -> ApplicantMessageResponse | None:
         case = self.case_service.get_case(case_id)
         if not case:
@@ -264,10 +290,21 @@ class TouristVisaWorkflow:
         return self.notification_service.store_message(case_id, message)
 
     def get_policy_requirements(self, visa_class: str) -> PolicyRequirementsResponse:
-        retrieved = retrieve_policy_sections(visa_class, "Sri Lanka", "2026-05-25")
+        active_rules = self.reference_service.get_active_rules()
+        manifest = load_policy_manifest()
+        retrieved = retrieve_policy_sections(
+            visa_class,
+            "Sri Lanka",
+            active_rules.active_policy_version.effective_date,
+        )
         return PolicyRequirementsResponse(
             visa_class=visa_class.upper(),
+            workflow_pack=retrieved["workflow_pack"],
             policy_version=retrieved["policy_version"],
+            effective_date=active_rules.active_policy_version.effective_date,
+            source_uri=retrieved["source_uri"],
+            official_sources=manifest.get("official_sources", []),
+            verified_at=manifest.get("verified_at", ""),
             requirements=[
                 {"policy_id": section["policy_id"], "requirement": section["requirement"]}
                 for section in retrieved["sections"]
@@ -411,6 +448,9 @@ class TouristVisaWorkflow:
             "policy_version": retrieved["policy_version"],
             "rule_version_used": case.policy_context.effective_rule_version,
             "publication_reference": case.policy_context.publication_reference,
+            "policy_source_uri": retrieved["source_uri"],
+            "official_sources": case.policy_context.official_sources,
+            "verified_at": case.policy_context.verified_at,
             "eligibility_status": eligibility_status,
             "criteria": criteria,
             "missing_evidence": missing_evidence,
@@ -490,6 +530,9 @@ class TouristVisaWorkflow:
                 "itinerary_evidence": [doc.document_id for doc in case.documents if doc.document_type == "FLIGHT_ITINERARY"],
                 "rule_version_used": case.policy_context.effective_rule_version,
                 "publication_reference": case.policy_context.publication_reference,
+                "policy_source_uri": case.policy_context.source_uri,
+                "official_sources": case.policy_context.official_sources,
+                "verified_at": case.policy_context.verified_at,
             },
             audit_timeline=self.case_service.list_audit_events(case.case_id),
         )
@@ -537,14 +580,12 @@ class TouristVisaWorkflow:
     def _handle_evidence_loop(self, case: CasePacket, intake: dict) -> dict:
         case = self.case_service.get_case(case.case_id)
         missing_items = intake["missing_items"] + intake.get("invalid_items", [])
-        request = AdditionalEvidenceRequest(
-            request_id=f"REQ-{uuid4()}",
+        self._upsert_open_evidence_request(
+            case,
             requested_items=missing_items,
             reason="Sri Lanka tourist visit processing requires the missing or replacement evidence listed.",
             deadline=case.decision_due_at or "",
-            status="OPEN",
         )
-        case.workflow.additional_evidence_requests.append(request)
         case.workflow.current_holder = "APPLICANT"
         case.workflow.action_required_from = "APPLICANT"
         case.workflow.next_action = "UPLOAD_REQUIRED_DOCUMENTS"
@@ -566,6 +607,10 @@ class TouristVisaWorkflow:
             actor_type="SYSTEM",
             actor_id="workflow",
             payload=applicant_message.model_dump(),
+            policy_version=case.policy_context.policy_version,
+            rule_version_used=case.policy_context.effective_rule_version,
+            publication_reference=case.policy_context.publication_reference,
+            policy_source_uri=case.policy_context.source_uri,
         )
         supervisor_output = self._supervisor_output(
             case,
@@ -620,6 +665,10 @@ class TouristVisaWorkflow:
             "workflow_pack": case.workflow.workflow_pack,
             "rule_version_used": case.policy_context.effective_rule_version,
             "publication_reference": case.policy_context.publication_reference,
+            "policy_version": case.policy_context.policy_version,
+            "policy_source_uri": case.policy_context.source_uri,
+            "official_sources": case.policy_context.official_sources,
+            "verified_at": case.policy_context.verified_at,
             "manual_referral_reason": case.workflow.manual_referral_reason,
             "eta_status": case.workflow.eta_status,
             "port_clearance_state": case.workflow.port_clearance_state,
@@ -632,6 +681,10 @@ class TouristVisaWorkflow:
             actor_type="SYSTEM",
             actor_id="workflow",
             payload=supervisor_output,
+            policy_version=case.policy_context.policy_version,
+            rule_version_used=case.policy_context.effective_rule_version,
+            publication_reference=case.policy_context.publication_reference,
+            policy_source_uri=case.policy_context.source_uri,
             recommendation="ENHANCED_REVIEW",
         )
         return supervisor_output
@@ -644,14 +697,12 @@ class TouristVisaWorkflow:
         missing_evidence: list[str],
     ) -> CasePacket:
         if recommendation == "REQUEST_MORE_INFO":
-            request = AdditionalEvidenceRequest(
-                request_id=f"REQ-{uuid4()}",
+            self._upsert_open_evidence_request(
+                case,
                 requested_items=missing_evidence or blocking_issues,
                 reason="Additional evidence or governance clarification is required for this Sri Lanka tourist visit case.",
                 deadline=case.decision_due_at or "",
-                status="OPEN",
             )
-            case.workflow.additional_evidence_requests.append(request)
             case.workflow.current_holder = "APPLICANT"
             case.workflow.action_required_from = "APPLICANT"
             case.workflow.next_action = "RESPOND_TO_INFORMATION_REQUEST"
@@ -676,6 +727,31 @@ class TouristVisaWorkflow:
             description="Case has completed automated preparation and is ready for officer review.",
             action_owner="OFFICER",
         )
+
+    def _upsert_open_evidence_request(
+        self,
+        case: CasePacket,
+        *,
+        requested_items: list[str],
+        reason: str,
+        deadline: str,
+    ) -> AdditionalEvidenceRequest:
+        normalized_items = sorted({item for item in requested_items if item})
+        for request in case.workflow.additional_evidence_requests:
+            if request.status == "OPEN" and sorted(set(request.requested_items)) == normalized_items:
+                request.reason = reason
+                request.deadline = deadline
+                return request
+
+        request = AdditionalEvidenceRequest(
+            request_id=f"REQ-{uuid4()}",
+            requested_items=normalized_items,
+            reason=reason,
+            deadline=deadline,
+            status="OPEN",
+        )
+        case.workflow.additional_evidence_requests.append(request)
+        return request
 
     def _supervisor_output(
         self,
@@ -715,8 +791,12 @@ class TouristVisaWorkflow:
             "current_holder": case.workflow.current_holder,
             "action_required_from": case.workflow.action_required_from,
             "workflow_pack": case.workflow.workflow_pack,
+            "policy_version": case.policy_context.policy_version,
             "rule_version_used": case.policy_context.effective_rule_version,
             "publication_reference": case.policy_context.publication_reference,
+            "policy_source_uri": case.policy_context.source_uri,
+            "official_sources": case.policy_context.official_sources,
+            "verified_at": case.policy_context.verified_at,
             "manual_referral_reason": case.workflow.manual_referral_reason,
             "eta_status": case.workflow.eta_status,
             "port_clearance_state": case.workflow.port_clearance_state,
@@ -732,10 +812,15 @@ class TouristVisaWorkflow:
 
     def _apply_governance_context(self, case: CasePacket) -> CasePacket:
         active_rules = self.reference_service.get_active_rules()
+        manifest = load_policy_manifest()
         case.policy_context.country = "Sri Lanka"
         case.policy_context.policy_version = active_rules.active_policy_version.policy_version
+        case.policy_context.effective_date = active_rules.active_policy_version.effective_date
         case.policy_context.effective_rule_version = active_rules.active_policy_version.rule_version
         case.policy_context.publication_reference = active_rules.active_policy_version.publication_reference
+        case.policy_context.source_uri = manifest.get("source_uri", "")
+        case.policy_context.official_sources = manifest.get("official_sources", active_rules.official_sources)
+        case.policy_context.verified_at = manifest.get("verified_at", active_rules.verified_at)
         case.policy_context.publication_channels = active_rules.active_circulars[0].publications
         case.workflow.workflow_pack = active_rules.workflow_pack
         return self.case_service.save_case(case)

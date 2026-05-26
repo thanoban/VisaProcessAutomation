@@ -36,7 +36,7 @@
   ],
   "policy_context": {
     "country": "Sri Lanka",
-    "policy_version": "tourist-policy-v1",
+    "policy_version": "sl-tourist-policy-v1",
     "effective_date": "2026-05-25"
   }
 }

@@ -18,9 +18,12 @@ from backend.main import create_app
 
 @pytest.fixture(autouse=True)
 def reset_db():
-    Base.metadata.drop_all(bind=engine)
+    engine.dispose()
+    if TEST_DB.exists():
+        TEST_DB.unlink()
     init_db()
     yield
+    engine.dispose()
 
 
 @pytest.fixture

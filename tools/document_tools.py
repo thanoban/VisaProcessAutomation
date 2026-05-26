@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date
 
 from backend.models.schemas import CasePacket
 
@@ -36,8 +36,8 @@ def extract_document_fields(case: CasePacket, document_id: str) -> dict:
 
 
 def validate_passport(passport_data: dict, application_name: str) -> dict:
-    expiry = datetime.fromisoformat(passport_data["expiry_date"])
-    valid_months = (expiry - datetime.utcnow()).days / 30
+    expiry = date.fromisoformat(passport_data["expiry_date"])
+    valid_months = (expiry - date.today()).days / 30
     name_match = passport_data["full_name"].strip().lower() == application_name.strip().lower()
     findings = []
     if valid_months < 6:

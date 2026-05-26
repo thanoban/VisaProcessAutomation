@@ -1,28 +1,41 @@
 {
-  "policy_version": "tourist-policy-v1",
-  "source_uri": "local://tourist-policy.pdf",
+  "policy_version": "sl-tourist-policy-v1",
+  "workflow_pack": "SRI_LANKA_TOURIST_VISIT",
+  "country": "Sri Lanka",
+  "verified_at": "2026-05-25",
+  "source_uri": "https://www.immigration.gov.lk/pages_e.php?id=14&os=av..",
+  "official_sources": [
+    "https://www.immigration.gov.lk/pages_e.php?id=14&os=av..",
+    "https://www.eta.gov.lk/slvisa/visainfo/weta.jsp?ch1=current&locale=en_US"
+  ],
   "sections": [
     {
       "policy_id": "TOURIST-01-A",
       "visa_class": "TOURIST",
+      "country": "Sri Lanka",
       "effective_date": "2026-01-01",
-      "requirement": "Applicant must hold a valid passport with at least 6 months validity.",
-      "required_document": "PASSPORT"
+      "requirement": "Applicant must hold a passport valid for at least six months from the intended date of arrival in Sri Lanka.",
+      "required_document": "PASSPORT",
+      "source_reference": "https://www.immigration.gov.lk/pages_e.php?id=14&os=av.."
     },
     {
       "policy_id": "TOURIST-12-B",
       "visa_class": "TOURIST",
+      "country": "Sri Lanka",
       "effective_date": "2026-01-01",
-      "requirement": "Applicant must show sufficient funds for the intended stay.",
+      "requirement": "Applicant must show adequate funds for maintenance during the intended short stay in Sri Lanka.",
       "required_document": "BANK_STATEMENT",
-      "minimum_funds": 1500.0
+      "minimum_funds": 1500.0,
+      "source_reference": "https://www.immigration.gov.lk/pages_e.php?id=14&os=av.."
     },
     {
       "policy_id": "TOURIST-20-C",
       "visa_class": "TOURIST",
+      "country": "Sri Lanka",
       "effective_date": "2026-01-01",
-      "requirement": "Applicant must provide intended travel itinerary evidence.",
-      "required_document": "FLIGHT_ITINERARY"
+      "requirement": "Applicant must provide return or onward travel assurance consistent with a temporary tourist visit to Sri Lanka.",
+      "required_document": "FLIGHT_ITINERARY",
+      "source_reference": "https://www.immigration.gov.lk/pages_e.php?id=14&os=av.."
     }
   ]
 }
