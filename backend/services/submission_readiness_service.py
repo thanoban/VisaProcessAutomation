@@ -45,6 +45,13 @@ class SubmissionReadinessService:
                 details="Phoenix MCP server configuration sample should be present for the Arize track.",
             ),
             SubmissionReadinessItem(
+                key="submission_runbook",
+                status="PASS"
+                if (self.repo_root / "docs" / "runbooks" / "hackathon-submission-checklist.md").exists()
+                else "FAIL",
+                details="A concrete hosted-deployment and demo-readiness runbook should exist for final hackathon handoff.",
+            ),
+            SubmissionReadinessItem(
                 key="live_gemini_runtime",
                 status="PASS" if bool(os.getenv("GOOGLE_API_KEY", "").strip()) else "WARNING",
                 required=False,
