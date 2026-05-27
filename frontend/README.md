@@ -24,6 +24,7 @@ Case-aware deep links now support jumping straight into:
 - officer extension handling via `#extension-operations-panel`
 - governance self-improvement review via `#self-improvement-panel`
 - governance evaluation runner via `#evaluation-panel`
+- governance submission readiness via `#submission-readiness-panel`
 
 ## Local preview
 

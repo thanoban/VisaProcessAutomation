@@ -28,6 +28,7 @@ const elements = {
   sourcesList: document.querySelector("#sources-list"),
   traceabilityList: document.querySelector("#traceability-list"),
   observabilityStatusList: document.querySelector("#observability-status-list"),
+  submissionReadinessPanel: document.querySelector("#submission-readiness-panel"),
   submissionReadinessList: document.querySelector("#submission-readiness-list"),
   agentRuntimeStatusList: document.querySelector("#agent-runtime-status-list"),
   agentRuntimeNotesList: document.querySelector("#agent-runtime-notes-list"),
@@ -146,6 +147,7 @@ async function initialize() {
     setRegionBusy(elements.observabilityReadinessList, false);
     setRegionBusy(elements.observabilityGuardrailsList, false);
     setRegionBusy(elements.evaluationCatalogList, false);
+    syncSubmissionReadinessDeepLinkState();
     syncSelfImprovementDeepLinkState();
     syncEvaluationDeepLinkState();
   }
@@ -154,6 +156,7 @@ async function initialize() {
 function wireEvents() {
   elements.selfImprovementForm.addEventListener("submit", handleSelfImprovementSubmit);
   elements.evaluationForm.addEventListener("submit", handleEvaluationSubmit);
+  window.addEventListener("hashchange", syncSubmissionReadinessDeepLinkState);
   window.addEventListener("hashchange", syncSelfImprovementDeepLinkState);
   window.addEventListener("hashchange", syncEvaluationDeepLinkState);
 }
@@ -950,6 +953,29 @@ function syncGovernanceCaseInputs(caseId) {
 
 function formatReadinessKey(value) {
   return titleCase(String(value || "readiness_item").replaceAll("_", " "));
+}
+
+function syncSubmissionReadinessDeepLinkState() {
+  const panel = elements.submissionReadinessPanel;
+  if (!panel) {
+    return;
+  }
+
+  const isReadinessHash = window.location.hash === "#submission-readiness-panel";
+  panel.classList.toggle("ring-2", isReadinessHash);
+  panel.classList.toggle("ring-teal-300", isReadinessHash);
+  panel.classList.toggle("border-teal-300", isReadinessHash);
+
+  if (isReadinessHash) {
+    panel.setAttribute("tabindex", "-1");
+    window.requestAnimationFrame(() => {
+      panel.focus({ preventScroll: true });
+      panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return;
+  }
+
+  panel.removeAttribute("tabindex");
 }
 
 function syncCaseQueryParam(caseId) {

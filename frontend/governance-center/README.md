@@ -17,6 +17,7 @@ Current scope:
 - one-case evaluation runner visibility
 - case-driven self-improvement review visibility
 - case-aware review deep links that land directly on the self-improvement panel
+- launchpad links that can land directly on the submission-readiness panel
 
 Frontend priorities:
 
