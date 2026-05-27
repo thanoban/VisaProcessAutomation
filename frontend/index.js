@@ -359,6 +359,9 @@ function renderOperationalSnapshot(
       <a class="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="${appendWorkspacePreviewParam("./governance-center/")}">
         Open governance center
       </a>
+      <a class="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="${appendWorkspacePreviewParam("./governance-center/#demo-showcase-panel")}">
+        Open demo showcase
+      </a>
       <a class="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="${appendWorkspacePreviewParam("./governance-center/#submission-readiness-panel")}">
         Open submission readiness
       </a>

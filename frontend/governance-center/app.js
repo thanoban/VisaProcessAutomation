@@ -158,6 +158,7 @@ async function initialize() {
     setRegionBusy(elements.observabilityReadinessList, false);
     setRegionBusy(elements.observabilityGuardrailsList, false);
     setRegionBusy(elements.evaluationCatalogList, false);
+    syncDemoShowcaseDeepLinkState();
     syncSubmissionReadinessDeepLinkState();
     syncSelfImprovementDeepLinkState();
     syncEvaluationDeepLinkState();
@@ -168,6 +169,7 @@ function wireEvents() {
   elements.demoShowcaseSeedButton.addEventListener("click", handleDemoShowcaseSeed);
   elements.selfImprovementForm.addEventListener("submit", handleSelfImprovementSubmit);
   elements.evaluationForm.addEventListener("submit", handleEvaluationSubmit);
+  window.addEventListener("hashchange", syncDemoShowcaseDeepLinkState);
   window.addEventListener("hashchange", syncSubmissionReadinessDeepLinkState);
   window.addEventListener("hashchange", syncSelfImprovementDeepLinkState);
   window.addEventListener("hashchange", syncEvaluationDeepLinkState);
@@ -1075,6 +1077,29 @@ function syncGovernanceCaseInputs(caseId) {
 
 function formatReadinessKey(value) {
   return titleCase(String(value || "readiness_item").replaceAll("_", " "));
+}
+
+function syncDemoShowcaseDeepLinkState() {
+  const panel = elements.demoShowcasePanel;
+  if (!panel) {
+    return;
+  }
+
+  const isDemoHash = window.location.hash === "#demo-showcase-panel";
+  panel.classList.toggle("ring-2", isDemoHash);
+  panel.classList.toggle("ring-teal-300", isDemoHash);
+  panel.classList.toggle("border-teal-300", isDemoHash);
+
+  if (isDemoHash) {
+    panel.setAttribute("tabindex", "-1");
+    window.requestAnimationFrame(() => {
+      panel.focus({ preventScroll: true });
+      panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return;
+  }
+
+  panel.removeAttribute("tabindex");
 }
 
 function syncSubmissionReadinessDeepLinkState() {
