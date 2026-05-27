@@ -1,13 +1,17 @@
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 
 from backend.models.schemas import (
+    AgentRuntimeStatusResponse,
     ApplicantMessageResponse,
     ApplicationCreateRequest,
     AuthorizationStatusResponse,
     CasePacket,
     CaseStatusResponse,
     ChecklistResponse,
+    DemoSeedResponse,
     DocumentUploadRequest,
+    EvaluationCatalogResponse,
+    EvaluationRunResponse,
     ExtensionAppointmentRequest,
     ExtensionDecisionRequest,
     ExtensionRequestCreateRequest,
@@ -17,13 +21,20 @@ from backend.models.schemas import (
     OfficerBrief,
     OfficerDecisionRequest,
     PolicyRequirementsResponse,
+    SelfImprovementReviewResponse,
+    SubmissionReadinessResponse,
     SupervisorCaseListResponse,
     SupervisorQueueSummary,
     SystemNotice,
 )
+from backend.services.adk_runtime_service import AdkRuntimeService
 from backend.services.case_service import CaseService
+from backend.services.demo_service import DemoService
+from backend.services.evaluation_service import EvaluationService
 from backend.services.observability_service import ObservabilityService
+from backend.services.self_improvement_service import SelfImprovementService
 from backend.services.sri_lanka_reference_service import SriLankaReferenceService
+from backend.services.submission_readiness_service import SubmissionReadinessService
 from backend.services.storage_service import LocalDocumentStorageService
 from backend.workflows.extension_workflow import ExtensionWorkflow
 from backend.workflows.tourist_visa_workflow import TouristVisaWorkflow
@@ -35,6 +46,11 @@ extension_workflow = ExtensionWorkflow()
 sri_lanka_reference = SriLankaReferenceService()
 storage_service = LocalDocumentStorageService()
 observability_service = ObservabilityService()
+adk_runtime_service = AdkRuntimeService()
+self_improvement_service = SelfImprovementService()
+evaluation_service = EvaluationService()
+submission_readiness_service = SubmissionReadinessService()
+demo_service = DemoService()
 
 
 @router.get("/health")
@@ -51,6 +67,11 @@ def get_system_notices() -> list[SystemNotice]:
             level="INFO",
         )
     ]
+
+
+@router.post("/demo/showcase/seed", response_model=DemoSeedResponse)
+def seed_demo_showcase() -> DemoSeedResponse:
+    return demo_service.seed_showcase_cases()
 
 
 @router.post("/applications", response_model=CasePacket, status_code=status.HTTP_201_CREATED)
@@ -241,6 +262,40 @@ def get_active_governance_rules() -> GovernanceRulesResponse:
 @router.get("/governance/observability/status", response_model=ObservabilityStatusResponse)
 def get_observability_status() -> ObservabilityStatusResponse:
     return observability_service.status()
+
+
+@router.get("/governance/agent-runtime/status", response_model=AgentRuntimeStatusResponse)
+def get_agent_runtime_status() -> AgentRuntimeStatusResponse:
+    return adk_runtime_service.status()
+
+
+@router.get("/governance/submission-readiness", response_model=SubmissionReadinessResponse)
+def get_submission_readiness() -> SubmissionReadinessResponse:
+    return submission_readiness_service.status()
+
+
+@router.post("/cases/{case_id}/self-improvement/review", response_model=SelfImprovementReviewResponse)
+def review_case_for_self_improvement(case_id: str) -> SelfImprovementReviewResponse:
+    review = self_improvement_service.review_case(case_id)
+    if not review:
+        raise HTTPException(status_code=404, detail="Case not found")
+    return review
+
+
+@router.get("/governance/evaluations/catalog", response_model=EvaluationCatalogResponse)
+def get_evaluation_catalog() -> EvaluationCatalogResponse:
+    return evaluation_service.catalog()
+
+
+@router.post("/cases/{case_id}/evaluations/run", response_model=EvaluationRunResponse)
+def run_case_evaluation(case_id: str) -> EvaluationRunResponse:
+    try:
+        evaluation = evaluation_service.run_case_evaluation(case_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if not evaluation:
+        raise HTTPException(status_code=404, detail="Case not found")
+    return evaluation
 
 
 @router.get("/supervisor/queues", response_model=SupervisorQueueSummary)

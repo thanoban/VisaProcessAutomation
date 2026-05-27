@@ -15,11 +15,17 @@ def calculate_risk_score(case: CasePacket) -> dict:
         recommended_route = "ENHANCED_REVIEW"
     if case.mock_profile.get("security_status") in {"POSSIBLE_MATCH", "CONFIRMED_HIT"}:
         recommended_route = "SECURITY_REVIEW"
+    reasons = profile.get("risk_reasons", indicators)
+    if not reasons:
+        if indicators:
+            reasons = indicators
+        else:
+            reasons = ["No evidence-based fraud or anomaly indicators were detected in the current mock evidence set."]
     return {
         "risk_band": risk_band,
         "risk_score": score_map.get(risk_band, 50),
         "fraud_indicators": indicators,
-        "evidence_based_reasons": case.mock_profile.get("risk_reasons", indicators),
+        "evidence_based_reasons": reasons,
         "protected_attribute_used": False,
         "recommended_route": recommended_route,
     }

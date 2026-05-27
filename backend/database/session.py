@@ -11,6 +11,16 @@ engine = create_engine(DATABASE_URL, future=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 
 
+def configure_database(database_url: str):
+    global DATABASE_URL, engine
+
+    DATABASE_URL = database_url
+    engine.dispose()
+    engine = create_engine(DATABASE_URL, future=True)
+    SessionLocal.configure(bind=engine)
+    return engine
+
+
 def init_db() -> None:
     from backend.models import db  # noqa: F401
 

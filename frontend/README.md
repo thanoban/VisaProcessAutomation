@@ -19,6 +19,14 @@ The frontend now distinguishes between:
 
 Cross-surface navigation should only appear in workspace preview mode.
 
+Case-aware deep links now support jumping straight into:
+
+- officer extension handling via `#extension-operations-panel`
+- governance demo showcase via `#demo-showcase-panel`
+- governance self-improvement review via `#self-improvement-panel`
+- governance evaluation runner via `#evaluation-panel`
+- governance submission readiness via `#submission-readiness-panel`
+
 ## Local preview
 
 1. Install dependencies:
@@ -46,7 +54,16 @@ For the hackathon demo, the frontend should visibly prove:
 - applicant submission and status flow
 - officer recommendation and human decision flow
 - supervisor queue visibility
+- extension backlog visibility from the launchpad and supervisor surface
 - governance and Arize observability posture visibility
+- governance evaluation rubric visibility and one-case evaluation runs
+- governance submission-readiness visibility for repo URL, hosted URL, demo video, and live-runtime gaps
+- launchpad-level submission-readiness summary before entering governance
+- governance demo-showcase seeding for repeatable judge walkthrough cases
+- Phoenix readiness and redaction guardrail visibility
+- case-driven self-improvement review visibility inside governance
+- case-aware governance review jumps from applicant, officer, supervisor, and recent-case surfaces
+- launchpad-level observability summary before entering internal surfaces
 
 ## Verification steps
 
@@ -65,6 +82,9 @@ node --check frontend/governance-center/app.js
 
 ```bash
 pytest tests/agent_tests/test_api_contracts.py -q
+pytest tests/agent_tests/test_demo_service.py -q
+pytest tests/agent_tests/test_evaluation_service.py -q
+pytest tests/agent_tests/test_submission_readiness.py -q
 pytest tests/agent_tests/test_observability_service.py -q
 pytest tests/workflow_tests/test_workflow_cases.py -q
 ```

@@ -640,6 +640,12 @@ function buildCrossSurfaceActions(item) {
   }
 
   return `
+    <a
+      class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5"
+      href="${appendWorkspacePreviewParam(`../governance-center/?case=${encodeURIComponent(item.case_id)}#self-improvement-panel`)}"
+    >
+      Governance review
+    </a>
     ${
       isExtensionWorkflowActive(item.extension_state)
         ? `

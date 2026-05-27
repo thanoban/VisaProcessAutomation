@@ -132,18 +132,20 @@ async function refreshHealthState(messagePrefix) {
 
   try {
     const health = await api.getHealth();
-    const [queues, notices, rules] = await Promise.all([
+    const [queues, notices, rules, observability, submissionReadiness] = await Promise.all([
       api.getSupervisorQueues(),
       api.getSystemNotices(),
       api.getActiveGovernanceRules(),
+      api.getObservabilityStatus(),
+      api.getSubmissionReadiness(),
     ]);
     elements.apiPill.textContent = `Live API: ${apiBaseUrl}`;
     elements.healthChip.innerHTML = buildStatusChip(health.status || "connected", "success");
     elements.feedback.textContent = `${messagePrefix} Health check succeeded for ${apiBaseUrl}.`;
     setSnapshotMode(true);
     elements.snapshotFeedback.textContent =
-      "Queue, notice, and governance summaries below are being pulled from the selected live backend target.";
-    renderOperationalSnapshot(queues, notices, rules);
+      "Queue, notice, governance, and observability summaries below are being pulled from the selected live backend target.";
+    renderOperationalSnapshot(queues, notices, rules, observability, submissionReadiness);
   } catch (error) {
     elements.apiPill.textContent = `Saved target: ${apiBaseUrl}`;
     elements.healthChip.innerHTML = buildStatusChip("unreachable", "warning");
@@ -154,7 +156,9 @@ async function refreshHealthState(messagePrefix) {
     renderOperationalSnapshot(
       supervisorDashboardMock.queues,
       applicantPortalMock.notices,
-      governanceCenterMock.rules
+      governanceCenterMock.rules,
+      governanceCenterMock.observability,
+      governanceCenterMock.submissionReadiness
     );
   } finally {
     setButtonBusy(elements.apiForm.querySelector("button[type='submit']"), false, "Saving...");
@@ -174,7 +178,13 @@ function setSnapshotMode(isLive) {
   }`;
 }
 
-function renderOperationalSnapshot(queues, notices, rules) {
+function renderOperationalSnapshot(
+  queues,
+  notices,
+  rules,
+  observability = governanceCenterMock.observability,
+  submissionReadiness = governanceCenterMock.submissionReadiness
+) {
   const totalCases = Object.values(queues.counts_by_state || {}).reduce((sum, value) => sum + value, 0);
   const metrics = [
     ["Total active cases", totalCases, "info", appendWorkspacePreviewParam("./supervisor-dashboard/"), "Open supervisor operations"],
@@ -212,6 +222,27 @@ function renderOperationalSnapshot(queues, notices, rules) {
       (queues.ready_for_officer_review || 0) > 0 ? "info" : "warning",
       appendWorkspacePreviewParam("./supervisor-dashboard/?state=READY_FOR_OFFICER_REVIEW&holder=OFFICER"),
       "Open officer queue",
+    ],
+    [
+      "Extension requests",
+      queues.extension_requested || 0,
+      (queues.extension_requested || 0) > 0 ? "warning" : "success",
+      appendWorkspacePreviewParam("./supervisor-dashboard/?state=EXTENSION_REQUESTED&holder=OFFICER"),
+      "Open extension review",
+    ],
+    [
+      "Extension appointments",
+      queues.extension_appointment_required || 0,
+      (queues.extension_appointment_required || 0) > 0 ? "warning" : "success",
+      appendWorkspacePreviewParam("./supervisor-dashboard/?state=EXTENSION_APPOINTMENT_REQUIRED&holder=APPLICANT"),
+      "Open appointment backlog",
+    ],
+    [
+      "Extension review backlog",
+      queues.under_extension_review || 0,
+      (queues.under_extension_review || 0) > 0 ? "info" : "success",
+      appendWorkspacePreviewParam("./supervisor-dashboard/?state=UNDER_EXTENSION_REVIEW&holder=OFFICER"),
+      "Open extension review queue",
     ],
   ];
 
@@ -257,11 +288,23 @@ function renderOperationalSnapshot(queues, notices, rules) {
   const driftSignals = (rules.active_circulars || []).filter(
     (circular) => String(circular.status || "").toUpperCase() !== "ACTIVE"
   );
+  const requiredReadinessItems = (submissionReadiness.items || []).filter((item) => item.required);
+  const blockingSubmissionItems = requiredReadinessItems.filter((item) => item.status !== "PASS");
+  const readinessWarnings = (submissionReadiness.items || []).filter((item) => item.status === "WARNING");
   const governanceCards = [
     ["Workflow pack", activeVersion.workflow_pack || rules.workflow_pack || "Not available"],
     ["Policy version", activeVersion.policy_version || "Not available"],
     ["Rule version", activeVersion.rule_version || "Not available"],
     ["Publication reference", activeVersion.publication_reference || "Not available"],
+    ["Phoenix status", observability.status || "DISABLED"],
+    ["Observability target", observability.target || "LOCAL_ONLY"],
+    ["Phoenix project", observability.project_name || "visaflow-mas"],
+    [
+      "Submission readiness",
+      submissionReadiness.ready_for_submission ? "READY" : submissionReadiness.overall_status || "ACTION_REQUIRED",
+    ],
+    ["Submission blockers", blockingSubmissionItems.length],
+    ["Submission warnings", readinessWarnings.length],
     ["Oldest due date", formatDateTime(queues.oldest_due_at || "")],
     ["Drift signals", driftSignals.length],
     ["Official sources", (rules.official_sources || []).length],
@@ -279,10 +322,109 @@ function renderOperationalSnapshot(queues, notices, rules) {
     )
     .join("") +
     `
+      <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/85 p-5">
+        <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Observability posture</span>
+            <h3 class="mt-2 text-lg font-extrabold text-slate-900">${observabilitySnapshotTitle(observability)}</h3>
+          </div>
+          ${buildStatusChip(
+            observability.status || "DISABLED",
+            toneForObservabilityStatus(observability.status || "DISABLED")
+          )}
+        </div>
+        <p class="text-sm leading-7 text-slate-600">${observabilitySnapshotMessage(observability)}</p>
+      </article>
+      <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/85 p-5">
+        <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Submission readiness</span>
+            <h3 class="mt-2 text-lg font-extrabold text-slate-900">${submissionReadinessSnapshotTitle(submissionReadiness)}</h3>
+          </div>
+          ${buildStatusChip(
+            submissionReadiness.overall_status || "ACTION_REQUIRED",
+            submissionReadiness.ready_for_submission
+              ? "success"
+              : blockingSubmissionItems.length
+                ? "warning"
+                : "info"
+          )}
+        </div>
+        <p class="text-sm leading-7 text-slate-600">${submissionReadinessSnapshotMessage(
+          submissionReadiness,
+          blockingSubmissionItems.length,
+          readinessWarnings.length
+        )}</p>
+      </article>
       <a class="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="${appendWorkspacePreviewParam("./governance-center/")}">
         Open governance center
       </a>
+      <a class="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="${appendWorkspacePreviewParam("./governance-center/#demo-showcase-panel")}">
+        Open demo showcase
+      </a>
+      <a class="inline-flex rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="${appendWorkspacePreviewParam("./governance-center/#submission-readiness-panel")}">
+        Open submission readiness
+      </a>
     `;
+}
+
+function observabilitySnapshotTitle(observability) {
+  const status = String(observability.status || "DISABLED").toUpperCase();
+  switch (status) {
+    case "READY":
+      return "Phoenix runtime is ready";
+    case "DEGRADED":
+      return "Phoenix runtime needs attention";
+    case "PENDING":
+      return "Phoenix runtime is still warming up";
+    default:
+      return "Phoenix is still disabled";
+  }
+}
+
+function observabilitySnapshotMessage(observability) {
+  const status = String(observability.status || "DISABLED").toUpperCase();
+  switch (status) {
+    case "READY":
+      return `The selected backend is exporting observability data for project ${observability.project_name || "visaflow-mas"} on target ${
+        observability.target || "LOCAL_ONLY"
+      }.`;
+    case "DEGRADED":
+      return "The selected backend intends to export traces, but the runtime is degraded. Audit remains the fallback source of truth until Phoenix health is restored.";
+    case "PENDING":
+      return "The selected backend has observability enabled, but runtime readiness is still pending. Open the governance center to review the rollout checklist.";
+    default:
+      return "The selected backend is still in local-audit-only mode. Open the governance center for the enablement checklist and redaction guardrails.";
+  }
+}
+
+function submissionReadinessSnapshotTitle(submissionReadiness) {
+  if (submissionReadiness.ready_for_submission) {
+    return "Submission package is ready";
+  }
+  return "Submission package still has blockers";
+}
+
+function submissionReadinessSnapshotMessage(submissionReadiness, blockerCount, warningCount) {
+  if (submissionReadiness.ready_for_submission) {
+    return "The required hackathon packaging checks are currently satisfied from this backend target.";
+  }
+  return `This backend still reports ${blockerCount} required submission blocker${
+    blockerCount === 1 ? "" : "s"
+  } and ${warningCount} advisory warning${warningCount === 1 ? "" : "s"}. Open governance to review hosted URL, public repo, demo video, and live-runtime readiness gaps.`;
+}
+
+function toneForObservabilityStatus(value) {
+  switch (String(value || "").toUpperCase()) {
+    case "READY":
+      return "success";
+    case "DEGRADED":
+      return "warning";
+    case "PENDING":
+      return "info";
+    default:
+      return "warning";
+  }
 }
 
 function handleClearRecentCases() {
@@ -317,6 +459,9 @@ function renderRecentCases() {
           <div class="mt-4 flex flex-wrap gap-3">
             <a class="rounded-full bg-visa-navy px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5" href="${surfaceHref(item.surface, item.case_id)}">
               Resume ${titleForSurface(item.surface)}
+            </a>
+            <a class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5" href="${appendWorkspacePreviewParam(`./governance-center/?case=${encodeURIComponent(item.case_id)}#self-improvement-panel`)}">
+              Governance Review
             </a>
             ${
               isExtensionWorkflowActive(item.extension_state)

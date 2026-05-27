@@ -434,6 +434,112 @@ class ObservabilityStatusResponse(BaseModel):
     status: str = "DISABLED"
 
 
+class AgentRuntimeStatusResponse(BaseModel):
+    runtime: str = "GOOGLE_ADK"
+    provider: str = "Gemini"
+    status: str = "DEGRADED"
+    configured: bool = False
+    live_model_available: bool = False
+    google_adk_installed: bool = False
+    google_adk_instrumentation_enabled: bool = False
+    google_genai_instrumentation_enabled: bool = False
+    model_name: str = ""
+    project_name: str = ""
+    location: str = ""
+    phoenix_mcp_config_present: bool = False
+    agent_names: list[str] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
+class SelfImprovementSuggestion(BaseModel):
+    scope: Literal["PROMPT", "ROUTING", "EVALUATION", "OBSERVABILITY"]
+    change: str
+    reason: str
+    risk_level: Literal["LOW", "MEDIUM", "HIGH"] = "LOW"
+
+
+class SelfImprovementReviewResponse(BaseModel):
+    case_id: str
+    runtime_mode: Literal["GOOGLE_ADK_GEMINI", "GOOGLE_ADK_MOCK", "DETERMINISTIC_FALLBACK"]
+    review_status: Literal["GENERATED", "FALLBACK"]
+    human_approval_required: bool = True
+    failure_summary: str
+    detected_issues: list[str] = Field(default_factory=list)
+    proposed_changes: list[SelfImprovementSuggestion] = Field(default_factory=list)
+    comparison_questions: list[str] = Field(default_factory=list)
+    source_trace_ids: list[str] = Field(default_factory=list)
+    evaluation_labels: list[str] = Field(default_factory=list)
+    trace_id: str = ""
+    observation_id: str = ""
+    observability_export_status: str = "DISABLED"
+    observability_target: str = "LOCAL_ONLY"
+
+
+class EvaluationCheckResult(BaseModel):
+    check_name: str
+    status: Literal["PASS", "FAIL"]
+    severity: Literal["INFO", "WARNING", "ERROR"] = "INFO"
+    details: str
+    expected: str = ""
+    actual: str = ""
+
+
+class EvaluationRunResponse(BaseModel):
+    case_id: str
+    scenario_name: str
+    overall_status: Literal["PASS", "FAIL"]
+    human_review_required: bool = True
+    recommendation: Recommendation
+    check_count: int
+    passed_checks: int
+    failed_checks: int
+    checks: list[EvaluationCheckResult] = Field(default_factory=list)
+    trace_id: str = ""
+    observation_id: str = ""
+    observability_export_status: str = "DISABLED"
+    observability_target: str = "LOCAL_ONLY"
+    evaluation_labels: list[str] = Field(default_factory=list)
+
+
+class EvaluationCatalogResponse(BaseModel):
+    workflow_pack: str
+    required_scenarios: list[str] = Field(default_factory=list)
+    required_criteria: list[str] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
+class SubmissionReadinessItem(BaseModel):
+    key: str
+    status: Literal["PASS", "FAIL", "WARNING"]
+    required: bool = True
+    details: str
+
+
+class SubmissionReadinessResponse(BaseModel):
+    project_name: str
+    partner_track: str
+    overall_status: Literal["READY", "ACTION_REQUIRED"]
+    ready_for_submission: bool = False
+    items: list[SubmissionReadinessItem] = Field(default_factory=list)
+
+
+class DemoCaseSummary(BaseModel):
+    case_id: str
+    scenario_name: str
+    expected_recommendation: Recommendation
+    actual_recommendation: Recommendation
+    current_state: str
+    current_holder: str
+    next_action: str
+
+
+class DemoSeedResponse(BaseModel):
+    workflow_pack: str
+    seeded_count: int
+    cases: list[DemoCaseSummary] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
 class SupervisorQueueSummary(BaseModel):
     workflow_pack: str
     counts_by_state: dict[str, int]

@@ -102,7 +102,45 @@
 
       <div class="mt-6 grid gap-6 xl:grid-cols-[1.2fr_minmax(20rem,0.95fr)]" id="protected-surface-shell">
         <main class="grid gap-6">
-          <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7">
+          <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7" id="demo-showcase-panel">
+            <div class="mb-5">
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Demo showcase</span>
+              <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Seed a repeatable judge-ready case set</h2>
+              <p class="mt-2 text-sm leading-7 text-slate-600">
+                This internal tool creates a consistent set of mock Sri Lanka tourist-visa cases across low-risk, missing-document, security, risk, and manual-referral paths so we can demo the system without improvising.
+              </p>
+            </div>
+
+            <div class="flex flex-wrap gap-3">
+              <button class="rounded-full bg-visa-navy px-5 py-3 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5" type="button" id="demo-showcase-seed-button">
+                Seed showcase cases
+              </button>
+            </div>
+
+            <p class="mt-3 text-sm text-slate-500" id="demo-showcase-feedback" role="status" aria-live="polite">
+              Seed the canonical demo cases, then jump directly into officer, supervisor, evaluation, and self-improvement flows.
+            </p>
+
+            <div class="mt-6 grid gap-4" id="demo-showcase-results" hidden>
+              <div class="grid gap-4 md:grid-cols-3" id="demo-showcase-summary-grid"></div>
+              <section class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+                <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Seeded case set</span>
+                <h3 class="mt-2 text-lg font-extrabold text-slate-900">Quick-launch paths for the live demo</h3>
+                <div class="mt-4 grid gap-4" id="demo-showcase-cases-list"></div>
+              </section>
+              <section class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+                <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Operator notes</span>
+                <h3 class="mt-2 text-lg font-extrabold text-slate-900">What this seeded set is meant to prove</h3>
+                <div class="mt-4 grid gap-3" id="demo-showcase-notes-list"></div>
+              </section>
+            </div>
+
+            <div class="mt-6 rounded-[1.5rem] border border-dashed border-slate-300 bg-white/45 p-5 text-sm leading-7 text-slate-600" id="demo-showcase-empty" role="status" aria-live="polite">
+              Seed the showcase to generate a repeatable, judge-friendly case spread for live demo use.
+            </div>
+          </section>
+
+          <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7" id="submission-readiness-panel">
             <div class="mb-5">
               <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Active policy version</span>
               <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Workflow rule pack in force</h2>
@@ -126,6 +164,102 @@
               <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Publication and notice visibility</h2>
             </div>
             <div class="grid gap-4" id="circulars-list"></div>
+          </section>
+
+          <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7" id="self-improvement-panel">
+            <div class="mb-5">
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Self-improvement review</span>
+              <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Inspect one case for safe prompt and routing improvements</h2>
+              <p class="mt-2 text-sm leading-7 text-slate-600">
+                This internal tool runs the self-improvement review for a selected case and shows advisory suggestions only. No change is applied automatically.
+              </p>
+            </div>
+
+            <form id="self-improvement-form" class="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+              <div class="grid gap-2">
+                <label class="text-sm font-semibold text-slate-700" for="self-improvement-case-id">Case ID</label>
+                <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="self-improvement-case-id" name="caseId" placeholder="VISA-2026-0001" required />
+              </div>
+              <button class="rounded-full bg-visa-navy px-5 py-3 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5" type="submit">
+                Run review
+              </button>
+            </form>
+
+            <p class="mt-3 text-sm text-slate-500" id="self-improvement-feedback" role="status" aria-live="polite">
+              Enter a case ID to review detected issues, safer proposed changes, comparison questions, and observability metadata.
+            </p>
+
+            <div class="mt-6 grid gap-4" id="self-improvement-results" hidden>
+              <div class="grid gap-4 md:grid-cols-3" id="self-improvement-summary-grid"></div>
+              <div class="grid gap-4 lg:grid-cols-2">
+                <section class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+                  <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Detected issues</span>
+                  <h3 class="mt-2 text-lg font-extrabold text-slate-900">What the review flagged</h3>
+                  <div class="mt-4 grid gap-3" id="self-improvement-issues-list"></div>
+                </section>
+                <section class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+                  <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Comparison questions</span>
+                  <h3 class="mt-2 text-lg font-extrabold text-slate-900">What a human should check next</h3>
+                  <div class="mt-4 grid gap-3" id="self-improvement-questions-list"></div>
+                </section>
+              </div>
+              <section class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+                <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Proposed changes</span>
+                <h3 class="mt-2 text-lg font-extrabold text-slate-900">Advisory improvements requiring human approval</h3>
+                <div class="mt-4 grid gap-4" id="self-improvement-changes-list"></div>
+              </section>
+              <section class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+                <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Trace and evaluation metadata</span>
+                <h3 class="mt-2 text-lg font-extrabold text-slate-900">Observability context for the review</h3>
+                <div class="mt-4 grid gap-4 md:grid-cols-2" id="self-improvement-meta-list"></div>
+              </section>
+            </div>
+
+            <div class="mt-6 rounded-[1.5rem] border border-dashed border-slate-300 bg-white/45 p-5 text-sm leading-7 text-slate-600" id="self-improvement-empty" role="status" aria-live="polite">
+              Run a case review to inspect self-improvement suggestions in a human-approval-only flow.
+            </div>
+          </section>
+
+          <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7" id="evaluation-panel">
+            <div class="mb-5">
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Evaluation runner</span>
+              <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Run the safety rubric against one processed case</h2>
+              <p class="mt-2 text-sm leading-7 text-slate-600">
+                These checks fail deterministically before any human reviews a prompt or routing change. Phoenix receives the redacted evaluation trace, but local audit remains the legal record.
+              </p>
+            </div>
+
+            <form id="evaluation-form" class="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+              <div class="grid gap-2">
+                <label class="text-sm font-semibold text-slate-700" for="evaluation-case-id">Case ID</label>
+                <input class="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500" id="evaluation-case-id" name="caseId" placeholder="VISA-2026-0001" required />
+              </div>
+              <button class="rounded-full bg-visa-navy px-5 py-3 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5" type="submit">
+                Run evaluation
+              </button>
+            </form>
+
+            <p class="mt-3 text-sm text-slate-500" id="evaluation-feedback" role="status" aria-live="polite">
+              Enter a processed case ID to run the current evaluation rubric and review pass/fail detail.
+            </p>
+
+            <div class="mt-6 grid gap-4" id="evaluation-results" hidden>
+              <div class="grid gap-4 md:grid-cols-4" id="evaluation-summary-grid"></div>
+              <section class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+                <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Per-check results</span>
+                <h3 class="mt-2 text-lg font-extrabold text-slate-900">What passed and what still needs work</h3>
+                <div class="mt-4 grid gap-4" id="evaluation-checks-list"></div>
+              </section>
+              <section class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+                <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Trace and label context</span>
+                <h3 class="mt-2 text-lg font-extrabold text-slate-900">How this evaluation is tagged for Phoenix and audit</h3>
+                <div class="mt-4 grid gap-4 md:grid-cols-2" id="evaluation-meta-list"></div>
+              </section>
+            </div>
+
+            <div class="mt-6 rounded-[1.5rem] border border-dashed border-slate-300 bg-white/45 p-5 text-sm leading-7 text-slate-600" id="evaluation-empty" role="status" aria-live="polite">
+              Run an evaluation to inspect the current pass/fail rubric for one case.
+            </div>
           </section>
         </main>
 
@@ -152,6 +286,33 @@
               <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Observability and evaluation posture</h2>
             </div>
             <div class="grid gap-4" id="observability-status-list"></div>
+            <div class="mt-5 grid gap-4" id="observability-readiness-list"></div>
+            <div class="mt-5 grid gap-4" id="observability-guardrails-list"></div>
+          </section>
+
+          <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7">
+            <div class="mb-5">
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Submission readiness</span>
+              <h2 class="mt-2 text-2xl font-extrabold text-slate-950">What still blocks the final hackathon submission</h2>
+            </div>
+            <div class="grid gap-4" id="submission-readiness-list"></div>
+          </section>
+
+          <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7">
+            <div class="mb-5">
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Evaluation rubric</span>
+              <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Required scenarios and criteria</h2>
+            </div>
+            <div class="grid gap-4" id="evaluation-catalog-list"></div>
+          </section>
+
+          <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7">
+            <div class="mb-5">
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Google ADK runtime</span>
+              <h2 class="mt-2 text-2xl font-extrabold text-slate-950">Gemini and self-improvement runtime posture</h2>
+            </div>
+            <div class="grid gap-4" id="agent-runtime-status-list"></div>
+            <div class="mt-5 grid gap-4" id="agent-runtime-notes-list"></div>
           </section>
 
           <section class="rounded-[2rem] border border-slate-200/80 bg-white/70 p-6 shadow-soft backdrop-blur xl:p-7">

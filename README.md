@@ -125,6 +125,15 @@ Phoenix MCP is part of the self-improvement story. The intended loop is:
 
 The MCP configuration sample is documented in [deployment/mcp/phoenix-mcp.sample.json](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/deployment/mcp/phoenix-mcp.sample.json) and explained in [deployment/arize_phoenix_setup.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/deployment/arize_phoenix_setup.md).
 
+Current implementation status:
+
+- the repo now includes a Google ADK runtime status service
+- the repo now includes a submission-readiness status service for hackathon packaging gaps such as hosted URL, repo URL, and demo video
+- the frontend launchpad now summarizes submission-readiness blockers before a reviewer opens the governance surface
+- the repo now includes a demo-showcase seed endpoint for repeatable judge-ready walkthrough cases across approval, document-loop, security, risk, and manual-referral paths
+- the repo now includes a self-improvement review endpoint backed by Google ADK with a mock-safe local fallback
+- when `GOOGLE_API_KEY` is absent, the self-improvement lane runs in `GOOGLE_ADK_MOCK` mode instead of failing the workflow
+
 ## How evaluations work
 
 The repository uses scenario-based evaluation expectations for:
@@ -170,6 +179,7 @@ These are non-negotiable:
 - [docs/architecture/api-contracts.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/docs/architecture/api-contracts.md)
 - [frontend/README.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/frontend/README.md)
 - [deployment/README.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/deployment/README.md)
+- [docs/runbooks/hackathon-submission-checklist.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/docs/runbooks/hackathon-submission-checklist.md)
 
 ## Environment variables
 
@@ -184,6 +194,9 @@ PHOENIX_API_KEY=
 PHOENIX_COLLECTOR_ENDPOINT=
 PHOENIX_PROJECT_NAME=
 DATABASE_URL=
+VISAFLOW_PUBLIC_REPO_URL=
+VISAFLOW_HOSTED_URL=
+VISAFLOW_DEMO_VIDEO_URL=
 ```
 
 Never commit a real `.env` file, API key, service-account key, token, or password.
@@ -203,19 +216,42 @@ Open the web surfaces through FastAPI:
 - [http://127.0.0.1:8000/frontend/supervisor-dashboard/](http://127.0.0.1:8000/frontend/supervisor-dashboard/)
 - [http://127.0.0.1:8000/frontend/governance-center/](http://127.0.0.1:8000/frontend/governance-center/)
 
+## Container and Cloud Run path
+
+The repo now includes a root `Dockerfile` and `.dockerignore` so the FastAPI app can be containerized consistently for Cloud Run-style deployment.
+
+Example local container flow:
+
+```bash
+docker build -t visaflow-mas .
+docker run --rm -p 8080:8080 visaflow-mas
+```
+
 ## Run tests and evaluations
 
 ```bash
 pytest -q
 ```
 
+The pytest harness now rebinds SQLite to a fresh per-test database file, so the full suite can run on Windows without the old `test_visaflow.db` file-lock reset issue.
+
 Recommended focused checks:
 
 ```bash
 pytest tests/agent_tests/test_observability_service.py -q
+pytest tests/agent_tests/test_adk_runtime_and_self_improvement.py -q
+pytest tests/agent_tests/test_evaluation_service.py -q
+pytest tests/agent_tests/test_submission_readiness.py -q
 pytest tests/workflow_tests/test_workflow_cases.py -q
 pytest tests/workflow_tests/test_end_to_end_case_journey.py -q
 ```
+
+The governance center also exposes live hackathon packaging signals through:
+
+- `GET /governance/submission-readiness`
+- `GET /governance/evaluations/catalog`
+- `POST /cases/{case_id}/evaluations/run`
+- `POST /demo/showcase/seed`
 
 ## Screenshots and demo media
 
