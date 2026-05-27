@@ -215,6 +215,8 @@ Open the web surfaces through FastAPI:
 pytest -q
 ```
 
+The pytest harness now rebinds SQLite to a fresh per-test database file, so the full suite can run on Windows without the old `test_visaflow.db` file-lock reset issue.
+
 Recommended focused checks:
 
 ```bash
