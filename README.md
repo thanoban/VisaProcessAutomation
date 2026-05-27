@@ -191,6 +191,9 @@ PHOENIX_API_KEY=
 PHOENIX_COLLECTOR_ENDPOINT=
 PHOENIX_PROJECT_NAME=
 DATABASE_URL=
+VISAFLOW_PUBLIC_REPO_URL=
+VISAFLOW_HOSTED_URL=
+VISAFLOW_DEMO_VIDEO_URL=
 ```
 
 Never commit a real `.env` file, API key, service-account key, token, or password.
@@ -223,9 +226,17 @@ Recommended focused checks:
 ```bash
 pytest tests/agent_tests/test_observability_service.py -q
 pytest tests/agent_tests/test_adk_runtime_and_self_improvement.py -q
+pytest tests/agent_tests/test_evaluation_service.py -q
+pytest tests/agent_tests/test_submission_readiness.py -q
 pytest tests/workflow_tests/test_workflow_cases.py -q
 pytest tests/workflow_tests/test_end_to_end_case_journey.py -q
 ```
+
+The governance center also exposes live hackathon packaging signals through:
+
+- `GET /governance/submission-readiness`
+- `GET /governance/evaluations/catalog`
+- `POST /cases/{case_id}/evaluations/run`
 
 ## Screenshots and demo media
 
