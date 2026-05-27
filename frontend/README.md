@@ -55,6 +55,7 @@ For the hackathon demo, the frontend should visibly prove:
 - extension backlog visibility from the launchpad and supervisor surface
 - governance and Arize observability posture visibility
 - governance evaluation rubric visibility and one-case evaluation runs
+- governance submission-readiness visibility for repo URL, hosted URL, demo video, and live-runtime gaps
 - Phoenix readiness and redaction guardrail visibility
 - case-driven self-improvement review visibility inside governance
 - case-aware governance review jumps from applicant, officer, supervisor, and recent-case surfaces
@@ -78,6 +79,7 @@ node --check frontend/governance-center/app.js
 ```bash
 pytest tests/agent_tests/test_api_contracts.py -q
 pytest tests/agent_tests/test_evaluation_service.py -q
+pytest tests/agent_tests/test_submission_readiness.py -q
 pytest tests/agent_tests/test_observability_service.py -q
 pytest tests/workflow_tests/test_workflow_cases.py -q
 ```
