@@ -21,6 +21,7 @@ from backend.models.schemas import (
     OfficerDecisionRequest,
     PolicyRequirementsResponse,
     SelfImprovementReviewResponse,
+    SubmissionReadinessResponse,
     SupervisorCaseListResponse,
     SupervisorQueueSummary,
     SystemNotice,
@@ -31,6 +32,7 @@ from backend.services.evaluation_service import EvaluationService
 from backend.services.observability_service import ObservabilityService
 from backend.services.self_improvement_service import SelfImprovementService
 from backend.services.sri_lanka_reference_service import SriLankaReferenceService
+from backend.services.submission_readiness_service import SubmissionReadinessService
 from backend.services.storage_service import LocalDocumentStorageService
 from backend.workflows.extension_workflow import ExtensionWorkflow
 from backend.workflows.tourist_visa_workflow import TouristVisaWorkflow
@@ -45,6 +47,7 @@ observability_service = ObservabilityService()
 adk_runtime_service = AdkRuntimeService()
 self_improvement_service = SelfImprovementService()
 evaluation_service = EvaluationService()
+submission_readiness_service = SubmissionReadinessService()
 
 
 @router.get("/health")
@@ -256,6 +259,11 @@ def get_observability_status() -> ObservabilityStatusResponse:
 @router.get("/governance/agent-runtime/status", response_model=AgentRuntimeStatusResponse)
 def get_agent_runtime_status() -> AgentRuntimeStatusResponse:
     return adk_runtime_service.status()
+
+
+@router.get("/governance/submission-readiness", response_model=SubmissionReadinessResponse)
+def get_submission_readiness() -> SubmissionReadinessResponse:
+    return submission_readiness_service.status()
 
 
 @router.post("/cases/{case_id}/self-improvement/review", response_model=SelfImprovementReviewResponse)

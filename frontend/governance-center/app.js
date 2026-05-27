@@ -28,6 +28,7 @@ const elements = {
   sourcesList: document.querySelector("#sources-list"),
   traceabilityList: document.querySelector("#traceability-list"),
   observabilityStatusList: document.querySelector("#observability-status-list"),
+  submissionReadinessList: document.querySelector("#submission-readiness-list"),
   agentRuntimeStatusList: document.querySelector("#agent-runtime-status-list"),
   agentRuntimeNotesList: document.querySelector("#agent-runtime-notes-list"),
   observabilityReadinessList: document.querySelector("#observability-readiness-list"),
@@ -100,6 +101,7 @@ async function initialize() {
   setRegionBusy(elements.publicationSignalGrid, true);
   setRegionBusy(elements.traceabilityList, true);
   setRegionBusy(elements.observabilityStatusList, true);
+  setRegionBusy(elements.submissionReadinessList, true);
   setRegionBusy(elements.agentRuntimeStatusList, true);
   setRegionBusy(elements.agentRuntimeNotesList, true);
   setRegionBusy(elements.observabilityReadinessList, true);
@@ -109,16 +111,17 @@ async function initialize() {
     await api.getHealth();
     state.apiAvailable = true;
     elements.apiPill.textContent = `Live API: ${api.baseUrl}`;
-    const [requirements, rules, observability, agentRuntime, evaluationCatalog] = await Promise.all([
+    const [requirements, rules, observability, submissionReadiness, agentRuntime, evaluationCatalog] = await Promise.all([
       api.getPolicyRequirements("TOURIST"),
       api.getActiveGovernanceRules(),
       api.getObservabilityStatus(),
+      api.getSubmissionReadiness(),
       api.getAgentRuntimeStatus(),
       api.getEvaluationCatalog(),
     ]);
     elements.heroCopy.textContent =
       "Live API connected. The rule pack, policy source, and publication state below reflect the current backend governance references.";
-    renderGovernanceCenter(requirements, rules, observability, agentRuntime, evaluationCatalog);
+    renderGovernanceCenter(requirements, rules, observability, submissionReadiness, agentRuntime, evaluationCatalog);
   } catch {
     state.apiAvailable = false;
     elements.apiPill.textContent = "Mock preview mode";
@@ -128,6 +131,7 @@ async function initialize() {
       governanceCenterMock.requirements,
       governanceCenterMock.rules,
       governanceCenterMock.observability,
+      governanceCenterMock.submissionReadiness,
       governanceCenterMock.agentRuntime,
       governanceCenterMock.evaluationCatalog
     );
@@ -136,6 +140,7 @@ async function initialize() {
     setRegionBusy(elements.publicationSignalGrid, false);
     setRegionBusy(elements.traceabilityList, false);
     setRegionBusy(elements.observabilityStatusList, false);
+    setRegionBusy(elements.submissionReadinessList, false);
     setRegionBusy(elements.agentRuntimeStatusList, false);
     setRegionBusy(elements.agentRuntimeNotesList, false);
     setRegionBusy(elements.observabilityReadinessList, false);
@@ -153,7 +158,7 @@ function wireEvents() {
   window.addEventListener("hashchange", syncEvaluationDeepLinkState);
 }
 
-function renderGovernanceCenter(requirements, rules, observability, agentRuntime, evaluationCatalog) {
+function renderGovernanceCenter(requirements, rules, observability, submissionReadiness, agentRuntime, evaluationCatalog) {
   const activeVersion = rules.active_policy_version || {};
   const circulars = rules.active_circulars || [];
   const publications = circulars.flatMap((circular) => circular.publications || []);
@@ -424,6 +429,7 @@ function renderGovernanceCenter(requirements, rules, observability, agentRuntime
   renderAgentRuntime(agentRuntime);
   renderObservabilityReadiness(observability);
   renderObservabilityGuardrails(observability);
+  renderSubmissionReadiness(submissionReadiness);
   renderEvaluationCatalog(evaluationCatalog);
 
   elements.exceptionRulesList.innerHTML = listMarkup(
@@ -450,6 +456,47 @@ function renderGovernanceCenter(requirements, rules, observability, agentRuntime
     elements.heroCopy.textContent =
       "The governance data currently includes non-active circular records alongside the active rule pack, so publication drift is being surfaced instead of hidden.";
   }
+}
+
+function renderSubmissionReadiness(readiness) {
+  const items = readiness.items || [];
+  const blockingCount = items.filter((item) => item.required && item.status !== "PASS").length;
+  const warningCount = items.filter((item) => item.status === "WARNING").length;
+  elements.submissionReadinessList.innerHTML = listMarkup(
+    [
+      `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">Submission overview</span>
+              <h3 class="mt-2 text-lg font-extrabold text-slate-900">${readiness.project_name || "VisaFlow MAS"}</h3>
+            </div>
+            ${buildStatusChip(readiness.overall_status || "ACTION_REQUIRED", readiness.ready_for_submission ? "success" : "warning")}
+          </div>
+          <p class="text-sm leading-7 text-slate-600">
+            Partner track: <strong class="text-slate-900">${readiness.partner_track || "Arize"}</strong><br />
+            Required blockers remaining: <strong class="text-slate-900">${blockingCount}</strong><br />
+            Advisory warnings remaining: <strong class="text-slate-900">${warningCount}</strong>
+          </p>
+        </article>
+      `,
+      ...items.map(
+        (item) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${formatReadinessKey(item.key)}</span>
+              <h3 class="mt-2 text-lg font-extrabold text-slate-900">${item.required ? "Required for submission" : "Recommended for the final demo"}</h3>
+            </div>
+            ${buildStatusChip(item.status || "FAIL", item.status === "PASS" ? "success" : item.status === "WARNING" ? "warning" : "danger")}
+          </div>
+          <p class="text-sm leading-7 text-slate-600">${item.details || "No readiness detail is available."}</p>
+        </article>
+      `
+      ),
+    ],
+    "Submission readiness data is not available yet."
+  );
 }
 
 function renderEvaluationCatalog(evaluationCatalog) {
@@ -899,6 +946,10 @@ function syncGovernanceCaseInputs(caseId) {
   if (elements.evaluationCaseId) {
     elements.evaluationCaseId.value = caseId || "";
   }
+}
+
+function formatReadinessKey(value) {
+  return titleCase(String(value || "readiness_item").replaceAll("_", " "));
 }
 
 function syncCaseQueryParam(caseId) {

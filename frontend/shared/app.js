@@ -268,6 +268,9 @@ export function createApiClient(baseUrl) {
     getAgentRuntimeStatus() {
       return request("/governance/agent-runtime/status");
     },
+    getSubmissionReadiness() {
+      return request("/governance/submission-readiness");
+    },
     getEvaluationCatalog() {
       return request("/governance/evaluations/catalog");
     },
@@ -1072,6 +1075,68 @@ export const governanceCenterMock = {
     google_genai_instrumentation_enabled: false,
     phoenix_mcp_expected: true,
     status: "DISABLED",
+  },
+  submissionReadiness: {
+    project_name: "VisaFlow MAS — Multi-Agent Visa Decision Support System",
+    partner_track: "Arize",
+    overall_status: "ACTION_REQUIRED",
+    ready_for_submission: false,
+    items: [
+      {
+        key: "license_file",
+        status: "PASS",
+        required: true,
+        details: "Public open-source submissions need a visible license file in the repository root.",
+      },
+      {
+        key: "env_example",
+        status: "PASS",
+        required: true,
+        details: "Environment variable examples should exist so judges can run the project safely without leaked secrets.",
+      },
+      {
+        key: "readme_hackathon_alignment",
+        status: "PASS",
+        required: true,
+        details: "README explains the Google, Arize, OpenInference, and MCP usage for judges.",
+      },
+      {
+        key: "phoenix_mcp_config",
+        status: "PASS",
+        required: true,
+        details: "Phoenix MCP sample configuration is included for the Arize track.",
+      },
+      {
+        key: "live_gemini_runtime",
+        status: "WARNING",
+        required: false,
+        details: "Live Gemini execution is not configured in this local environment, so the ADK runtime stays in safe mock mode.",
+      },
+      {
+        key: "live_phoenix_export",
+        status: "WARNING",
+        required: false,
+        details: "Phoenix export credentials are not configured in this local environment.",
+      },
+      {
+        key: "hosted_url",
+        status: "FAIL",
+        required: true,
+        details: "A hosted project URL is still required for final submission.",
+      },
+      {
+        key: "public_repo_url",
+        status: "FAIL",
+        required: true,
+        details: "A public repository URL still needs to be supplied in the submission metadata.",
+      },
+      {
+        key: "demo_video_url",
+        status: "FAIL",
+        required: true,
+        details: "A public or unlisted demo video URL under three minutes is still required.",
+      },
+    ],
   },
   agentRuntime: {
     runtime: "GOOGLE_ADK",

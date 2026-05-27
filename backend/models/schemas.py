@@ -508,6 +508,21 @@ class EvaluationCatalogResponse(BaseModel):
     notes: list[str] = Field(default_factory=list)
 
 
+class SubmissionReadinessItem(BaseModel):
+    key: str
+    status: Literal["PASS", "FAIL", "WARNING"]
+    required: bool = True
+    details: str
+
+
+class SubmissionReadinessResponse(BaseModel):
+    project_name: str
+    partner_track: str
+    overall_status: Literal["READY", "ACTION_REQUIRED"]
+    ready_for_submission: bool = False
+    items: list[SubmissionReadinessItem] = Field(default_factory=list)
+
+
 class SupervisorQueueSummary(BaseModel):
     workflow_pack: str
     counts_by_state: dict[str, int]
