@@ -8,6 +8,7 @@ from backend.models.schemas import (
     CasePacket,
     CaseStatusResponse,
     ChecklistResponse,
+    DemoSeedResponse,
     DocumentUploadRequest,
     EvaluationCatalogResponse,
     EvaluationRunResponse,
@@ -28,6 +29,7 @@ from backend.models.schemas import (
 )
 from backend.services.adk_runtime_service import AdkRuntimeService
 from backend.services.case_service import CaseService
+from backend.services.demo_service import DemoService
 from backend.services.evaluation_service import EvaluationService
 from backend.services.observability_service import ObservabilityService
 from backend.services.self_improvement_service import SelfImprovementService
@@ -48,6 +50,7 @@ adk_runtime_service = AdkRuntimeService()
 self_improvement_service = SelfImprovementService()
 evaluation_service = EvaluationService()
 submission_readiness_service = SubmissionReadinessService()
+demo_service = DemoService()
 
 
 @router.get("/health")
@@ -64,6 +67,11 @@ def get_system_notices() -> list[SystemNotice]:
             level="INFO",
         )
     ]
+
+
+@router.post("/demo/showcase/seed", response_model=DemoSeedResponse)
+def seed_demo_showcase() -> DemoSeedResponse:
+    return demo_service.seed_showcase_cases()
 
 
 @router.post("/applications", response_model=CasePacket, status_code=status.HTTP_201_CREATED)

@@ -130,6 +130,7 @@ Current implementation status:
 - the repo now includes a Google ADK runtime status service
 - the repo now includes a submission-readiness status service for hackathon packaging gaps such as hosted URL, repo URL, and demo video
 - the frontend launchpad now summarizes submission-readiness blockers before a reviewer opens the governance surface
+- the repo now includes a demo-showcase seed endpoint for repeatable judge-ready walkthrough cases across approval, document-loop, security, risk, and manual-referral paths
 - the repo now includes a self-improvement review endpoint backed by Google ADK with a mock-safe local fallback
 - when `GOOGLE_API_KEY` is absent, the self-improvement lane runs in `GOOGLE_ADK_MOCK` mode instead of failing the workflow
 
@@ -238,6 +239,7 @@ The governance center also exposes live hackathon packaging signals through:
 - `GET /governance/submission-readiness`
 - `GET /governance/evaluations/catalog`
 - `POST /cases/{case_id}/evaluations/run`
+- `POST /demo/showcase/seed`
 
 ## Screenshots and demo media
 

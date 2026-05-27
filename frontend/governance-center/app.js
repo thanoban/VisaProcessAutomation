@@ -1,4 +1,5 @@
 import {
+  appendWorkspacePreviewParam,
   buildStatusChip,
   createApiClient,
   formatDate,
@@ -21,6 +22,14 @@ const elements = {
   surfaceAccessNote: document.querySelector("#surface-access-note"),
   internalSurfaceGate: document.querySelector("#internal-surface-gate"),
   protectedSurfaceShell: document.querySelector("#protected-surface-shell"),
+  demoShowcasePanel: document.querySelector("#demo-showcase-panel"),
+  demoShowcaseSeedButton: document.querySelector("#demo-showcase-seed-button"),
+  demoShowcaseFeedback: document.querySelector("#demo-showcase-feedback"),
+  demoShowcaseResults: document.querySelector("#demo-showcase-results"),
+  demoShowcaseSummaryGrid: document.querySelector("#demo-showcase-summary-grid"),
+  demoShowcaseCasesList: document.querySelector("#demo-showcase-cases-list"),
+  demoShowcaseNotesList: document.querySelector("#demo-showcase-notes-list"),
+  demoShowcaseEmpty: document.querySelector("#demo-showcase-empty"),
   activePolicyGrid: document.querySelector("#active-policy-grid"),
   publicationSignalGrid: document.querySelector("#publication-signal-grid"),
   requirementsList: document.querySelector("#requirements-list"),
@@ -98,6 +107,7 @@ async function initialize() {
   }
   wireEvents();
   syncGovernanceCaseInputs(state.currentCaseId);
+  setRegionBusy(elements.demoShowcaseResults, true);
   setRegionBusy(elements.activePolicyGrid, true);
   setRegionBusy(elements.publicationSignalGrid, true);
   setRegionBusy(elements.traceabilityList, true);
@@ -137,6 +147,7 @@ async function initialize() {
       governanceCenterMock.evaluationCatalog
     );
   } finally {
+    setRegionBusy(elements.demoShowcaseResults, false);
     setRegionBusy(elements.activePolicyGrid, false);
     setRegionBusy(elements.publicationSignalGrid, false);
     setRegionBusy(elements.traceabilityList, false);
@@ -154,6 +165,7 @@ async function initialize() {
 }
 
 function wireEvents() {
+  elements.demoShowcaseSeedButton.addEventListener("click", handleDemoShowcaseSeed);
   elements.selfImprovementForm.addEventListener("submit", handleSelfImprovementSubmit);
   elements.evaluationForm.addEventListener("submit", handleEvaluationSubmit);
   window.addEventListener("hashchange", syncSubmissionReadinessDeepLinkState);
@@ -459,6 +471,116 @@ function renderGovernanceCenter(requirements, rules, observability, submissionRe
     elements.heroCopy.textContent =
       "The governance data currently includes non-active circular records alongside the active rule pack, so publication drift is being surfaced instead of hidden.";
   }
+}
+
+async function handleDemoShowcaseSeed() {
+  elements.demoShowcaseFeedback.textContent = state.apiAvailable
+    ? "Seeding the repeatable showcase cases..."
+    : "Mock mode is active. Showing the contract-aligned showcase preview.";
+  setButtonBusy(elements.demoShowcaseSeedButton, true, "Seeding cases...");
+  setRegionBusy(elements.demoShowcaseResults, true);
+
+  try {
+    const showcase = state.apiAvailable ? await api.seedDemoShowcase() : governanceCenterMock.demoShowcase;
+    renderDemoShowcase(showcase, !state.apiAvailable);
+    const firstCaseId = showcase.cases?.[0]?.case_id || "";
+    if (firstCaseId) {
+      state.currentCaseId = firstCaseId;
+      syncGovernanceCaseInputs(firstCaseId);
+      syncCaseQueryParam(firstCaseId);
+    }
+    elements.demoShowcaseFeedback.textContent = state.apiAvailable
+      ? `Seeded ${showcase.seeded_count} showcase cases. Use the quick-launch links below to drive the demo.`
+      : "Mock showcase loaded.";
+  } catch (error) {
+    elements.demoShowcaseResults.hidden = true;
+    elements.demoShowcaseEmpty.hidden = false;
+    elements.demoShowcaseFeedback.textContent = `Demo showcase seeding failed: ${error.message}`;
+  } finally {
+    setButtonBusy(elements.demoShowcaseSeedButton, false, "Seeding cases...");
+    setRegionBusy(elements.demoShowcaseResults, false);
+  }
+}
+
+function renderDemoShowcase(showcase, useMock = false) {
+  elements.demoShowcaseResults.hidden = false;
+  elements.demoShowcaseEmpty.hidden = true;
+
+  const counts = (showcase.cases || []).reduce((accumulator, item) => {
+    const key = item.actual_recommendation || "UNKNOWN";
+    accumulator[key] = (accumulator[key] || 0) + 1;
+    return accumulator;
+  }, {});
+
+  const summaryCards = [
+    ["Workflow pack", showcase.workflow_pack || "SRI_LANKA_TOURIST_VISIT"],
+    ["Seeded cases", String(showcase.seeded_count || 0)],
+    [
+      "Recommendation spread",
+      Object.entries(counts)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join(" · ") || "No cases seeded",
+    ],
+  ];
+  elements.demoShowcaseSummaryGrid.innerHTML = summaryCards
+    .map(
+      ([label, value]) => `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/85 p-5">
+          <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${label}</span>
+          <strong class="mt-2 block text-base font-extrabold text-slate-900">${value}</strong>
+        </article>
+      `
+    )
+    .join("");
+
+  elements.demoShowcaseCasesList.innerHTML = listMarkup(
+    (showcase.cases || []).map((item) => {
+      const query = `?case=${encodeURIComponent(item.case_id)}`;
+      const applicantHref = `../applicant-portal/${query}`;
+      const officerHref = `../officer-dashboard/${query}`;
+      const supervisorHref = `../supervisor-dashboard/${query}`;
+      const evaluationHref = `./${query}#evaluation-panel`;
+      const improvementHref = `./${query}#self-improvement-panel`;
+      return `
+        <article class="rounded-[1.5rem] border border-slate-200/80 bg-white/85 p-5">
+          <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <span class="block text-[0.72rem] uppercase tracking-[0.18em] text-slate-500">${item.case_id}</span>
+              <h3 class="mt-2 text-lg font-extrabold text-slate-900">${item.scenario_name}</h3>
+            </div>
+            ${buildStatusChip(item.actual_recommendation || "UNKNOWN")}
+          </div>
+          <p class="text-sm leading-7 text-slate-600">
+            <strong class="text-slate-900">Expected:</strong> ${item.expected_recommendation}<br />
+            <strong class="text-slate-900">Actual:</strong> ${item.actual_recommendation}<br />
+            <strong class="text-slate-900">State:</strong> ${item.current_state}<br />
+            <strong class="text-slate-900">Holder:</strong> ${item.current_holder}<br />
+            <strong class="text-slate-900">Next action:</strong> ${item.next_action}
+          </p>
+          <div class="mt-4 flex flex-wrap gap-3 text-sm font-semibold">
+            <a class="rounded-full border border-slate-200 bg-white px-4 py-2 text-slate-700 transition hover:-translate-y-0.5" href="${appendWorkspacePreviewParam(applicantHref)}">Applicant</a>
+            <a class="rounded-full border border-slate-200 bg-white px-4 py-2 text-slate-700 transition hover:-translate-y-0.5" href="${appendWorkspacePreviewParam(officerHref)}">Officer</a>
+            <a class="rounded-full border border-slate-200 bg-white px-4 py-2 text-slate-700 transition hover:-translate-y-0.5" href="${appendWorkspacePreviewParam(supervisorHref)}">Supervisor</a>
+            <a class="rounded-full border border-slate-200 bg-white px-4 py-2 text-slate-700 transition hover:-translate-y-0.5" href="${appendWorkspacePreviewParam(evaluationHref)}">Evaluation</a>
+            <a class="rounded-full border border-slate-200 bg-white px-4 py-2 text-slate-700 transition hover:-translate-y-0.5" href="${appendWorkspacePreviewParam(improvementHref)}">Self-improvement</a>
+          </div>
+          ${
+            useMock
+              ? `<p class="mt-3 text-xs uppercase tracking-[0.18em] text-slate-500">Mock preview</p>`
+              : ""
+          }
+        </article>
+      `;
+    }),
+    "No showcase cases are available yet."
+  );
+
+  elements.demoShowcaseNotesList.innerHTML = listMarkup(
+    (showcase.notes || []).map(
+      (item) => `<div class="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-6 text-slate-700">${item}</div>`
+    ),
+    "No operator notes are available yet."
+  );
 }
 
 function renderSubmissionReadiness(readiness) {

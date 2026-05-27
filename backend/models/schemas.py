@@ -523,6 +523,23 @@ class SubmissionReadinessResponse(BaseModel):
     items: list[SubmissionReadinessItem] = Field(default_factory=list)
 
 
+class DemoCaseSummary(BaseModel):
+    case_id: str
+    scenario_name: str
+    expected_recommendation: Recommendation
+    actual_recommendation: Recommendation
+    current_state: str
+    current_holder: str
+    next_action: str
+
+
+class DemoSeedResponse(BaseModel):
+    workflow_pack: str
+    seeded_count: int
+    cases: list[DemoCaseSummary] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
 class SupervisorQueueSummary(BaseModel):
     workflow_pack: str
     counts_by_state: dict[str, int]

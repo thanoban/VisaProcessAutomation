@@ -236,6 +236,11 @@ export function createApiClient(baseUrl) {
     getSystemNotices() {
       return request("/system/notices");
     },
+    seedDemoShowcase() {
+      return request("/demo/showcase/seed", {
+        method: "POST",
+      });
+    },
     getSupervisorQueues() {
       return request("/supervisor/queues");
     },
@@ -1243,6 +1248,62 @@ export const governanceCenterMock = {
         details: "Supervisor recommendation stays within the allowed advisory states.",
         expected: "One of APPROVE_READY, REQUEST_MORE_INFO, ENHANCED_REVIEW, REFUSAL_DRAFT_READY.",
         actual: "APPROVE_READY",
+      },
+    ],
+  },
+  demoShowcase: {
+    workflow_pack: "SRI_LANKA_TOURIST_VISIT",
+    seeded_count: 5,
+    notes: [
+      "These demo cases use mock applicant data only.",
+      "The seeded set is designed to cover a judge-friendly spread of recommendation states and routing paths.",
+      "Use the governance evaluation runner and self-improvement panel on seeded cases to demonstrate Arize-track workflow safety.",
+    ],
+    cases: [
+      {
+        case_id: "VISA-DEMO-LOW-RISK-001",
+        scenario_name: "complete_low_risk_tourist_case",
+        expected_recommendation: "APPROVE_READY",
+        actual_recommendation: "APPROVE_READY",
+        current_state: "READY_FOR_OFFICER_REVIEW",
+        current_holder: "OFFICER",
+        next_action: "HUMAN_OFFICER_FINAL_REVIEW",
+      },
+      {
+        case_id: "VISA-DEMO-MISSING-BANK-001",
+        scenario_name: "missing_bank_statement",
+        expected_recommendation: "REQUEST_MORE_INFO",
+        actual_recommendation: "REQUEST_MORE_INFO",
+        current_state: "WAITING_FOR_DOCUMENTS",
+        current_holder: "APPLICANT",
+        next_action: "UPLOAD_REQUIRED_DOCUMENTS",
+      },
+      {
+        case_id: "VISA-DEMO-SECURITY-001",
+        scenario_name: "security_unavailable",
+        expected_recommendation: "ENHANCED_REVIEW",
+        actual_recommendation: "ENHANCED_REVIEW",
+        current_state: "READY_FOR_OFFICER_REVIEW",
+        current_holder: "OFFICER",
+        next_action: "HUMAN_OFFICER_FINAL_REVIEW",
+      },
+      {
+        case_id: "VISA-DEMO-HIGH-RISK-001",
+        scenario_name: "sudden_suspicious_deposit",
+        expected_recommendation: "ENHANCED_REVIEW",
+        actual_recommendation: "ENHANCED_REVIEW",
+        current_state: "READY_FOR_OFFICER_REVIEW",
+        current_holder: "OFFICER",
+        next_action: "HUMAN_OFFICER_FINAL_REVIEW",
+      },
+      {
+        case_id: "VISA-DEMO-MANUAL-001",
+        scenario_name: "manual_referral",
+        expected_recommendation: "ENHANCED_REVIEW",
+        actual_recommendation: "ENHANCED_REVIEW",
+        current_state: "REFERRED_TO_MANUAL_REVIEW",
+        current_holder: "MISSION_OR_HEAD_OFFICE",
+        next_action: "MANUAL_SPONSOR_OR_EXCEPTION_REVIEW",
       },
     ],
   },
