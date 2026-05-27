@@ -56,6 +56,7 @@ For the hackathon demo, the frontend should visibly prove:
 - governance and Arize observability posture visibility
 - governance evaluation rubric visibility and one-case evaluation runs
 - governance submission-readiness visibility for repo URL, hosted URL, demo video, and live-runtime gaps
+- launchpad-level submission-readiness summary before entering governance
 - Phoenix readiness and redaction guardrail visibility
 - case-driven self-improvement review visibility inside governance
 - case-aware governance review jumps from applicant, officer, supervisor, and recent-case surfaces

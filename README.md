@@ -129,6 +129,7 @@ Current implementation status:
 
 - the repo now includes a Google ADK runtime status service
 - the repo now includes a submission-readiness status service for hackathon packaging gaps such as hosted URL, repo URL, and demo video
+- the frontend launchpad now summarizes submission-readiness blockers before a reviewer opens the governance surface
 - the repo now includes a self-improvement review endpoint backed by Google ADK with a mock-safe local fallback
 - when `GOOGLE_API_KEY` is absent, the self-improvement lane runs in `GOOGLE_ADK_MOCK` mode instead of failing the workflow
 
