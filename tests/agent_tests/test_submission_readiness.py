@@ -9,6 +9,7 @@ def test_submission_readiness_endpoint_reports_required_gaps(client):
     assert item_map["license_file"]["status"] == "PASS"
     assert item_map["env_example"]["status"] == "PASS"
     assert item_map["phoenix_mcp_config"]["status"] == "PASS"
+    assert item_map["cloud_run_container_artifact"]["status"] == "PASS"
     assert item_map["submission_runbook"]["status"] == "PASS"
     assert item_map["hosted_url"]["status"] == "FAIL"
     assert item_map["public_repo_url"]["status"] == "FAIL"

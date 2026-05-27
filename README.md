@@ -216,6 +216,17 @@ Open the web surfaces through FastAPI:
 - [http://127.0.0.1:8000/frontend/supervisor-dashboard/](http://127.0.0.1:8000/frontend/supervisor-dashboard/)
 - [http://127.0.0.1:8000/frontend/governance-center/](http://127.0.0.1:8000/frontend/governance-center/)
 
+## Container and Cloud Run path
+
+The repo now includes a root `Dockerfile` and `.dockerignore` so the FastAPI app can be containerized consistently for Cloud Run-style deployment.
+
+Example local container flow:
+
+```bash
+docker build -t visaflow-mas .
+docker run --rm -p 8080:8080 visaflow-mas
+```
+
 ## Run tests and evaluations
 
 ```bash
