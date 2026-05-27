@@ -45,6 +45,11 @@ class SubmissionReadinessService:
                 details="Phoenix MCP server configuration sample should be present for the Arize track.",
             ),
             SubmissionReadinessItem(
+                key="cloud_run_container_artifact",
+                status="PASS" if (self.repo_root / "Dockerfile").exists() else "FAIL",
+                details="A Cloud Run compatible container artifact should exist so the hosted submission can be reproduced cleanly.",
+            ),
+            SubmissionReadinessItem(
                 key="submission_runbook",
                 status="PASS"
                 if (self.repo_root / "docs" / "runbooks" / "hackathon-submission-checklist.md").exists()

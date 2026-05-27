@@ -179,6 +179,7 @@ These are non-negotiable:
 - [docs/architecture/api-contracts.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/docs/architecture/api-contracts.md)
 - [frontend/README.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/frontend/README.md)
 - [deployment/README.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/deployment/README.md)
+- [docs/runbooks/hackathon-submission-checklist.md](/D:/PROJECTS/Startup/VisaAgent/VisaProcessAutomation/docs/runbooks/hackathon-submission-checklist.md)
 
 ## Environment variables
 
